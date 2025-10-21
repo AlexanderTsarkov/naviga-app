@@ -46,24 +46,10 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   }
 
   Future<void> _connect() async {
-    if (_connectionState == BluetoothConnectionState.connected) {
-      await _disconnect();
-      return;
-    }
-
     setState(() {
-      _connecting = true;
-      _status = 'Подключение...';
+      _status = 'Подключение пока не реализовано';
+      _connecting = false;
     });
-
-    try {
-      await widget.device.connect(timeout: const Duration(seconds: 10));
-    } catch (e) {
-      setState(() {
-        _status = 'Ошибка подключения: $e';
-        _connecting = false;
-      });
-    }
   }
 
   Future<void> _disconnect() async {
@@ -150,15 +136,9 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _connecting ? null : _connect,
-        backgroundColor: _connectionState == BluetoothConnectionState.connected 
-            ? Colors.red 
-            : Colors.green,
-        child: _connecting
-            ? const CircularProgressIndicator(color: Colors.white)
-            : Icon(_connectionState == BluetoothConnectionState.connected 
-                ? Icons.bluetooth_disabled 
-                : Icons.bluetooth),
+        onPressed: _connect,
+        backgroundColor: Colors.blue,
+        child: const Icon(Icons.info),
       ),
     );
   }
