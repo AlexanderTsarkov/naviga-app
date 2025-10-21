@@ -16,6 +16,8 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   String _status = 'Устройство не подключено';
   final TextEditingController _codeController = TextEditingController();
   bool _showCodeDialog = false;
+  String _gpsCoordinates = 'GPS не получен';
+  bool _gpsEnabled = false;
 
   @override
   void initState() {
@@ -141,6 +143,27 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     }
   }
 
+  void _simulateGpsData() {
+    // Имитация получения GPS данных от Meshtastic устройства
+    Future.delayed(const Duration(seconds: 3), () {
+      if (_gpsEnabled) {
+        setState(() {
+          // Примерные координаты для Новгородской области
+          _gpsCoordinates = '58.5218°N, 31.2750°E';
+        });
+      }
+    });
+  }
+
+  void _refreshGps() {
+    if (_gpsEnabled) {
+      setState(() {
+        _gpsCoordinates = 'Обновление GPS...';
+      });
+      _simulateGpsData();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -166,6 +189,50 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                     _buildInfoRow('ID', widget.device.remoteId.str),
                     _buildInfoRow('Имя', 'Meshtastic Device'),
                     _buildInfoRow('Статус', _status),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'GPS координаты',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        Switch(
+                          value: _gpsEnabled,
+                          onChanged: _gpsEnabled ? null : (value) {
+                            setState(() {
+                              _gpsEnabled = value;
+                              if (value) {
+                                _gpsCoordinates = 'Получение GPS...';
+                                _simulateGpsData();
+                              } else {
+                                _gpsCoordinates = 'GPS отключен';
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildInfoRow('Координаты', _gpsCoordinates),
+                    if (_gpsEnabled) ...[
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: _refreshGps,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Обновить GPS'),
+                      ),
+                    ],
                   ],
                 ),
               ),
