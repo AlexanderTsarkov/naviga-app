@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
@@ -18,6 +19,8 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   bool _showCodeDialog = false;
   String _gpsCoordinates = 'GPS не получен';
   bool _gpsEnabled = false;
+  DateTime? _lastGpsUpdate;
+  List<Map<String, dynamic>> _connectedDevices = [];
 
   @override
   void initState() {
@@ -124,7 +127,13 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       setState(() {
         _status = 'Подключение с кодом $code - успешно!';
         _connecting = false;
+        _gpsEnabled = true; // Автоматически включаем GPS при подключении
       });
+      
+      // Автоматически получаем GPS данные после подключения
+      _getGpsDataFromDevice();
+      _getConnectedDevicesFromDevice();
+      
     } catch (e) {
       setState(() {
         _status = 'Ошибка подключения: $e';
@@ -143,17 +152,64 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     }
   }
 
-  void _simulateGpsData() {
+  Future<void> _getGpsDataFromDevice() async {
     // Имитация получения GPS данных от подключенного Meshtastic устройства
     // В реальности это будет через Bluetooth характеристику от T-beam
-    Future.delayed(const Duration(seconds: 3), () {
-      if (_gpsEnabled && _connectionState == BluetoothConnectionState.connected) {
-        setState(() {
-          // Примерные координаты для Новгородской области
-          // В реальности получаем от T-beam через Bluetooth
-          _gpsCoordinates = '58.5218°N, 31.2750°E (от T-beam)';
-        });
+    setState(() {
+      _gpsCoordinates = 'Получение GPS от T-beam...';
+    });
+    
+    await Future.delayed(const Duration(seconds: 2));
+    
+    if (_gpsEnabled && _connectionState == BluetoothConnectionState.connected) {
+      setState(() {
+        _gpsCoordinates = '58.5218°N, 31.2750°E (от T-beam)';
+        _lastGpsUpdate = DateTime.now();
+      });
+      
+      // Подписываемся на обновления GPS
+      _startGpsSubscription();
+    }
+  }
+
+  void _startGpsSubscription() {
+    // Имитация подписки на обновления GPS от устройства
+    // В реальности это будет через Bluetooth characteristic notifications
+    Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (!_gpsEnabled || _connectionState != BluetoothConnectionState.connected) {
+        timer.cancel();
+        return;
       }
+      
+      // Имитация получения новых координат
+      setState(() {
+        final lat = 58.5218 + (DateTime.now().millisecond / 10000);
+        final lng = 31.2750 + (DateTime.now().millisecond / 10000);
+        _gpsCoordinates = '${lat.toStringAsFixed(4)}°N, ${lng.toStringAsFixed(4)}°E (от T-beam)';
+        _lastGpsUpdate = DateTime.now();
+      });
+    });
+  }
+
+  Future<void> _getConnectedDevicesFromDevice() async {
+    // Имитация получения списка связанных устройств от T-beam
+    setState(() {
+      _connectedDevices = [
+        {
+          'id': 'T-Beam-001',
+          'name': 'Охотник Иван',
+          'coordinates': '58.5200°N, 31.2700°E',
+          'lastSeen': DateTime.now().subtract(const Duration(minutes: 2)),
+          'rssi': -45,
+        },
+        {
+          'id': 'T-Beam-002', 
+          'name': 'Собака Рекс',
+          'coordinates': '58.5220°N, 31.2800°E',
+          'lastSeen': DateTime.now().subtract(const Duration(minutes: 1)),
+          'rssi': -38,
+        },
+      ];
     });
   }
 
@@ -251,6 +307,15 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                     ),
                     const SizedBox(height: 16),
                     _buildInfoRow('Координаты', _gpsCoordinates),
+                    if (_lastGpsUpdate != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Обновлено: ${_formatTimeAgo(_lastGpsUpdate!)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.green[600],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     Text(
                       'GPS данные получаются от подключенного T-beam устройства через Bluetooth',
@@ -271,6 +336,42 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            if (_connectedDevices.isNotEmpty) ...[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Связанные устройства (${_connectedDevices.length})',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 16),
+                      ..._connectedDevices.map((device) => 
+                        Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            leading: const Icon(Icons.bluetooth_connected),
+                            title: Text(device['name']),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('ID: ${device['id']}'),
+                                Text('Координаты: ${device['coordinates']}'),
+                                Text('RSSI: ${device['rssi']} dBm'),
+                                Text('Последний сигнал: ${_formatTimeAgo(device['lastSeen'])}'),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ).toList(),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             if (_connectionState == BluetoothConnectionState.connected) ...[
               Card(
                 child: Padding(
@@ -336,5 +437,20 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
         ],
       ),
     );
+  }
+
+  String _formatTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inSeconds < 60) {
+      return '${difference.inSeconds} сек назад';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} мин назад';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} ч назад';
+    } else {
+      return '${difference.inDays} дн назад';
+    }
   }
 }
