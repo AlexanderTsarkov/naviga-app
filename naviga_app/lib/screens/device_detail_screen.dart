@@ -89,8 +89,8 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       return;
     }
 
-    // Показываем диалог для ввода кода
-    _showCodeInputDialog();
+    // Подключаемся напрямую без запроса кода - система сама запросит
+    _attemptConnection();
   }
 
   void _showCodeInputDialog() {
@@ -138,17 +138,9 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   }
 
   Future<void> _attemptConnection() async {
-    final code = _codeController.text.trim();
-    if (code.isEmpty) {
-      setState(() {
-        _status = 'Введите код подключения';
-      });
-      return;
-    }
-
     setState(() {
       _connecting = true;
-      _status = 'Подключение с кодом: $code...';
+      _status = 'Подключение к Meshtastic устройству...';
     });
 
     try {

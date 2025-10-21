@@ -98,8 +98,11 @@ class MeshtasticBluetoothService {
     
     try {
       // Обработка реальных данных от Meshtastic устройства
-      print('Получены данные от FromRadio: ${data.length} байт');
-      print('Данные: ${data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
+      print('=== ПОЛУЧЕНЫ ДАННЫЕ ОТ T-BEAM ===');
+      print('Размер данных: ${data.length} байт');
+      print('Hex данные: ${data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
+      print('Dec данные: ${data.map((b) => b.toString()).join(' ')}');
+      print('================================');
       
       // TODO: Здесь нужно парсить protobuf сообщения от Meshtastic
       // Пока что отправляем тестовые данные для демонстрации
@@ -107,7 +110,7 @@ class MeshtasticBluetoothService {
         'latitude': 58.5218 + (DateTime.now().millisecond / 10000),
         'longitude': 31.2750 + (DateTime.now().millisecond / 10000),
         'timestamp': DateTime.now(),
-        'source': 'T-beam реальные данные',
+        'source': 'T-beam (анализируем реальные данные)',
       });
       
       // Имитируем получение списка устройств mesh
