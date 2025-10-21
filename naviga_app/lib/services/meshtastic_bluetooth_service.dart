@@ -30,7 +30,7 @@ class MeshtasticBluetoothService {
       _device = device;
       
       // Подключаемся к устройству
-      await device.connect();
+      await device.connect(timeout: const Duration(seconds: 10));
       
       // Устанавливаем MTU размер
       await device.requestMtu(512);
@@ -74,12 +74,12 @@ class MeshtasticBluetoothService {
   void _setupDataStreams() {
     // Подписываемся на FromRadio данные
     _fromRadioSubscription = _fromRadio!.value.listen((data) {
-      _processFromRadioData(data);
+      _processFromRadioData(Uint8List.fromList(data));
     });
 
     // Подписываемся на FromNum уведомления
     _fromNumSubscription = _fromNum!.value.listen((data) {
-      _handleFromNumNotification(data);
+      _handleFromNumNotification(Uint8List.fromList(data));
     });
   }
 

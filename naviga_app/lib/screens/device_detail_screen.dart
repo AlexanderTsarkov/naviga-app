@@ -482,3 +482,14 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       });
     });
   }
+
+  Color _getBatteryColor(int batteryLevel) {
+    if (batteryLevel > 50) {
+      return Colors.green;
+    } else if (batteryLevel > 20) {
+      return Colors.orange;
+    } else {
+      return Colors.red;
+    }
+  }
+}
