@@ -181,7 +181,13 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
 
   Future<void> _disconnect() async {
     try {
-      await widget.device.disconnect();
+      await _meshtasticService.disconnect();
+      setState(() {
+        _status = 'Отключено';
+        _gpsEnabled = false;
+        _gpsCoordinates = 'GPS не получен';
+        _connectedDevices.clear();
+      });
     } catch (e) {
       setState(() {
         _status = 'Ошибка отключения: $e';

@@ -30,7 +30,7 @@ class MeshtasticBluetoothService {
       _device = device;
       
       // Подключаемся к устройству
-      await device.connect(timeout: const Duration(seconds: 10));
+      await device.connect();
       
       // Устанавливаем MTU размер
       await device.requestMtu(512);
