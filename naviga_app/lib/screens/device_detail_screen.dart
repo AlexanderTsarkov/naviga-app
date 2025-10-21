@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import '../services/meshtastic_bluetooth_service.dart';
 
 class DeviceDetailScreen extends StatefulWidget {
   final BluetoothDevice device;
@@ -21,6 +22,9 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   DateTime? _lastGpsUpdate;
   List<Map<String, dynamic>> _connectedDevices = [];
   Timer? _updateTimer;
+  final MeshtasticBluetoothService _meshtasticService = MeshtasticBluetoothService();
+  StreamSubscription? _gpsSubscription;
+  StreamSubscription? _meshDevicesSubscription;
 
   @override
   void initState() {
@@ -32,6 +36,9 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   @override
   void dispose() {
     _updateTimer?.cancel();
+    _gpsSubscription?.cancel();
+    _meshDevicesSubscription?.cancel();
+    _meshtasticService.dispose();
     super.dispose();
   }
 
@@ -145,18 +152,24 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     });
 
     try {
-      // Здесь будет реальное подключение с кодом
-      await Future.delayed(const Duration(seconds: 2)); // Имитация
+      // Подключаемся к Meshtastic устройству через реальный сервис
+      final success = await _meshtasticService.connectToDevice(widget.device);
       
-      setState(() {
-        _status = 'Подключено';
-        _connecting = false;
-        _gpsEnabled = true;
-      });
-      
-      // Автоматически получаем GPS данные после подключения
-      _getGpsDataFromDevice();
-      _getConnectedDevicesFromDevice();
+      if (success) {
+        setState(() {
+          _status = 'Подключено к Meshtastic';
+          _connecting = false;
+          _gpsEnabled = true;
+        });
+        
+        // Подписываемся на реальные данные
+        _subscribeToRealData();
+      } else {
+        setState(() {
+          _status = 'Ошибка подключения к Meshtastic';
+          _connecting = false;
+        });
+      }
       
     } catch (e) {
       setState(() {
@@ -453,13 +466,19 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     }
   }
 
-  Color _getBatteryColor(int batteryLevel) {
-    if (batteryLevel > 50) {
-      return Colors.green;
-    } else if (batteryLevel > 20) {
-      return Colors.orange;
-    } else {
-      return Colors.red;
-    }
+  void _subscribeToRealData() {
+    // Подписываемся на GPS данные от реального устройства
+    _gpsSubscription = _meshtasticService.gpsDataStream.listen((gpsData) {
+      setState(() {
+        _gpsCoordinates = '${gpsData['latitude'].toStringAsFixed(4)}°N, ${gpsData['longitude'].toStringAsFixed(4)}°E (${gpsData['source']})';
+        _lastGpsUpdate = gpsData['timestamp'];
+      });
+    });
+
+    // Подписываемся на данные mesh устройств
+    _meshDevicesSubscription = _meshtasticService.meshDevicesStream.listen((devices) {
+      setState(() {
+        _connectedDevices = devices;
+      });
+    });
   }
-}
