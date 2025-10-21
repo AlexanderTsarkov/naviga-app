@@ -26,60 +26,93 @@ class MeshtasticBluetoothService {
 
   Future<bool> connectToDevice(BluetoothDevice device) async {
     try {
+      print('=== НАЧАЛО ПОДКЛЮЧЕНИЯ К T-BEAM ===');
+      print('Устройство: ${device.remoteId.str}');
       _device = device;
       
       // Подключаемся к устройству
+      print('Шаг 1: Подключение к устройству...');
       await device.connect();
+      print('✅ Подключение успешно!');
       
       // Устанавливаем MTU размер
+      print('Шаг 2: Установка MTU размера...');
       await device.requestMtu(512);
+      print('✅ MTU установлен!');
       
       // Получаем сервисы
+      print('Шаг 3: Поиск сервисов...');
       final services = await device.discoverServices();
+      print('Найдено сервисов: ${services.length}');
+      
+      for (var service in services) {
+        print('Сервис: ${service.uuid}');
+      }
+      
       final meshService = services.firstWhere(
         (service) => service.uuid.toString().toLowerCase() == meshServiceUuid.toLowerCase(),
         orElse: () => throw Exception('MeshBluetoothService не найден'),
       );
+      print('✅ MeshBluetoothService найден!');
 
       // Получаем характеристики
+      print('Шаг 4: Поиск характеристик...');
       _fromRadio = meshService.characteristics.firstWhere(
         (char) => char.uuid.toString().toLowerCase() == fromRadioUuid.toLowerCase(),
       );
+      print('✅ FromRadio найден: ${_fromRadio!.uuid}');
       
       _toRadio = meshService.characteristics.firstWhere(
         (char) => char.uuid.toString().toLowerCase() == toRadioUuid.toLowerCase(),
       );
+      print('✅ ToRadio найден: ${_toRadio!.uuid}');
       
       _fromNum = meshService.characteristics.firstWhere(
         (char) => char.uuid.toString().toLowerCase() == fromNumUuid.toLowerCase(),
       );
+      print('✅ FromNum найден: ${_fromNum!.uuid}');
 
       // Подписываемся на уведомления
+      print('Шаг 5: Подписка на уведомления...');
       await _fromNum!.setNotifyValue(true);
+      print('✅ Подписка на FromNum активна!');
       
       // Настраиваем потоки данных
+      print('Шаг 6: Настройка потоков данных...');
       _setupDataStreams();
+      print('✅ Потоки данных настроены!');
       
       // Отправляем startConfig
+      print('Шаг 7: Отправка startConfig...');
       await _sendStartConfig();
+      print('✅ startConfig отправлен!');
       
+      print('=== ПОДКЛЮЧЕНИЕ ЗАВЕРШЕНО УСПЕШНО ===');
       return true;
     } catch (e) {
-      print('Ошибка подключения к Meshtastic устройству: $e');
+      print('❌ ОШИБКА ПОДКЛЮЧЕНИЯ: $e');
       return false;
     }
   }
 
   void _setupDataStreams() {
+    print('=== НАСТРОЙКА ПОТОКОВ ДАННЫХ ===');
+    
     // Подписываемся на FromRadio данные
+    print('Подписка на FromRadio...');
     _fromRadioSubscription = _fromRadio!.lastValueStream.listen((data) {
+      print('📡 Получены данные от FromRadio: ${data.length} байт');
       _processFromRadioData(Uint8List.fromList(data));
     });
 
     // Подписываемся на FromNum уведомления
+    print('Подписка на FromNum...');
     _fromNumSubscription = _fromNum!.lastValueStream.listen((data) {
+      print('🔔 Получено уведомление FromNum: ${data.length} байт');
       _handleFromNumNotification(Uint8List.fromList(data));
     });
+    
+    print('✅ Потоки данных настроены!');
   }
 
   Future<void> _sendStartConfig() async {
