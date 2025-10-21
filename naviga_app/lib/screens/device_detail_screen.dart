@@ -144,12 +144,14 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   }
 
   void _simulateGpsData() {
-    // Имитация получения GPS данных от Meshtastic устройства
+    // Имитация получения GPS данных от подключенного Meshtastic устройства
+    // В реальности это будет через Bluetooth характеристику от T-beam
     Future.delayed(const Duration(seconds: 3), () {
-      if (_gpsEnabled) {
+      if (_gpsEnabled && _connectionState == BluetoothConnectionState.connected) {
         setState(() {
           // Примерные координаты для Новгородской области
-          _gpsCoordinates = '58.5218°N, 31.2750°E';
+          // В реальности получаем от T-beam через Bluetooth
+          _gpsCoordinates = '58.5218°N, 31.2750°E (от T-beam)';
         });
       }
     });
@@ -189,6 +191,30 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                     _buildInfoRow('ID', widget.device.remoteId.str),
                     _buildInfoRow('Имя', 'Meshtastic Device'),
                     _buildInfoRow('Статус', _status),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _connecting ? null : _connect,
+                        icon: _connecting 
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Icon(_connectionState == BluetoothConnectionState.connected 
+                                ? Icons.bluetooth_disabled 
+                                : Icons.bluetooth),
+                        label: Text(_connectionState == BluetoothConnectionState.connected 
+                            ? 'Отключиться' 
+                            : 'Подключиться'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _connectionState == BluetoothConnectionState.connected 
+                              ? Colors.red 
+                              : Colors.green,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -225,6 +251,13 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                     ),
                     const SizedBox(height: 16),
                     _buildInfoRow('Координаты', _gpsCoordinates),
+                    const SizedBox(height: 8),
+                    Text(
+                      'GPS данные получаются от подключенного T-beam устройства через Bluetooth',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
                     if (_gpsEnabled) ...[
                       const SizedBox(height: 8),
                       ElevatedButton.icon(
@@ -280,11 +313,6 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
             ],
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _connect,
-        backgroundColor: Colors.blue,
-        child: const Icon(Icons.info),
       ),
     );
   }
