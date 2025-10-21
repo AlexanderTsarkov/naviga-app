@@ -20,11 +20,30 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   bool _gpsEnabled = false;
   DateTime? _lastGpsUpdate;
   List<Map<String, dynamic>> _connectedDevices = [];
+  Timer? _updateTimer;
 
   @override
   void initState() {
     super.initState();
     _listenToConnectionState();
+    _startUpdateTimer();
+  }
+
+  @override
+  void dispose() {
+    _updateTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startUpdateTimer() {
+    // Обновляем таймеры каждую секунду для корректного отображения времени
+    _updateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          // Принудительно обновляем UI для пересчета времени
+        });
+      }
+    });
   }
 
   void _listenToConnectionState() {
@@ -192,21 +211,32 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   }
 
   Future<void> _getConnectedDevicesFromDevice() async {
+    final now = DateTime.now();
     setState(() {
       _connectedDevices = [
         {
           'id': 'T-Beam-001',
           'name': 'Охотник Иван',
           'coordinates': '58.5200°N, 31.2700°E',
-          'lastSeen': DateTime.now().subtract(const Duration(minutes: 2)),
+          'lastSeen': now.subtract(const Duration(minutes: 2, seconds: 15)),
           'rssi': -45,
+          'battery': 87,
         },
         {
           'id': 'T-Beam-002', 
           'name': 'Собака Рекс',
           'coordinates': '58.5220°N, 31.2800°E',
-          'lastSeen': DateTime.now().subtract(const Duration(minutes: 1)),
+          'lastSeen': now.subtract(const Duration(minutes: 1, seconds: 30)),
           'rssi': -38,
+          'battery': 92,
+        },
+        {
+          'id': 'T-Beam-003',
+          'name': 'Охотник Петр',
+          'coordinates': '58.5190°N, 31.2850°E',
+          'lastSeen': now.subtract(const Duration(seconds: 45)),
+          'rssi': -52,
+          'battery': 76,
         },
       ];
     });
@@ -340,21 +370,54 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                             const Icon(Icons.bluetooth_connected, color: Colors.blue),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: Text(
-                                device['name'],
-                                style: Theme.of(context).textTheme.titleMedium,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    device['name'],
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  Text(
+                                    device['id'],
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            Text(
-                              '${device['rssi']} dBm',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey[600],
-                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.battery_std,
+                                      size: 16,
+                                      color: _getBatteryColor(device['battery']),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${device['battery']}%',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: _getBatteryColor(device['battery']),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  '${device['rssi']} dBm',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
-                        _buildInfoRow('ID', device['id']),
                         _buildInfoRow('Координаты', device['coordinates']),
                         _buildInfoRow('Последний сигнал', _formatTimeAgo(device['lastSeen'])),
                       ],
@@ -402,6 +465,16 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       return '${difference.inHours} ч назад';
     } else {
       return '${difference.inDays} дн назад';
+    }
+  }
+
+  Color _getBatteryColor(int batteryLevel) {
+    if (batteryLevel > 50) {
+      return Colors.green;
+    } else if (batteryLevel > 20) {
+      return Colors.orange;
+    } else {
+      return Colors.red;
     }
   }
 }
