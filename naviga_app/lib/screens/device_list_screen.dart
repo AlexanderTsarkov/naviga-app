@@ -3,6 +3,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../services/meshtastic_service.dart';
+import 'device_detail_screen.dart';
 
 class DeviceListScreen extends StatefulWidget {
   const DeviceListScreen({super.key});
@@ -98,7 +99,12 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                             : r.device.remoteId.str),
                         subtitle: Text('RSSI: ${r.rssi}'),
                         onTap: () {
-                          // TODO: navigate to details/connect
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DeviceDetailScreen(device: r.device),
+                            ),
+                          );
                         },
                       );
                     },
