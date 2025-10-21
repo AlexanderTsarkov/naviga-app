@@ -16,13 +16,15 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
   final MeshtasticService _service = MeshtasticService();
   List<ScanResult> _results = const [];
   bool _scanning = false;
-  String _status = 'Нажмите Refresh для поиска устройств';
+  String _status = 'Поиск устройств...';
 
   @override
   void initState() {
     super.initState();
     _service.scanResultsStream.listen((r) => setState(() => _results = r));
     _checkPermissions();
+    // Автоматически начинаем сканирование при запуске
+    _start();
   }
 
   Future<void> _checkPermissions() async {

@@ -16,7 +16,6 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   bool _connecting = false;
   String _status = 'Устройство не подключено';
   final TextEditingController _codeController = TextEditingController();
-  bool _showCodeDialog = false;
   String _gpsCoordinates = 'GPS не получен';
   bool _gpsEnabled = false;
   DateTime? _lastGpsUpdate;
@@ -37,9 +36,15 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
         switch (state) {
           case BluetoothConnectionState.connected:
             _status = 'Подключено';
+            _gpsEnabled = true;
+            _getGpsDataFromDevice();
+            _getConnectedDevicesFromDevice();
             break;
           case BluetoothConnectionState.disconnected:
             _status = 'Отключено';
+            _gpsEnabled = false;
+            _gpsCoordinates = 'GPS не получен';
+            _connectedDevices.clear();
             break;
           case BluetoothConnectionState.connecting:
             _status = 'Подключение...';
@@ -125,9 +130,9 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       await Future.delayed(const Duration(seconds: 2)); // Имитация
       
       setState(() {
-        _status = 'Подключение с кодом $code - успешно!';
+        _status = 'Подключено';
         _connecting = false;
-        _gpsEnabled = true; // Автоматически включаем GPS при подключении
+        _gpsEnabled = true;
       });
       
       // Автоматически получаем GPS данные после подключения
@@ -153,8 +158,6 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   }
 
   Future<void> _getGpsDataFromDevice() async {
-    // Имитация получения GPS данных от подключенного Meshtastic устройства
-    // В реальности это будет через Bluetooth характеристику от T-beam
     setState(() {
       _gpsCoordinates = 'Получение GPS от T-beam...';
     });
@@ -173,15 +176,12 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   }
 
   void _startGpsSubscription() {
-    // Имитация подписки на обновления GPS от устройства
-    // В реальности это будет через Bluetooth characteristic notifications
     Timer.periodic(const Duration(seconds: 10), (timer) {
       if (!_gpsEnabled || _connectionState != BluetoothConnectionState.connected) {
         timer.cancel();
         return;
       }
       
-      // Имитация получения новых координат
       setState(() {
         final lat = 58.5218 + (DateTime.now().millisecond / 10000);
         final lng = 31.2750 + (DateTime.now().millisecond / 10000);
@@ -192,7 +192,6 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   }
 
   Future<void> _getConnectedDevicesFromDevice() async {
-    // Имитация получения списка связанных устройств от T-beam
     setState(() {
       _connectedDevices = [
         {
@@ -213,40 +212,84 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     });
   }
 
-  void _refreshGps() {
-    if (_gpsEnabled) {
-      setState(() {
-        _gpsCoordinates = 'Обновление GPS...';
-      });
-      _getGpsDataFromDevice();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.device.remoteId.str),
+        backgroundColor: _connectionState == BluetoothConnectionState.connected 
+            ? Colors.green[700] 
+            : null,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Основная карточка устройства
             Card(
+              elevation: _connectionState == BluetoothConnectionState.connected ? 8 : 2,
+              color: _connectionState == BluetoothConnectionState.connected 
+                  ? Colors.green[50] 
+                  : null,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Информация об устройстве',
-                      style: Theme.of(context).textTheme.titleLarge,
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.bluetooth,
+                          color: _connectionState == BluetoothConnectionState.connected 
+                              ? Colors.green 
+                              : Colors.grey,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Meshtastic Device',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: _connectionState == BluetoothConnectionState.connected 
+                                  ? Colors.green[700] 
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        if (_connectionState == BluetoothConnectionState.connected)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              'ПОДКЛЮЧЕНО',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     _buildInfoRow('ID', widget.device.remoteId.str),
-                    _buildInfoRow('Имя', 'Meshtastic Device'),
                     _buildInfoRow('Статус', _status),
+                    if (_connectionState == BluetoothConnectionState.connected) ...[
+                      const SizedBox(height: 16),
+                      _buildInfoRow('GPS координаты', _gpsCoordinates),
+                      if (_lastGpsUpdate != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Обновлено: ${_formatTimeAgo(_lastGpsUpdate!)}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.green[600],
+                          ),
+                        ),
+                      ],
+                    ],
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
@@ -275,142 +318,50 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            
+            // Связанные устройства
+            if (_connectedDevices.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Связанные устройства (${_connectedDevices.length})',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              ..._connectedDevices.map((device) => 
+                Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'GPS координаты',
-                          style: Theme.of(context).textTheme.titleLarge,
+                        Row(
+                          children: [
+                            const Icon(Icons.bluetooth_connected, color: Colors.blue),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                device['name'],
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ),
+                            Text(
+                              '${device['rssi']} dBm',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
                         ),
-                        Switch(
-                          value: _gpsEnabled,
-                          onChanged: _gpsEnabled ? null : (value) {
-                            setState(() {
-                              _gpsEnabled = value;
-                              if (value) {
-                                _gpsCoordinates = 'Получение GPS...';
-                                _getGpsDataFromDevice();
-                              } else {
-                                _gpsCoordinates = 'GPS отключен';
-                              }
-                            });
-                          },
-                        ),
+                        const SizedBox(height: 8),
+                        _buildInfoRow('ID', device['id']),
+                        _buildInfoRow('Координаты', device['coordinates']),
+                        _buildInfoRow('Последний сигнал', _formatTimeAgo(device['lastSeen'])),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    _buildInfoRow('Координаты', _gpsCoordinates),
-                    if (_lastGpsUpdate != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Обновлено: ${_formatTimeAgo(_lastGpsUpdate!)}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.green[600],
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    Text(
-                      'GPS данные получаются от подключенного T-beam устройства через Bluetooth',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    if (_gpsEnabled) ...[
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: _refreshGps,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Обновить GPS'),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (_connectedDevices.isNotEmpty) ...[
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Связанные устройства (${_connectedDevices.length})',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 16),
-                      ..._connectedDevices.map((device) => 
-                        Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            leading: const Icon(Icons.bluetooth_connected),
-                            title: Text(device['name']),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('ID: ${device['id']}'),
-                                Text('Координаты: ${device['coordinates']}'),
-                                Text('RSSI: ${device['rssi']} dBm'),
-                                Text('Последний сигнал: ${_formatTimeAgo(device['lastSeen'])}'),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ).toList(),
-                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            if (_connectionState == BluetoothConnectionState.connected) ...[
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Сервисы',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 16),
-                      FutureBuilder<List<BluetoothService>>(
-                        future: widget.device.discoverServices(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const CircularProgressIndicator();
-                          }
-                          
-                          if (snapshot.hasError) {
-                            return Text('Ошибка: ${snapshot.error}');
-                          }
-                          
-                          final services = snapshot.data ?? [];
-                          return Column(
-                            children: services.map((service) => 
-                              ListTile(
-                                leading: const Icon(Icons.bluetooth),
-                                title: Text('Service: ${service.uuid}'),
-                                subtitle: Text('Characteristics: ${service.characteristics.length}'),
-                              ),
-                            ).toList(),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              ).toList(),
             ],
           ],
         ),
@@ -420,12 +371,12 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
 
   Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 80,
+            width: 100,
             child: Text(
               '$label:',
               style: const TextStyle(fontWeight: FontWeight.bold),
