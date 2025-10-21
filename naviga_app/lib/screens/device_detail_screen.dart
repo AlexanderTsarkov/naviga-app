@@ -57,7 +57,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     });
 
     try {
-      await widget.device.connect();
+      await widget.device.connect(timeout: const Duration(seconds: 10));
     } catch (e) {
       setState(() {
         _status = 'Ошибка подключения: $e';
@@ -80,9 +80,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.device.platformName.isNotEmpty 
-            ? widget.device.platformName 
-            : 'Meshtastic Device'),
+        title: Text(widget.device.remoteId.str),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -101,11 +99,8 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                     ),
                     const SizedBox(height: 16),
                     _buildInfoRow('ID', widget.device.remoteId.str),
-                    _buildInfoRow('Имя', widget.device.platformName.isNotEmpty 
-                        ? widget.device.platformName 
-                        : 'Неизвестно'),
+                    _buildInfoRow('Имя', 'Meshtastic Device'),
                     _buildInfoRow('Статус', _status),
-                    _buildInfoRow('Тип', widget.device.deviceType.toString()),
                   ],
                 ),
               ),
