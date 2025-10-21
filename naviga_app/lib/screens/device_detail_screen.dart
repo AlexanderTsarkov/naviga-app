@@ -218,7 +218,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       setState(() {
         _gpsCoordinates = 'Обновление GPS...';
       });
-      _simulateGpsData();
+      _getGpsDataFromDevice();
     }
   }
 
@@ -296,7 +296,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                               _gpsEnabled = value;
                               if (value) {
                                 _gpsCoordinates = 'Получение GPS...';
-                                _simulateGpsData();
+                                _getGpsDataFromDevice();
                               } else {
                                 _gpsCoordinates = 'GPS отключен';
                               }
