@@ -185,7 +185,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     
     if (_gpsEnabled && _connectionState == BluetoothConnectionState.connected) {
       setState(() {
-        _gpsCoordinates = '58.5218°N, 31.2750°E (от T-beam)';
+        _gpsCoordinates = '58.5218°N, 31.2750°E (ИМИТАЦИЯ - не от реального T-beam)';
         _lastGpsUpdate = DateTime.now();
       });
       
@@ -204,39 +204,24 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       setState(() {
         final lat = 58.5218 + (DateTime.now().millisecond / 10000);
         final lng = 31.2750 + (DateTime.now().millisecond / 10000);
-        _gpsCoordinates = '${lat.toStringAsFixed(4)}°N, ${lng.toStringAsFixed(4)}°E (от T-beam)';
+        _gpsCoordinates = '${lat.toStringAsFixed(4)}°N, ${lng.toStringAsFixed(4)}°E (ИМИТАЦИЯ)';
         _lastGpsUpdate = DateTime.now();
       });
     });
   }
 
   Future<void> _getConnectedDevicesFromDevice() async {
-    final now = DateTime.now();
+    // TODO: Получить реальные данные от подключенного Meshtastic устройства
+    // Пока что показываем сообщение о том, что это имитация
     setState(() {
       _connectedDevices = [
         {
-          'id': 'T-Beam-001',
-          'name': 'Охотник Иван',
-          'coordinates': '58.5200°N, 31.2700°E',
-          'lastSeen': now.subtract(const Duration(minutes: 2, seconds: 15)),
-          'rssi': -45,
-          'battery': 87,
-        },
-        {
-          'id': 'T-Beam-002', 
-          'name': 'Собака Рекс',
-          'coordinates': '58.5220°N, 31.2800°E',
-          'lastSeen': now.subtract(const Duration(minutes: 1, seconds: 30)),
-          'rssi': -38,
-          'battery': 92,
-        },
-        {
-          'id': 'T-Beam-003',
-          'name': 'Охотник Петр',
-          'coordinates': '58.5190°N, 31.2850°E',
-          'lastSeen': now.subtract(const Duration(seconds: 45)),
-          'rssi': -52,
-          'battery': 76,
+          'id': 'ИМИТАЦИЯ',
+          'name': 'Тестовые данные (не реальные)',
+          'coordinates': 'Реальные данные будут получены от T-beam',
+          'lastSeen': DateTime.now(),
+          'rssi': 0,
+          'battery': 0,
         },
       ];
     });
