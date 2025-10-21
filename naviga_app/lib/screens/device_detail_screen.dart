@@ -14,6 +14,8 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   BluetoothConnectionState _connectionState = BluetoothConnectionState.disconnected;
   bool _connecting = false;
   String _status = 'Устройство не подключено';
+  final TextEditingController _codeController = TextEditingController();
+  bool _showCodeDialog = false;
 
   @override
   void initState() {
@@ -46,10 +48,87 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   }
 
   Future<void> _connect() async {
+    if (_connectionState == BluetoothConnectionState.connected) {
+      await _disconnect();
+      return;
+    }
+
+    // Показываем диалог для ввода кода
+    _showCodeInputDialog();
+  }
+
+  void _showCodeInputDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Код подключения'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Введите код подключения для Meshtastic устройства:'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _codeController,
+                decoration: const InputDecoration(
+                  labelText: 'Код',
+                  hintText: 'Введите код',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _codeController.clear();
+              },
+              child: const Text('Отмена'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _attemptConnection();
+              },
+              child: const Text('Подключиться'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _attemptConnection() async {
+    final code = _codeController.text.trim();
+    if (code.isEmpty) {
+      setState(() {
+        _status = 'Введите код подключения';
+      });
+      return;
+    }
+
     setState(() {
-      _status = 'Подключение пока не реализовано';
-      _connecting = false;
+      _connecting = true;
+      _status = 'Подключение с кодом: $code...';
     });
+
+    try {
+      // Здесь будет реальное подключение с кодом
+      await Future.delayed(const Duration(seconds: 2)); // Имитация
+      
+      setState(() {
+        _status = 'Подключение с кодом $code - успешно!';
+        _connecting = false;
+      });
+    } catch (e) {
+      setState(() {
+        _status = 'Ошибка подключения: $e';
+        _connecting = false;
+      });
+    }
   }
 
   Future<void> _disconnect() async {
