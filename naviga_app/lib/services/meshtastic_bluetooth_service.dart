@@ -112,17 +112,44 @@ class MeshtasticBluetoothService {
       _handleFromNumNotification(Uint8List.fromList(data));
     });
     
+    // Периодически читаем FromRadio для получения данных
+    print('Запуск периодического чтения FromRadio...');
+    Timer.periodic(const Duration(seconds: 2), (timer) {
+      print('🔄 Периодическое чтение FromRadio...');
+      _fromRadio!.read();
+    });
+    
     print('✅ Потоки данных настроены!');
   }
 
   Future<void> _sendStartConfig() async {
     try {
-      // Создаем простой startConfig пакет
-      // В реальности это должен быть protobuf, но для начала используем простой байт
-      final startConfig = Uint8List.fromList([0x01]); // Простой startConfig
-      await _toRadio!.write(startConfig);
+      print('=== ОТПРАВКА STARTCONFIG ===');
+      
+      // Пробуем разные варианты startConfig
+      // Вариант 1: Пустой пакет (может быть startConfig)
+      print('Отправляем пустой пакет...');
+      await _toRadio!.write(Uint8List(0));
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Вариант 2: Простой байт
+      print('Отправляем байт 0x01...');
+      await _toRadio!.write(Uint8List.fromList([0x01]));
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Вариант 3: Байт 0x00
+      print('Отправляем байт 0x00...');
+      await _toRadio!.write(Uint8List.fromList([0x00]));
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Вариант 4: Несколько байт
+      print('Отправляем несколько байт...');
+      await _toRadio!.write(Uint8List.fromList([0x08, 0x01]));
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      print('✅ Все варианты startConfig отправлены!');
     } catch (e) {
-      print('Ошибка отправки startConfig: $e');
+      print('❌ Ошибка отправки startConfig: $e');
     }
   }
 
