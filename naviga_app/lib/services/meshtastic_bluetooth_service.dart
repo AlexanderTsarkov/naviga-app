@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:typed_data';
-import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class MeshtasticBluetoothService {
@@ -73,12 +72,12 @@ class MeshtasticBluetoothService {
 
   void _setupDataStreams() {
     // Подписываемся на FromRadio данные
-    _fromRadioSubscription = _fromRadio!.value.listen((data) {
+    _fromRadioSubscription = _fromRadio!.lastValueStream.listen((data) {
       _processFromRadioData(Uint8List.fromList(data));
     });
 
     // Подписываемся на FromNum уведомления
-    _fromNumSubscription = _fromNum!.value.listen((data) {
+    _fromNumSubscription = _fromNum!.lastValueStream.listen((data) {
       _handleFromNumNotification(Uint8List.fromList(data));
     });
   }

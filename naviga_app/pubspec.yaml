@@ -39,7 +39,7 @@ dependencies:
   latlong2: ^0.9.1
   
   # Bluetooth and GPS
-  flutter_blue_plus: ^2.0.0
+  flutter_blue_plus: ^1.35.5
   geolocator: ^14.0.2
   
   # Storage and preferences
