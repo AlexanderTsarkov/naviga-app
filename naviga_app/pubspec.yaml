@@ -54,6 +54,10 @@ dependencies:
   
   # JSON serialization
   json_annotation: ^4.8.1
+  protobuf: ^5.0.0
+  
+  # Database
+  sqflite: ^2.3.0
 
 dev_dependencies:
   flutter_test:

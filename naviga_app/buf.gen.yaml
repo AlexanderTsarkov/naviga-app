@@ -1,0 +1,4 @@
+version: v2
+plugins:
+  - remote: protocolbuffers/dart:v1.0.0
+    out: lib/meshtastic/proto

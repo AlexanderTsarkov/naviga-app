@@ -21,6 +21,9 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   bool _gpsEnabled = false;
   DateTime? _lastGpsUpdate;
   List<Map<String, dynamic>> _connectedDevices = [];
+  List<Map<String, dynamic>> _allNodes = [];
+  List<Map<String, dynamic>> _latestPositions = [];
+  List<Map<String, dynamic>> _latestMetrics = [];
   Timer? _updateTimer;
   final MeshtasticBluetoothService _meshtasticService = MeshtasticBluetoothService();
   StreamSubscription? _gpsSubscription;
@@ -51,6 +54,29 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
         });
       }
     });
+    
+    // Загружаем данные из БД каждые 5 секунд
+    Timer.periodic(const Duration(seconds: 5), (timer) {
+      _loadDataFromDatabase();
+    });
+  }
+  
+  Future<void> _loadDataFromDatabase() async {
+    try {
+      final allNodes = await _meshtasticService.getAllNodes();
+      final latestPositions = await _meshtasticService.getLatestPositions();
+      final latestMetrics = await _meshtasticService.getLatestMetrics();
+      
+      setState(() {
+        _allNodes = allNodes;
+        _latestPositions = latestPositions;
+        _latestMetrics = latestMetrics;
+      });
+      
+      print('📊 Загружено из БД: ${allNodes.length} узлов, ${latestPositions.length} позиций, ${latestMetrics.length} метрик');
+    } catch (e) {
+      print('❌ Ошибка загрузки данных из БД: $e');
+    }
   }
 
   void _listenToConnectionState() {
@@ -65,6 +91,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
             _gpsEnabled = true;
             _getGpsDataFromDevice();
             _getConnectedDevicesFromDevice();
+            _loadDataFromDatabase(); // Загружаем данные сразу после подключения
             break;
           case BluetoothConnectionState.disconnected:
             _status = 'Отключено';
@@ -346,82 +373,51 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
             ),
             
             // Связанные устройства
-            if (_connectedDevices.isNotEmpty) ...[
+            // Карточка подключенного устройства
+            if (_connectionState == BluetoothConnectionState.connected) ...[
               const SizedBox(height: 16),
               Text(
-                'Связанные устройства (${_connectedDevices.length})',
+                'Подключенное устройство',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
-              ..._connectedDevices.map((device) => 
-                Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.bluetooth_connected, color: Colors.blue),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    device['name'],
-                                    style: Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                  Text(
-                                    device['id'],
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.battery_std,
-                                      size: 16,
-                                      color: _getBatteryColor(device['battery']),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${device['battery']}%',
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: _getBatteryColor(device['battery']),
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Text(
-                                  '${device['rssi']} dBm',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        _buildInfoRow('Координаты', device['coordinates']),
-                        _buildInfoRow('Последний сигнал', _formatTimeAgo(device['lastSeen'])),
-                      ],
-                    ),
-                  ),
-                ),
-              ).toList(),
+              _buildConnectedDeviceCard(),
             ],
+            
+        // Кнопки для запроса данных
+        if (_connectionState == BluetoothConnectionState.connected) ...[
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _requestAllPositions,
+                  icon: const Icon(Icons.location_on),
+                  label: const Text('Запросить позиции'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _requestAllTelemetry,
+                  icon: const Icon(Icons.analytics),
+                  label: const Text('Запросить метрики'),
+                ),
+              ),
+            ],
+          ),
+        ],
+        
+        // Карточки других узлов в сети
+        if (_allNodes.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text(
+            'Узлы в сети (${_allNodes.length})',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          ..._allNodes.map((node) => _buildNodeCard(node)),
+        ],
           ],
         ),
       ),
@@ -488,6 +484,225 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       return Colors.orange;
     } else {
       return Colors.red;
+    }
+  }
+
+  /// Создает карточку подключенного устройства
+  Widget _buildConnectedDeviceCard() {
+    // Находим данные подключенного устройства
+    final connectedNode = _allNodes.isNotEmpty ? _allNodes.first : null;
+    final latestMetrics = _latestMetrics.isNotEmpty ? _latestMetrics.first : null;
+    final latestPosition = _latestPositions.isNotEmpty ? _latestPositions.first : null;
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.bluetooth_connected, color: Colors.blue),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        connectedNode?['long_name'] ?? widget.device.platformName ?? 'T-beam',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Text(
+                        'ID: ${connectedNode?['node_num'] ?? 'N/A'}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.battery_std,
+                          size: 16,
+                          color: _getBatteryColorFromMetrics(latestMetrics ?? {}),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _getBatteryText(latestMetrics ?? {}),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: _getBatteryColorFromMetrics(latestMetrics ?? {}),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      'BT: N/A dBm',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildInfoRow('Статус', _status),
+            _buildInfoRow('Последнее обновление', latestMetrics?['t'] != null ? _formatTimeAgo(DateTime.fromMillisecondsSinceEpoch(latestMetrics!['t'] * 1000)) : 'N/A'),
+            _buildInfoRow('Записей в логе', '${_latestMetrics.length}'),
+            if (latestPosition != null) ...[
+              _buildInfoRow('Координаты', '${latestPosition['lat']?.toStringAsFixed(6) ?? 'N/A'}, ${latestPosition['lon']?.toStringAsFixed(6) ?? 'N/A'}'),
+              _buildInfoRow('Последняя позиция', latestPosition['t'] != null ? _formatTimeAgo(DateTime.fromMillisecondsSinceEpoch(latestPosition['t'] * 1000)) : 'N/A'),
+              _buildInfoRow('GPS записей', '${_latestPositions.length}'),
+            ] else ...[
+              _buildInfoRow('Координаты', 'GPS не получен'),
+              _buildInfoRow('GPS записей', '0'),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Создает карточку узла в сети
+  Widget _buildNodeCard(Map<String, dynamic> node) {
+    final nodeNum = node['node_num'];
+    final latestMetrics = _latestMetrics.firstWhere(
+      (m) => m['node_num'] == nodeNum,
+      orElse: () => <String, dynamic>{},
+    );
+    final latestPosition = _latestPositions.firstWhere(
+      (p) => p['node_num'] == nodeNum,
+      orElse: () => <String, dynamic>{},
+    );
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.radio, color: Colors.green),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        node['long_name'] ?? 'Узел $nodeNum',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Text(
+                        'ID: $nodeNum',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.battery_std,
+                          size: 16,
+                          color: _getBatteryColorFromMetrics(latestMetrics ?? {}),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _getBatteryText(latestMetrics ?? {}),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: _getBatteryColorFromMetrics(latestMetrics ?? {}),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      'Радио: ${latestMetrics['voltage']?.toStringAsFixed(1) ?? 'N/A'}V',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildInfoRow('Последний сигнал', node['last_seen'] != null ? _formatTimeAgo(DateTime.fromMillisecondsSinceEpoch(node['last_seen'] * 1000)) : 'N/A'),
+            _buildInfoRow('Записей метрик', '${_latestMetrics.where((m) => m['node_num'] == nodeNum).length}'),
+            if (latestPosition.isNotEmpty) ...[
+              _buildInfoRow('Координаты', '${latestPosition['lat']?.toStringAsFixed(6) ?? 'N/A'}, ${latestPosition['lon']?.toStringAsFixed(6) ?? 'N/A'}'),
+              _buildInfoRow('Последняя позиция', latestPosition['t'] != null ? _formatTimeAgo(DateTime.fromMillisecondsSinceEpoch(latestPosition['t'] * 1000)) : 'N/A'),
+              _buildInfoRow('GPS записей', '${_latestPositions.where((p) => p['node_num'] == nodeNum).length}'),
+            ] else ...[
+              _buildInfoRow('Координаты', 'GPS не получен'),
+              _buildInfoRow('GPS записей', '0'),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Получает цвет батареи из метрик
+  Color _getBatteryColorFromMetrics(Map<String, dynamic> metrics) {
+    final battery = metrics['battery_level']?.toDouble();
+    if (battery == null) return Colors.grey;
+    return _getBatteryColor(battery.round());
+  }
+
+  /// Получает текст батареи из метрик
+  String _getBatteryText(Map<String, dynamic> metrics) {
+    final battery = metrics['battery_level']?.toDouble();
+    if (battery == null) return 'N/A';
+    return '${battery.toStringAsFixed(0)}%';
+  }
+
+  /// Запрашивает позиции всех узлов
+  Future<void> _requestAllPositions() async {
+    try {
+      await _meshtasticService.requestAllPositions();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Запросы позиций отправлены')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка запроса позиций: $e')),
+      );
+    }
+  }
+
+  /// Запрашивает телеметрию всех узлов
+  Future<void> _requestAllTelemetry() async {
+    try {
+      final nodes = await _meshtasticService.getAllNodes();
+      for (final node in nodes) {
+        final nodeNum = node['node_num'] as int;
+        await _meshtasticService.requestTelemetry(nodeNum);
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Запросы телеметрии отправлены')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка запроса телеметрии: $e')),
+      );
     }
   }
 }
