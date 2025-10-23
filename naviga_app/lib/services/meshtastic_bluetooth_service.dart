@@ -71,10 +71,11 @@ class MeshtasticBluetoothService {
         ..payload = queryPos.writeToBuffer() // Пустой Position как запрос
         ..wantResponse = true;
       
-      // Создаем MeshPacket для отправки конкретному узлу
+      // Создаем MeshPacket для отправки конкретному узлу (unicast)
       final packet = MeshPacket()
         ..from = 0 // заполняется прошивкой
         ..to = nodeNum
+        ..channel = 1 // Naviga channel (где передается геолокация)
         ..decoded = data
         ..hopLimit = 3; // или из конфигурации сети
       
@@ -113,7 +114,7 @@ class MeshtasticBluetoothService {
       // Создаем MeshPacket для отправки конкретному узлу
       final packet = MeshPacket()
         ..to = nodeNum
-        ..channel = 0 // primary channel
+        ..channel = 1 // Naviga channel (где передается геолокация и телеметрия)
         ..decoded = data;
       
       // Создаем ToRadio сообщение
@@ -173,7 +174,7 @@ class MeshtasticBluetoothService {
       // Создаем MeshPacket для отправки конкретному узлу
       final packet = MeshPacket()
         ..to = nodeNum
-        ..channel = 0 // primary channel
+        ..channel = 1 // Naviga channel (где передается геолокация и телеметрия)
         ..decoded = data;
       
       // Создаем ToRadio сообщение
@@ -378,6 +379,38 @@ class MeshtasticBluetoothService {
     if (fromRadio.hasNodeInfo()) {
       print('👥 Получена информация о узле: ${fromRadio.nodeInfo.num}');
       print('👥 Имя: ${fromRadio.nodeInfo.user?.longName ?? "N/A"}');
+      print('👥 Это node_info из снимка want_config_id!');
+      
+      // ИСПРАВЛЕНИЕ: Проверяем NodeInfo.position (последняя известная позиция)
+      if (fromRadio.nodeInfo.hasPosition()) {
+        final position = fromRadio.nodeInfo.position;
+        if (position.hasLatitudeI() && position.hasLongitudeI()) {
+          final latitude = position.latitudeI / 10000000.0;
+          final longitude = position.longitudeI / 10000000.0;
+          final timestamp = position.hasTime() ? position.time : DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          
+          print('📍 NodeInfo содержит ПОСЛЕДНЮЮ ИЗВЕСТНУЮ позицию узла ${fromRadio.nodeInfo.num}: $latitude, $longitude');
+          
+          // Сохраняем в БД
+          _databaseService.savePosition(
+            nodeNum: fromRadio.nodeInfo.num,
+            timestamp: timestamp,
+            latitude: latitude,
+            longitude: longitude,
+            altitude: position.hasAltitude() ? position.altitude.toInt() : null,
+            speedMs: position.hasGroundSpeed() ? position.groundSpeed.toDouble() : null,
+            trackDeg: position.hasGroundTrack() ? position.groundTrack.toDouble() : null,
+            precisionBits: position.hasPrecisionBits() ? position.precisionBits : null,
+            rawData: Uint8List.fromList(fromRadio.nodeInfo.writeToBuffer()),
+          );
+          
+          print('✅ ПОСЛЕДНЯЯ ИЗВЕСТНАЯ позиция сохранена для узла ${fromRadio.nodeInfo.num}');
+        } else {
+          print('ℹ️ NodeInfo узла ${fromRadio.nodeInfo.num} не содержит GPS координат');
+        }
+      } else {
+        print('ℹ️ NodeInfo узла ${fromRadio.nodeInfo.num} не содержит поля position');
+      }
     }
     
     print('📡 === КОНЕЦ ОБРАБОТКИ FromRadio ===');
@@ -385,8 +418,9 @@ class MeshtasticBluetoothService {
   
   /// Обрабатывает MeshPacket сообщения
   void _handleMeshPacket(MeshPacket packet) {
-    print('📦 Получен MeshPacket от узла ${packet.from}');
-    print('📦 Portnum: ${packet.decoded?.portnum}');
+      print('📦 Получен MeshPacket от узла ${packet.from}');
+      print('📦 Канал: ${packet.channel}');
+      print('📦 Portnum: ${packet.decoded?.portnum}');
     print('📦 HasDecoded: ${packet.hasDecoded()}');
     print('📦 Payload length: ${packet.decoded?.payload.length ?? 0}');
     
@@ -604,6 +638,7 @@ class MeshtasticBluetoothService {
     try {
       print('👤 Получена информация о узле $nodeNum: ${payload.length} байт');
       print('👤 Hex: ${payload.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
+      print('👤 Это NODEINFO_APP от другого узла!');
       
       // Парсим User protobuf используя официальные классы
       final user = User.fromBuffer(payload);
@@ -621,8 +656,45 @@ class MeshtasticBluetoothService {
         print('🎭 Роль: ${user.role}');
       }
       
-      // NodeInfo не содержит GPS координат - они передаются отдельно через POSITION_APP
-      print('ℹ️ NodeInfo узла $nodeNum получен (GPS координаты передаются отдельно)');
+      // ИСПРАВЛЕНИЕ: User protobuf не содержит position - GPS передается отдельно через POSITION_APP
+      // Но проверим, есть ли в payload дополнительные данные
+      if (payload.length > 50) { // User обычно меньше 50 байт
+        print('🔍 User payload больше обычного (${payload.length} байт) - возможно содержит дополнительные данные');
+        // Попробуем парсить как NodeInfo
+        try {
+          final nodeInfo = NodeInfo.fromBuffer(payload);
+          if (nodeInfo.hasPosition()) {
+            final position = nodeInfo.position;
+            if (position.hasLatitudeI() && position.hasLongitudeI()) {
+              final latitude = position.latitudeI / 10000000.0;
+              final longitude = position.longitudeI / 10000000.0;
+              final timestamp = position.hasTime() ? position.time : DateTime.now().millisecondsSinceEpoch ~/ 1000;
+              
+              print('📍 NodeInfo содержит GPS координаты узла $nodeNum: $latitude, $longitude');
+              
+              // Сохраняем в БД
+              _databaseService.savePosition(
+                nodeNum: nodeNum,
+                timestamp: timestamp,
+                latitude: latitude,
+                longitude: longitude,
+                altitude: position.hasAltitude() ? position.altitude.toInt() : null,
+                speedMs: position.hasGroundSpeed() ? position.groundSpeed.toDouble() : null,
+                trackDeg: position.hasGroundTrack() ? position.groundTrack.toDouble() : null,
+                precisionBits: position.hasPrecisionBits() ? position.precisionBits : null,
+                rawData: payload,
+              );
+              
+              print('✅ GPS координаты из NodeInfo сохранены для узла $nodeNum');
+              return; // Выходим, так как уже обработали
+            }
+          }
+        } catch (e) {
+          print('ℹ️ Payload не является NodeInfo: $e');
+        }
+      }
+      
+      print('ℹ️ NodeInfo узла $nodeNum получен (GPS координаты передаются отдельно через POSITION_APP)');
       
       // Сохраняем информацию о узле в БД
       _databaseService.saveNodeInfo(
@@ -643,8 +715,42 @@ class MeshtasticBluetoothService {
   /// Обрабатывает уведомления FromNum - вызывает чтение FromRadio
   void _handleFromNumNotification(Uint8List data) {
     print('🔔 Получено уведомление FromNum: ${data.length} байт');
-    // При получении уведомления читаем FromRadio до пустого ответа
-    _drainFromRadio();
+    // ИСПРАВЛЕНИЕ: Читаем FromRadio ПОКА НЕ ВЕРНЕТСЯ ПУСТО (как рекомендует ChatGPT)
+    _drainFromRadioUntilEmpty();
+  }
+
+  /// Читает FromRadio ПОКА НЕ ВЕРНЕТСЯ ПУСТО (рекомендация ChatGPT)
+  Future<void> _drainFromRadioUntilEmpty() async {
+    if (_fromRadio == null) return;
+    
+    print('=== ЧТЕНИЕ FromRadio ДО ПУСТОГО ОТВЕТА ===');
+    int readCount = 0;
+    
+    while (true) {
+      try {
+        final data = await _fromRadio!.read();
+        readCount++;
+        
+        if (data.isEmpty) {
+          print('✅ FromRadio пуст - чтение завершено (прочитано $readCount пакетов)');
+          break;
+        }
+        
+        print('📡 Получены данные от FromRadio: ${data.length} байт');
+        print('📡 Hex: ${data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
+        
+        // Обрабатываем каждый пакет
+        final fromRadio = FromRadio.fromBuffer(Uint8List.fromList(data));
+        _handleFromRadio(fromRadio);
+        
+        // Небольшая пауза между чтениями
+        await Future.delayed(const Duration(milliseconds: 10));
+        
+      } catch (e) {
+        print('❌ Ошибка чтения FromRadio: $e');
+        break;
+      }
+    }
   }
 
   Future<void> disconnect() async {

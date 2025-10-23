@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/device_list_screen.dart';
+import 'meshtastic/meshtastic.dart';
 
 void main() {
   runApp(const MyApp());
@@ -12,9 +12,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Naviga',
-      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.green)),
-      home: const DeviceListScreen(),
+      title: 'Naviga - Meshtastic Test',
+      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
+      home: const MeshtasticTestUI(),
     );
   }
 }
