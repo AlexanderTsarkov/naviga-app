@@ -25,8 +25,7 @@
 ### app/ — мобильное приложение Flutter
 
 - **Платформы:** Android, iOS (основные), Linux, macOS, Web, Windows
-- **Ключевые части:** `lib/` (meshtastic/, screens/, services/, generated/), proto, android/, ios/
-- **Статус:** переход от POC к продукту
+- **Статус:** чистый лист — минимальный каркас (main.dart, один экран). Весь POC-код удалён, продукт Naviga делается с нуля, шаг за шагом. Старый код в archive/.
 
 ### firmware/, backend/, web/
 

@@ -1,21 +1,40 @@
 import 'package:flutter/material.dart';
-import 'meshtastic/meshtastic.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const NavigaApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+/// Naviga — автономная навигация и связь.
+/// Каркас приложения: код добавляется шаг за шагом.
+class NavigaApp extends StatelessWidget {
+  const NavigaApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Naviga - Meshtastic Test',
-      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
-      home: const MeshtasticTestUI(),
+      title: 'Naviga',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      home: const _HomePage(),
     );
   }
 }
- 
+
+class _HomePage extends StatelessWidget {
+  const _HomePage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Naviga'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      ),
+      body: const Center(
+        child: Text('Naviga — чистый лист. Код добавляется шаг за шагом.'),
+      ),
+    );
+  }
+}
