@@ -9,7 +9,7 @@
 - **Offline Maps**: Pre-loaded maps for specific regions (Russia, Estonia)
 - **Real-time Tracking**: GPS position sharing between group members
 - **Geo-objects**: Share waypoints, hunting spots, and danger zones
-- **Cross-platform**: Android and iOS support
+- **Cross-platform**: Android and iOS (Flutter), Web app, Backend
 
 ## 🗺️ Target Regions
 
@@ -17,6 +17,21 @@
 - Rostov Oblast, Russia  
 - Yaroslavl Oblast, Russia
 - Estonia
+
+## 📁 Repository structure (Variant B)
+
+```
+Naviga/
+├── app/           # Mobile app (Flutter, iOS + Android)
+├── firmware/      # Firmware (see docs/firmware)
+├── backend/       # Backend
+├── web/           # Web app
+├── docs/          # Documentation (firmware/, mobile-app/, backend/, web/, design/, adr/)
+├── tools/         # Scripts and utilities
+└── README.md
+```
+
+Documentation: [docs/](docs/) — structure and plans in [docs/CLEAN_SLATE.md](docs/CLEAN_SLATE.md), [docs/REPO_STRUCTURE.md](docs/REPO_STRUCTURE.md).
 
 ## 🛠️ Technology Stack
 
@@ -27,30 +42,25 @@
 
 ## 📱 Project Status
 
-Currently in **POC (Proof of Concept)** phase, focusing on:
-- ✅ Meshtastic device integration
-- 🔄 Offline map implementation
-- ⏳ Basic mesh communication
-- ⏳ Field testing in target regions
+Transition from POC to product development; repository reorganized for clean start (see [docs/CLEAN_SLATE.md](docs/CLEAN_SLATE.md)).
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Flutter SDK
+- Flutter SDK (for app)
 - Android Studio / Xcode
-- Meshtastic T-beam device
+- Meshtastic T-beam device (optional, for field use)
 
-### Installation
+### Mobile app
 ```bash
-git clone https://github.com/AlexanderTsarkov/naviga-app.git
-cd naviga-app
+git clone <repo-url>
+cd Naviga/app
 flutter pub get
 flutter run
 ```
 
-## 📋 Development Plan
-
-See [POC Implementation Plan](docs/План%20реализации%20POC.md) for detailed development roadmap.
+### Firmware
+See [docs/firmware/](docs/firmware/) and [docs/REFERENCE_REPOS.md](docs/REFERENCE_REPOS.md).
 
 ## 🤝 Contributing
 

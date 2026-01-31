@@ -1,0 +1,15 @@
+# Reference repos: Meshtastic Android/iOS/Firmware (read-only, not part of Naviga build)
+# See docs/REFERENCE_REPOS.md
+meshtastic-android/
+meshtastic-ios/
+meshtastic-firmware/
+reference/
+
+# Archive of POC state (optional: remove this line if you want to commit archives)
+archive/
+
+# Firmware build artifacts (binaries)
+firmware-release/
+
+# OS
+.DS_Store
