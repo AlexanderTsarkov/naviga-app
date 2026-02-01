@@ -1,0 +1,38 @@
+# Minimal CI: Formatting/lint must fail if style is broken.
+# Issue: https://github.com/AlexanderTsarkov/naviga-app/issues/5
+# Commands: dart format --output=none --set-exit-if-changed app/; yamllint .github/workflows/*.yml
+
+name: CI Lint
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter (for dart format)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Check Dart formatting
+        run: dart format --output=none --set-exit-if-changed app/
+
+      - name: Set up Python (for yamllint)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Lint workflow YAML
+        run: yamllint .github/workflows/
+        continue-on-error: false
