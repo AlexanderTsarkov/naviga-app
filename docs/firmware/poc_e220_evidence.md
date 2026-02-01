@@ -17,6 +17,21 @@
   - M0/M1: as per datasheet for mode (e.g. normal operation vs config).
 - **Tooling:** Dual-ESP32 serial capture via `archive/poc-20260131/tools/dual_serial_log.py` (two boards, timestamped logs, optional RTS reset).
 
+### 1.1. Library Used in POC (Message Exchange Between 2 Boards)
+
+В тестовом коде обмена сообщениями между двумя платами использовалась **внешняя библиотека** для работы с E220 (не собственный низкоуровневый драйвер). В репозитории Naviga тестовый firmware и `platformio.ini` не хранятся; точное имя и версия библиотеки восстанавливаются по проекту тестов (например, из `lib_deps` в meshtastic-firmware или локального стенда).
+
+Типичные варианты для E220-400T30D (LLCC68) под Arduino/ESP32 и PlatformIO:
+
+| Библиотека | Описание / источник |
+|------------|----------------------|
+| **EByte LoRa E220 Series Library** | [xreef/EByte_LoRa_E220_Series_Library](https://github.com/xreef/EByte_LoRa_E220_Series_Library) — поддержка UART/SPI, конфиг, TX/RX, примеры для двух устройств. |
+| **Renzo Mischianti — Ebyte LoRa E220 LLCC68** | Документация и примеры: [mischianti.org](https://mischianti.org/ebyte-lora-e220-llcc68-device-for-arduino-esp32-or-esp8266-library-2/); часто используется вместе с библиотекой выше или аналогом. |
+
+Рекомендация для будущей реализации OOTB Radio v0: зафиксировать выбранную библиотеку и версию в `firmware/platformio.ini` (или аналоге) и не копировать её код в репо — подтягивать как зависимость (см. также `archive/poc-20260131/docs/CLEAN_SLATE.md`, раздел про E220/LoRa как зависимости).
+
+*Если при восстановлении тестового проекта будет найдено точное имя пакета (например, `lib_deps = ...`), его стоит добавить сюда для полноты evidence.*
+
 ---
 
 ## 2. What Was Proven Working (Checklist)
