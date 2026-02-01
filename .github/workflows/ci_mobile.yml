@@ -1,0 +1,36 @@
+# Minimal CI: Mobile (Flutter) must analyze and build.
+# Issue: https://github.com/AlexanderTsarkov/naviga-app/issues/5
+# Commands: flutter pub get, flutter analyze, flutter build apk --debug (in app/)
+
+name: CI Mobile
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: app
+
+      - name: Analyze
+        run: flutter analyze
+        working-directory: app
+
+      - name: Build APK (debug)
+        run: flutter build apk --debug
+        working-directory: app

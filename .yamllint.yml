@@ -1,0 +1,7 @@
+# Minimal yamllint config for .github/workflows (Issue #5).
+# Relax line-length so workflow files pass; focus on syntax/indent.
+extends: default
+rules:
+  line-length:
+    max: 200
+    allow-non-breakable-inline-mappings: true
