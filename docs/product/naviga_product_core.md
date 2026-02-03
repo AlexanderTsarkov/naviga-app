@@ -35,13 +35,13 @@ UI и “мозг продукта”:
 * лог/трек,  
 * настройки донгла,  
 * позже: сценарии (охота и т.д.).  
-   Вижн-документ проекта «Навига» …
+   [Вижн (Decision Edition)](naviga_vision_decision_edition.md)
 
 ### **2.4. OOTB (Out of the Box)**
 
 Базовый режим работы, доступный всем, **без охоты, без ролей, без JOIN, без mesh-оптимизаций**. Он должен быть самодостаточным продуктом.
 
-Навига \_Out of the box\_ и актив…
+[OOTB и активация сценариев](naviga_ootb_and_activation_scenarios.md)
 
 ---
 
@@ -53,7 +53,7 @@ UI и “мозг продукта”:
 * Любая нода ведёт список известных нод (NodeTable).  
 * Донгл отдаёт NodeTable в телефон.  
 * Приложение показывает ноды на карте и в списке.  
-   Навига \_Out of the box\_ и актив…
+   [OOTB и активация сценариев](naviga_ootb_and_activation_scenarios.md)
 
 ### **3.2. Охота (надстройка) — позже**
 
@@ -117,13 +117,13 @@ UI и “мозг продукта”:
 
 JOIN — механизм присоединения к сессии с Session Master, выдача short\_id и anchor для дельта-координат.
 
-Неформальное описание логики пр…
+[JOIN логика v1.2](naviga_join_session_logic_v1_2.md)
 
 ### **6.2. Mesh (для охоты/масштабирования, позже)**
 
 Концепция распространения геопакетов через покрывающую маску (covered\_mask) и объединённую best\_mask для уменьшения лишних ретрансляций.
 
-Навига Mesh\_ концептуальная спе…
+[Mesh концепт v1.4](naviga_mesh_protocol_concept_v1_4.md)
 
 ---
 
@@ -133,7 +133,7 @@ JOIN — механизм присоединения к сессии с Session 
 
 * донгл \= BLE \+ радио \+ питание (+ возможно GNSS)  
 * маяк/ошейник — позже, в OOTB v0 не обязателен (можно вторую “ноду” как донгл без телефона).  
-   Вижн-документ проекта «Навига» …
+   [Вижн (Decision Edition)](naviga_vision_decision_edition.md)
 
 ---
 
@@ -164,13 +164,13 @@ JOIN — механизм присоединения к сессии с Session 
 ## **9\. Статус существующих документов**
 
 * Vision (Decision Edition) — **историческая база \+ чеклист** (статус: `archive+reference`)  
-   Вижн-документ проекта «Навига» …  
+   [naviga_vision_decision_edition.md](naviga_vision_decision_edition.md)  
 * OOTB письмо — источник принципов, вшито в OOTB разделы (статус: `draft/reference`)  
-   Навига \_Out of the box\_ и актив…  
+   [naviga_ootb_and_activation_scenarios.md](naviga_ootb_and_activation_scenarios.md)  
 * JOIN — спецификация для охоты (статус: `active/future`)  
-   Неформальное описание логики пр…  
+   [naviga_join_session_logic_v1_2.md](naviga_join_session_logic_v1_2.md)  
 * Mesh — спецификация протокола (статус: `active/future`)  
-   Навига Mesh\_ концептуальная спе…
+   [naviga_mesh_protocol_concept_v1_4.md](naviga_mesh_protocol_concept_v1_4.md)
 
 ---
 
