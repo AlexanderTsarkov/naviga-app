@@ -33,7 +33,7 @@
 | — | [docs/firmware/gnss_v0.md](../firmware/gnss_v0.md), [docs/firmware/hal_contracts_v0.md](../firmware/hal_contracts_v0.md) (IGnss) — GNSS v0 contract + HAL |
 | — | [docs/adr/radio_band_strategy_v0.md](../adr/radio_band_strategy_v0.md) — ADR radio band + OOTB public profile defaults |
 
-**Опорные доки в репо:** [docs/product/OOTB_v0_analysis_and_plan.md](../product/OOTB_v0_analysis_and_plan.md), [docs/product/Naviga — Product Core.md](../product/Naviga%20—%20Product%20Core.md).
+**Опорные доки в репо:** [docs/product/OOTB_v0_analysis_and_plan.md](../product/OOTB_v0_analysis_and_plan.md), [docs/product/naviga_product_core.md](../product/naviga_product_core.md).
 
 ---
 

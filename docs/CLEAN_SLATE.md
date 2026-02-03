@@ -69,7 +69,7 @@ git restore docs/
 - `docs/Troubleshooting position updates.md`
 - `docs/meshtastic_flutter_cursor.md`
 - `docs/meshtastic_position_telemetry_flutter_cursor.md`
-- `docs/Виджн-документ проекта «Навига» (Decision Edition).md`
+- `docs/product/naviga_vision_decision_edition.md`
 - `docs/План реализации POC.md`
 
 ---
