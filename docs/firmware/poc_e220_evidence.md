@@ -2,7 +2,7 @@
 
 **Purpose:** Extract engineering evidence from the archived POC for the E220-400T30D radio path. No code migration—documentation only. Used to inform the OOTB Radio v0 spec and firmware HAL.
 
-**Related:** [OOTB v0 analysis and plan](../product/OOTB_v0_analysis_and_plan.md) (Phase 0.5.1), Issue #7.
+**Related:** [OOTB v0 analysis and plan](../product/OOTB_v0_analysis_and_plan.md) (Phase 0.5.1), Issue #7. Конфигурация OOTB для Sprint 1 — [OOTB Radio preset v0](../product/ootb_radio_preset_v0.md).
 
 ---
 
