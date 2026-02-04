@@ -1,5 +1,24 @@
 # Документация: прошивка
 
-Документы по прошивке Naviga (Meshtastic, T-Beam, сборка, Git-ветки).
+Документы по прошивке Naviga.
 
-См. также [Настройка Git для прошивки](README_GIT_SETUP.md).
+## Build + flash (PlatformIO)
+PlatformIO проект находится в `firmware/`.
+
+### Build
+```bash
+cd firmware
+pio run -e devkit_e220_oled
+```
+
+### Flash (USB)
+```bash
+cd firmware
+pio run -e devkit_e220_oled -t upload
+```
+
+### Serial monitor
+```bash
+cd firmware
+pio device monitor -b 115200
+```
