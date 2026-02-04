@@ -24,7 +24,7 @@ void app_init() {
   get_device_mac_bytes(mac);
   const uint64_t full_id = get_device_full_id_u64();
   const uint16_t short_id = get_device_short_id_u16();
-  node_table.init_self(full_id, short_id, millis());
+  node_table.init_self(full_id, short_id, static_cast<uint32_t>(millis()));
 
   char full_id_hex[20] = {0};
   char mac_hex[13] = {0};
@@ -34,6 +34,13 @@ void app_init() {
   format_short_id_hex(short_id, short_id_hex, sizeof(short_id_hex));
 
   const auto& profile = get_hw_profile();
+  Serial.println();
+  Serial.println("=== Naviga OOTB skeleton ===");
+  Serial.print("fw: ");
+  Serial.println("ootb-11.1-skeleton");
+  Serial.print("hw_profile: ");
+  Serial.println(profile.name);
+
   Serial.println("=== Node identity ===");
   Serial.print("full_id_u64: ");
   Serial.println(full_id_hex);
@@ -41,8 +48,6 @@ void app_init() {
   Serial.println(mac_hex);
   Serial.print("short_id: ");
   Serial.println(short_id_hex);
-  Serial.print("hw_profile: ");
-  Serial.println(profile.name);
 }
 
 void app_tick(uint32_t now_ms) {
