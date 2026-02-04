@@ -3,4 +3,5 @@
 **File naming convention:** English-only filenames (ASCII), `snake_case`, no spaces, no Cyrillic.  
 Reason: reliable Markdown links and path handling across GitHub, editors, and tooling.
 
-**Architecture entry point:** [docs/architecture/index.md](../architecture/index.md).
+## Entry points / Navigation
+- **Architecture Index:** [docs/architecture/index.md](../architecture/index.md)
