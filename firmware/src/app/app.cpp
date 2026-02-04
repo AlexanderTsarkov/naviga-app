@@ -5,6 +5,7 @@
 #include "app/node_table.h"
 #include "hw_profile.h"
 #include "platform/device_id.h"
+#include "services/ble_service.h"
 
 namespace naviga {
 
@@ -13,6 +14,7 @@ namespace {
 uint32_t last_heartbeat_ms = 0;
 uint32_t last_summary_ms = 0;
 NodeTable node_table;
+BleService ble_service;
 
 } // namespace
 
@@ -34,10 +36,21 @@ void app_init() {
   format_short_id_hex(short_id, short_id_hex, sizeof(short_id_hex));
 
   const auto& profile = get_hw_profile();
+  const DeviceInfoData device_info = {
+      .fw_version = "ootb-11.3-ble",
+      .hw_profile_name = profile.name,
+      .band_id = 433,
+      .public_channel_id = 1,
+      .full_id_u64 = full_id,
+      .short_id = short_id,
+  };
+
+  ble_service.init(device_info, &node_table);
+
   Serial.println();
   Serial.println("=== Naviga OOTB skeleton ===");
   Serial.print("fw: ");
-  Serial.println("ootb-11.1-skeleton");
+  Serial.println(device_info.fw_version);
   Serial.print("hw_profile: ");
   Serial.println(profile.name);
 
