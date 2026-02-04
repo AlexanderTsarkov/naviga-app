@@ -45,9 +45,10 @@ uint64_t get_device_full_id_u64() {
   uint8_t mac[6] = {0};
   get_device_mac_bytes(mac);
   uint64_t id = 0;
-  // Lower 6 bytes = MAC bytes in order (little-endian packing).
+  // Canonical order: MAC bytes [0..5] map to hex string and full_id_u64.
+  // full_id_u64 = 0x0000 <mac[0]..mac[5]> (big-endian packing into lower 6 bytes).
   for (int i = 0; i < 6; ++i) {
-    id |= static_cast<uint64_t>(mac[i]) << (8 * i);
+    id = (id << 8) | mac[i];
   }
   return id;
 }
