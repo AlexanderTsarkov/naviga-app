@@ -1,6 +1,7 @@
 # Naviga / OOTB v0 — карта работ (Workmap)
 
 Один документ: план, прогресс, границы scope. Issues [#2](https://github.com/AlexanderTsarkov/naviga-app/issues/2)–[#36](https://github.com/AlexanderTsarkov/naviga-app/issues/36).
+Architecture Index: [docs/architecture/index.md](../architecture/index.md).
 
 ---
 
