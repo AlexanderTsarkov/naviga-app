@@ -11,7 +11,7 @@
 ## B) Layer map (high-level)
 - **Firmware (ESP32)**
   - Ответственность: GNSS → beacon cadence → GEO_BEACON TX/RX → NodeTable → BLE snapshot/telemetry.
-  - Ключевые модули/слои: **Domain** (NodeTable, cadence), **Protocol** (GEO_BEACON, BLE payloads), **HAL** (IRadio/IGnss/IBleTransport/ILog), **Scheduler/tick** (GNSSTask/RadioRxTask/BeaconTxTask/BleTask).
+  - Ключевые модули/слои: **Domain** (NodeTable, cadence), **Protocol** (GEO_BEACON, BLE payloads), **HAL** (IRadio/IGnss/IBleTransport/ILog), **Scheduler/tick** (GNSSTask/RadioRxTask/BeaconTxTask/BleTask). Радио драйвер: Issue [#21](https://github.com/AlexanderTsarkov/naviga-app/issues/21).
 - **Mobile app**
   - Ответственность: BLE-клиент, список нод, карта/“я”, базовый лог.
   - Ключевые экраны/флоу: **BLE connect + DeviceInfo**, **Node list** (seed), **Map/Me** (planned), **Log** (seed minimal).
