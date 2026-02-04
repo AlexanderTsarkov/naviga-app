@@ -73,3 +73,4 @@ See: [naviga_mesh_protocol_concept_v1_4.md](../product/naviga_mesh_protocol_conc
 - **Packet philosophy:** радио-пакеты частые и **минимальные** по размеру; расширения — **опциональны**.
 - **Public vs Private:** `public_channel_id = 1` зарезервирован под OOTB Public.
 - **ADR governance rule:** если документ меняет ранее принятое решение, он **обязан** ссылаться на ADR (новый или обновлённый). ADR — источник истины по решениям; Architecture Index на них ссылается.
+- **ADR change rule (PR):** любой PR, который добавляет/обновляет ADR, **обязан** обновить этот Architecture Index в том же PR.
