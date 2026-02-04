@@ -38,3 +38,7 @@ jobs:
       - name: Build firmware
         run: pio run
         working-directory: firmware
+
+      - name: Run HAL mock tests (native)
+        run: pio test -e test_native
+        working-directory: firmware
