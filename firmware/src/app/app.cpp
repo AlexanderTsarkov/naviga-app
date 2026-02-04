@@ -5,6 +5,7 @@
 #include "app/node_table.h"
 #include "hw_profile.h"
 #include "platform/device_id.h"
+#include "platform/timebase.h"
 #include "services/ble_service.h"
 
 namespace naviga {
@@ -22,11 +23,21 @@ void app_init() {
   last_heartbeat_ms = 0;
   last_summary_ms = 0;
 
+  const auto& profile = get_hw_profile();
+  const char* fw_version = "ootb-11.3-ble";
+
+  Serial.println();
+  Serial.println("=== Naviga OOTB skeleton ===");
+  Serial.print("fw: ");
+  Serial.println(fw_version);
+  Serial.print("hw_profile: ");
+  Serial.println(profile.name);
+
   uint8_t mac[6] = {0};
   get_device_mac_bytes(mac);
   const uint64_t full_id = get_device_full_id_u64();
   const uint16_t short_id = get_device_short_id_u16();
-  node_table.init_self(full_id, short_id, static_cast<uint32_t>(millis()));
+  node_table.init_self(full_id, short_id, uptime_ms());
 
   char full_id_hex[20] = {0};
   char mac_hex[13] = {0};
@@ -35,25 +46,6 @@ void app_init() {
   format_full_id_mac_hex(mac, mac_hex, sizeof(mac_hex));
   format_short_id_hex(short_id, short_id_hex, sizeof(short_id_hex));
 
-  const auto& profile = get_hw_profile();
-  const DeviceInfoData device_info = {
-      .fw_version = "ootb-11.3-ble",
-      .hw_profile_name = profile.name,
-      .band_id = 433,
-      .public_channel_id = 1,
-      .full_id_u64 = full_id,
-      .short_id = short_id,
-  };
-
-  ble_service.init(device_info, &node_table);
-
-  Serial.println();
-  Serial.println("=== Naviga OOTB skeleton ===");
-  Serial.print("fw: ");
-  Serial.println(device_info.fw_version);
-  Serial.print("hw_profile: ");
-  Serial.println(profile.name);
-
   Serial.println("=== Node identity ===");
   Serial.print("full_id_u64: ");
   Serial.println(full_id_hex);
@@ -61,6 +53,16 @@ void app_init() {
   Serial.println(mac_hex);
   Serial.print("short_id: ");
   Serial.println(short_id_hex);
+
+  const DeviceInfoData device_info = {
+      .fw_version = fw_version,
+      .hw_profile_name = profile.name,
+      .band_id = 433,
+      .public_channel_id = 1,
+      .full_id_u64 = full_id,
+      .short_id = short_id,
+  };
+  ble_service.init(device_info, &node_table);
 }
 
 void app_tick(uint32_t now_ms) {
