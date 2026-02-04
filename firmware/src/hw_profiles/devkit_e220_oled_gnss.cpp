@@ -2,7 +2,7 @@
 
 namespace naviga {
 
-const HwProfile kDevkitE220OledGnssProfile = {
+extern const HwProfile kDevkitE220OledGnssProfile = {
     "devkit_e220_oled_gnss",
     Pins{
         .lora_m0 = 10,
