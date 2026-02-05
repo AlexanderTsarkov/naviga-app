@@ -1,6 +1,6 @@
 #pragma once
 
-#include "hal/interfaces.h"
+#include "naviga/hal/interfaces.h"
 
 namespace naviga {
 

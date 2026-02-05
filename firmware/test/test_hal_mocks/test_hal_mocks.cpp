@@ -2,17 +2,11 @@
 
 #include <cstdint>
 
-#include "hal/interfaces.h"
-#include "hal/mocks/mock_ble_transport.h"
-#include "hal/mocks/mock_gnss.h"
-#include "hal/mocks/mock_log.h"
-#include "hal/mocks/mock_radio.h"
-
-// Compile mock implementations directly into this test binary.
-#include "hal/mocks/mock_ble_transport.cpp"
-#include "hal/mocks/mock_gnss.cpp"
-#include "hal/mocks/mock_log.cpp"
-#include "hal/mocks/mock_radio.cpp"
+#include "naviga/hal/interfaces.h"
+#include "naviga/hal/mocks/mock_ble_transport.h"
+#include "naviga/hal/mocks/mock_gnss.h"
+#include "naviga/hal/mocks/mock_log.h"
+#include "naviga/hal/mocks/mock_radio.h"
 
 using namespace naviga;
 

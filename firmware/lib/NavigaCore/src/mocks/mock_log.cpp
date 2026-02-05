@@ -1,4 +1,4 @@
-#include "hal/mocks/mock_log.h"
+#include "naviga/hal/mocks/mock_log.h"
 
 #include <cstring>
 

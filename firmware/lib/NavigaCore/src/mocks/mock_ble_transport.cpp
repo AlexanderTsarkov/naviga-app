@@ -1,4 +1,4 @@
-#include "hal/mocks/mock_ble_transport.h"
+#include "naviga/hal/mocks/mock_ble_transport.h"
 
 #include <algorithm>
 #include <cstring>

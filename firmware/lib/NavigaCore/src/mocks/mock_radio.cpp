@@ -1,4 +1,4 @@
-#include "hal/mocks/mock_radio.h"
+#include "naviga/hal/mocks/mock_radio.h"
 
 #include <algorithm>
 #include <cstring>

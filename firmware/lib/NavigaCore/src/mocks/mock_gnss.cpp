@@ -1,4 +1,4 @@
-#include "hal/mocks/mock_gnss.h"
+#include "naviga/hal/mocks/mock_gnss.h"
 
 namespace naviga {
 
