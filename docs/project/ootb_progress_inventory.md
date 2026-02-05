@@ -6,6 +6,7 @@
 
 ## A) Status snapshot
 - Issue [#11](https://github.com/AlexanderTsarkov/naviga-app/issues/11) is **OPEN**, but steps **11.1–11.4** are delivered via merged PRs.
+- Issue [#18](https://github.com/AlexanderTsarkov/naviga-app/issues/18) is **DONE** (PR #57).
 - Firmware bring-up (skeleton, identity, BLE read-only, GNSS stub) is in place; radio TX/RX is not yet started.
 - Docs-only artifacts for earlier phase items (#3–#10) are closed.
 
@@ -27,12 +28,12 @@
 
 ## D) Remaining scope in #11 and next recommended issue
 - **Issue #11**: still open; close after confirming doc status and checklist closure in GitHub.
-- **Recommended next issue:** [#18 HAL interfaces + mock implementations](https://github.com/AlexanderTsarkov/naviga-app/issues/18)
+- **Recommended next issue:** [#21 HAL radio driver](https://github.com/AlexanderTsarkov/naviga-app/issues/21)
 
 ## E) Next 3 suggested steps (from OOTB plan)
-1) **[#18] HAL interfaces + mock implementations** — unblock hardware abstraction and tests.  
-2) **[#21] HAL radio driver** — start real TX/RX path (per decision in issue).  
-3) **[#23] GEO_BEACON codec** — radio payload encode/decode for end-to-end.
+1) **[#21] HAL radio driver** — start real TX/RX path (per decision in issue).  
+2) **[#23] GEO_BEACON codec** — radio payload encode/decode for end-to-end.  
+3) **[#19] Firmware module tree** — align structure for upcoming domain/protocol layers.
 
 ## OOTB Plan Issues (2–36)
 | Issue | Title | Planned Scope | Status | Evidence |
@@ -53,7 +54,7 @@
 | [#15](https://github.com/AlexanderTsarkov/naviga-app/issues/15) | 1.6 OOTB BLE v0 spec | Doc | Open | N/A |
 | [#16](https://github.com/AlexanderTsarkov/naviga-app/issues/16) | 1.7 Test Plan v0 | Doc | Open | N/A |
 | [#17](https://github.com/AlexanderTsarkov/naviga-app/issues/17) | 1.8 ADR: OOTB scope | Doc | Open | N/A |
-| [#18](https://github.com/AlexanderTsarkov/naviga-app/issues/18) | 2.0 HAL interfaces + mocks | Code | Open | N/A |
+| [#18](https://github.com/AlexanderTsarkov/naviga-app/issues/18) | 2.0 HAL interfaces + mocks | Code | Done | PR [#57](https://github.com/AlexanderTsarkov/naviga-app/pull/57) |
 | [#19](https://github.com/AlexanderTsarkov/naviga-app/issues/19) | 2.1 Firmware module tree | Code structure | Open | N/A |
 | [#20](https://github.com/AlexanderTsarkov/naviga-app/issues/20) | 2.2 Logging v0 | Code | Open | N/A |
 | [#21](https://github.com/AlexanderTsarkov/naviga-app/issues/21) | 2.3 HAL radio driver | Code | Open | N/A |

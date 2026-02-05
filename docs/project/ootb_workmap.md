@@ -58,11 +58,11 @@ Start here — Architecture Index: [docs/architecture/index.md](../architecture/
 | 15 | [#15](https://github.com/AlexanderTsarkov/naviga-app/issues/15) | 1.6 OOTB BLE v0 — спецификация | 1 | docs | Todo | docs/protocols/ootb_ble_v0.md | — |
 | 16 | [#16](https://github.com/AlexanderTsarkov/naviga-app/issues/16) | 1.7 Test Plan v0 | 1 | docs | Todo | docs/product/ootb_test_plan_v0.md | — |
 | 17 | [#17](https://github.com/AlexanderTsarkov/naviga-app/issues/17) | 1.8 ADR: границы OOTB v0 | 1 | docs | Todo | docs/adr/ootb_scope_v0.md | — |
-| 18 | [#18](https://github.com/AlexanderTsarkov/naviga-app/issues/18) | 2.0 HAL interfaces + mock implementations | 2 | firmware | Todo | firmware/ (interfaces + mocks) | 1.4 (HAL contracts) |
+| 18 | [#18](https://github.com/AlexanderTsarkov/naviga-app/issues/18) | 2.0 HAL interfaces + mock implementations | 2 | firmware | Todo | firmware/lib/NavigaCore (interfaces + mocks) | 1.4 (HAL contracts) |
 | 19 | [#19](https://github.com/AlexanderTsarkov/naviga-app/issues/19) | 2.1 Дерево модулей firmware по слоям | 2 | firmware | Todo | firmware/ README, domain/, protocol/, hal/ | 1.2 |
 | 20 | [#20](https://github.com/AlexanderTsarkov/naviga-app/issues/20) | 2.2 Logging v0 (ring-buffer + export) | 2 | firmware | Todo | firmware/ | 2.0 |
-| 21 | [#21](https://github.com/AlexanderTsarkov/naviga-app/issues/21) | 2.3 HAL радио (реальный драйвер) | 2 | firmware | Todo | firmware/hal/ | 2.0, 1.4, POC evidence |
-| 22 | [#22](https://github.com/AlexanderTsarkov/naviga-app/issues/22) | 2.4 HAL BLE (реальный транспорт) | 2 | firmware | Todo | firmware/hal/ | 2.0, 1.4 |
+| 21 | [#21](https://github.com/AlexanderTsarkov/naviga-app/issues/21) | 2.3 HAL радио (реальный драйвер) | 2 | firmware | Todo | firmware/src/platform/ | 2.0, 1.4, POC evidence |
+| 22 | [#22](https://github.com/AlexanderTsarkov/naviga-app/issues/22) | 2.4 HAL BLE (реальный транспорт) | 2 | firmware | Todo | firmware/src/platform/ | 2.0, 1.4 |
 | 23 | [#23](https://github.com/AlexanderTsarkov/naviga-app/issues/23) | 2.5 Протокол GEO_BEACON (кодер/декодер) | 2 | firmware | Todo | firmware/protocol/ | 1.5 (Radio v0 spec) |
 | 24 | [#24](https://github.com/AlexanderTsarkov/naviga-app/issues/24) | 2.6 NodeTable (domain) | 2 | firmware | Todo | firmware/domain/ | 1.3 (NodeTable spec) |
 | 25 | [#25](https://github.com/AlexanderTsarkov/naviga-app/issues/25) | 2.7 Логика beacon (domain) | 2 | firmware | Todo | firmware/domain/ | 2.5, 2.6, 2.3, 2.4 |
