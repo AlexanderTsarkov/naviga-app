@@ -44,6 +44,19 @@ void get_device_mac_bytes(uint8_t out_mac[6]) {
 uint64_t get_device_full_id_u64() {
   uint8_t mac[6] = {0};
   get_device_mac_bytes(mac);
+  return full_id_from_mac(mac);
+}
+
+uint16_t get_device_short_id_u16() {
+  uint8_t mac[6] = {0};
+  get_device_mac_bytes(mac);
+  return short_id_from_mac(mac);
+}
+
+uint64_t full_id_from_mac(const uint8_t mac[6]) {
+  if (!mac) {
+    return 0;
+  }
   uint64_t id = 0;
   // Canonical order: MAC bytes [0..5] map to hex string and full_id_u64.
   // full_id_u64 = 0x0000 <mac[0]..mac[5]> (big-endian packing into lower 6 bytes).
@@ -53,9 +66,10 @@ uint64_t get_device_full_id_u64() {
   return id;
 }
 
-uint16_t get_device_short_id_u16() {
-  uint8_t mac[6] = {0};
-  get_device_mac_bytes(mac);
+uint16_t short_id_from_mac(const uint8_t mac[6]) {
+  if (!mac) {
+    return 0;
+  }
   // CRC16-CCITT-FALSE over the 6 MAC bytes.
   return crc16_ccitt_false(mac, 6);
 }

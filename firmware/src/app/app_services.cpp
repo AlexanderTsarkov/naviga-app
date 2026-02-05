@@ -1,12 +1,14 @@
 #include "app/app_services.h"
 
-#ifdef ARDUINO
-#include <Arduino.h>
-#endif
+#include <cstdio>
 
 #include "app/node_table.h"
 #include "hw_profile.h"
+#include "platform/arduino_clock.h"
+#include "platform/arduino_gpio.h"
+#include "platform/arduino_logger.h"
 #include "platform/device_id.h"
+#include "platform/esp_device_id_provider.h"
 #include "platform/e220_radio.h"
 #include "platform/timebase.h"
 #include "services/ble_service.h"
@@ -26,23 +28,27 @@ GnssStubService gnss_stub;
 SelfUpdatePolicy self_policy;
 E220Radio* radio = nullptr;
 
-#ifdef ARDUINO
-inline void log_print(const char* value) { Serial.print(value); }
-inline void log_print(int32_t value) { Serial.print(value); }
-inline void log_print(uint32_t value) { Serial.print(value); }
-inline void log_print(double value, int digits) { Serial.print(value, digits); }
-inline void log_println(const char* value) { Serial.println(value); }
-inline void log_println(uint32_t value) { Serial.println(value); }
-inline void log_println(int32_t value) { Serial.println(value); }
-#else
-inline void log_print(const char*) {}
-inline void log_print(int32_t) {}
-inline void log_print(uint32_t) {}
-inline void log_print(double, int) {}
-inline void log_println(const char*) {}
-inline void log_println(uint32_t) {}
-inline void log_println(int32_t) {}
-#endif
+platform::ArduinoClock clock_;
+platform::ArduinoLogger logger_;
+platform::EspDeviceIdProvider device_id_provider_;
+
+constexpr const char* kLogTag = "app";
+
+inline void log_line(const char* msg) {
+  logger_.log(platform::LogLevel::kInfo, kLogTag, msg);
+}
+
+inline void log_kv(const char* key, const char* value) {
+  char buffer[128] = {0};
+  std::snprintf(buffer, sizeof(buffer), "%s%s", key, value ? value : "-");
+  log_line(buffer);
+}
+
+inline void log_kv_u32(const char* key, uint32_t value) {
+  char buffer[128] = {0};
+  std::snprintf(buffer, sizeof(buffer), "%s%lu", key, static_cast<unsigned long>(value));
+  log_line(buffer);
+}
 
 } // namespace
 
@@ -52,23 +58,19 @@ void AppServices::init() {
   fix_logged_ = false;
 
   const auto& profile = get_hw_profile();
-  pinMode(profile.pins.role_pin, INPUT_PULLUP);
-  delay(30);
-  role_ = (digitalRead(profile.pins.role_pin) == LOW) ? RadioRole::INIT : RadioRole::RESP;
+  platform::configure_input_pullup(profile.pins.role_pin);
+  clock_.sleep_ms(30);
+  role_ = platform::read_digital(profile.pins.role_pin) ? RadioRole::RESP : RadioRole::INIT;
 
-  log_println("");
-  log_println("=== Naviga OOTB skeleton ===");
-  log_print("fw: ");
-  log_println(kFirmwareVersion);
-  log_print("hw_profile: ");
-  log_println(profile.name);
-  log_print("role: ");
-  log_println(role_ == RadioRole::INIT ? "INIT (PING)" : "RESP (PONG)");
+  log_line("");
+  log_line("=== Naviga OOTB skeleton ===");
+  log_kv("fw: ", kFirmwareVersion);
+  log_kv("hw_profile: ", profile.name);
+  log_kv("role: ", role_ == RadioRole::INIT ? "INIT (PING)" : "RESP (PONG)");
 
-  uint8_t mac[6] = {0};
-  get_device_mac_bytes(mac);
-  const uint64_t full_id = get_device_full_id_u64();
-  const uint16_t short_id = get_device_short_id_u16();
+  const platform::DeviceId device_id = device_id_provider_.get();
+  const uint64_t full_id = full_id_from_mac(device_id.bytes);
+  const uint16_t short_id = short_id_from_mac(device_id.bytes);
   node_table.init_self(full_id, short_id, uptime_ms());
   gnss_stub.init(full_id);
   self_policy.init();
@@ -83,16 +85,13 @@ void AppServices::init() {
   char mac_hex[13] = {0};
   char short_id_hex[5] = {0};
   format_full_id_u64_hex(full_id, full_id_hex, sizeof(full_id_hex));
-  format_full_id_mac_hex(mac, mac_hex, sizeof(mac_hex));
+  format_full_id_mac_hex(device_id.bytes, mac_hex, sizeof(mac_hex));
   format_short_id_hex(short_id, short_id_hex, sizeof(short_id_hex));
 
-  log_println("=== Node identity ===");
-  log_print("full_id_u64: ");
-  log_println(full_id_hex);
-  log_print("full_id_mac: ");
-  log_println(mac_hex);
-  log_print("short_id: ");
-  log_println(short_id_hex);
+  log_line("=== Node identity ===");
+  log_kv("full_id_u64: ", full_id_hex);
+  log_kv("full_id_mac: ", mac_hex);
+  log_kv("short_id: ", short_id_hex);
 
   const DeviceInfoData device_info = {
       .fw_version = kFirmwareVersion,
@@ -102,14 +101,14 @@ void AppServices::init() {
       .full_id_u64 = full_id,
       .short_id = short_id,
   };
-  ble_service.init(device_info, &node_table);
+  ble_service.init(device_info, &node_table, &logger_);
 }
 
 void AppServices::tick(uint32_t now_ms) {
   if (gnss_stub.tick(now_ms)) {
     const GnssSample sample = gnss_stub.latest();
     if (sample.has_fix && !fix_logged_) {
-      log_println("GNSS: FIX acquired");
+      log_line("GNSS: FIX acquired");
       fix_logged_ = true;
     }
 
@@ -135,16 +134,14 @@ void AppServices::tick(uint32_t now_ms) {
           break;
       }
 
-      log_print("SELF_POS: updated reason=");
-      log_print(reason_str);
-      log_print(" lat_e7=");
-      log_print(sample.lat_e7);
-      log_print(" lon_e7=");
-      log_print(sample.lon_e7);
-      log_print(" d=");
-      log_print(decision.distance_m, 2);
-      log_print(" dt=");
-      log_println(decision.dt_ms);
+      char buffer[160] = {0};
+      std::snprintf(buffer, sizeof(buffer),
+                    "SELF_POS: updated reason=%s lat_e7=%ld lon_e7=%ld d=%.2f dt=%lu",
+                    reason_str, static_cast<long>(sample.lat_e7),
+                    static_cast<long>(sample.lon_e7),
+                    static_cast<double>(decision.distance_m),
+                    static_cast<unsigned long>(decision.dt_ms));
+      log_line(buffer);
     }
   }
 
@@ -153,8 +150,7 @@ void AppServices::tick(uint32_t now_ms) {
 
   if ((now_ms - last_heartbeat_ms_) >= 1000U) {
     last_heartbeat_ms_ = now_ms;
-    log_print("tick: ");
-    log_println(now_ms);
+    log_kv_u32("tick: ", now_ms);
   }
 
   if ((now_ms - last_summary_ms_) >= 5000U) {
@@ -163,10 +159,11 @@ void AppServices::tick(uint32_t now_ms) {
     const size_t bytes = node_table.get_page(0, NodeTable::kDefaultPageSize, page_buffer,
                                              sizeof(page_buffer));
     const size_t page0_count = bytes / NodeTable::kEntryBytes;
-    log_print("nodetable: size=");
-    log_print(static_cast<uint32_t>(node_table.size()));
-    log_print(" page0_count=");
-    log_println(static_cast<uint32_t>(page0_count));
+    char buffer[128] = {0};
+    std::snprintf(buffer, sizeof(buffer), "nodetable: size=%lu page0_count=%lu",
+                  static_cast<unsigned long>(node_table.size()),
+                  static_cast<unsigned long>(page0_count));
+    log_line(buffer);
   }
 }
 

@@ -1,6 +1,5 @@
 #include "services/ble_service.h"
 
-#include <Arduino.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -25,13 +24,29 @@ constexpr char kNodeTablePage3Uuid[] = "6e4f0006-1b9a-4c3a-9a3b-000000000001";
 constexpr size_t kMaxDeviceInfoPayload = 64;
 constexpr size_t kPageSize = 10;
 
+constexpr const char* kLogTag = "ble";
+
+inline void log_line(platform::ILogger* logger, const char* msg) {
+  if (!logger || !msg) {
+    return;
+  }
+  logger->log(platform::LogLevel::kInfo, kLogTag, msg);
+}
+
 class NavigaServerCallbacks : public BLEServerCallbacks {
  public:
-  void onConnect(BLEServer* /*server*/) override { Serial.println("BLE: connected"); }
+  explicit NavigaServerCallbacks(platform::ILogger* logger) : logger_(logger) {}
+
+  void onConnect(BLEServer* /*server*/) override {
+    log_line(logger_, "BLE: connected");
+  }
   void onDisconnect(BLEServer* server) override {
-    Serial.println("BLE: disconnected");
+    log_line(logger_, "BLE: disconnected");
     server->getAdvertising()->start();
   }
+
+ private:
+  platform::ILogger* logger_;
 };
 
 class DeviceInfoCallbacks : public BLECharacteristicCallbacks {
@@ -111,12 +126,14 @@ class NodeTablePageCallbacks : public BLECharacteristicCallbacks {
 
 } // namespace
 
-void BleService::init(const DeviceInfoData& info, const NodeTable* node_table) {
+void BleService::init(const DeviceInfoData& info, const NodeTable* node_table,
+                      platform::ILogger* logger) {
   node_table_ = node_table;
+  logger_ = logger;
 
   BLEDevice::init("Naviga");
   BLEServer* server = BLEDevice::createServer();
-  server->setCallbacks(new NavigaServerCallbacks());
+  server->setCallbacks(new NavigaServerCallbacks(logger_));
 
   BLEService* service = server->createService(kServiceUuid);
 
@@ -140,7 +157,7 @@ void BleService::init(const DeviceInfoData& info, const NodeTable* node_table) {
   advertising->setScanResponse(true);
   advertising->start();
 
-  Serial.println("BLE: started (Naviga service)");
+  log_line(logger_, "BLE: started (Naviga service)");
 }
 
 } // namespace naviga
