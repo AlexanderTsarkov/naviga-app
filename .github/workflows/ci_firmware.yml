@@ -35,6 +35,13 @@ jobs:
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
 
-      - name: Build firmware
-        run: pio run
+      - name: Build firmware (embedded envs)
+        run: |
+          pio run -e esp32dev
+          pio run -e devkit_e220_oled
+          pio run -e devkit_e220_oled_gnss
+        working-directory: firmware
+
+      - name: Run native unit tests
+        run: pio test -e test_native
         working-directory: firmware

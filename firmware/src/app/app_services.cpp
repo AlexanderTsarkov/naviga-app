@@ -1,6 +1,8 @@
 #include "app/app_services.h"
 
+#ifdef ARDUINO
 #include <Arduino.h>
+#endif
 
 #include "app/node_table.h"
 #include "hw_profile.h"
@@ -22,6 +24,24 @@ BleService ble_service;
 GnssStubService gnss_stub;
 SelfUpdatePolicy self_policy;
 
+#ifdef ARDUINO
+inline void log_print(const char* value) { Serial.print(value); }
+inline void log_print(int32_t value) { Serial.print(value); }
+inline void log_print(uint32_t value) { Serial.print(value); }
+inline void log_print(double value, int digits) { Serial.print(value, digits); }
+inline void log_println(const char* value) { Serial.println(value); }
+inline void log_println(uint32_t value) { Serial.println(value); }
+inline void log_println(int32_t value) { Serial.println(value); }
+#else
+inline void log_print(const char*) {}
+inline void log_print(int32_t) {}
+inline void log_print(uint32_t) {}
+inline void log_print(double, int) {}
+inline void log_println(const char*) {}
+inline void log_println(uint32_t) {}
+inline void log_println(int32_t) {}
+#endif
+
 } // namespace
 
 void AppServices::init() {
@@ -31,12 +51,12 @@ void AppServices::init() {
 
   const auto& profile = get_hw_profile();
 
-  Serial.println();
-  Serial.println("=== Naviga OOTB skeleton ===");
-  Serial.print("fw: ");
-  Serial.println(kFirmwareVersion);
-  Serial.print("hw_profile: ");
-  Serial.println(profile.name);
+  log_println("");
+  log_println("=== Naviga OOTB skeleton ===");
+  log_print("fw: ");
+  log_println(kFirmwareVersion);
+  log_print("hw_profile: ");
+  log_println(profile.name);
 
   uint8_t mac[6] = {0};
   get_device_mac_bytes(mac);
@@ -53,13 +73,13 @@ void AppServices::init() {
   format_full_id_mac_hex(mac, mac_hex, sizeof(mac_hex));
   format_short_id_hex(short_id, short_id_hex, sizeof(short_id_hex));
 
-  Serial.println("=== Node identity ===");
-  Serial.print("full_id_u64: ");
-  Serial.println(full_id_hex);
-  Serial.print("full_id_mac: ");
-  Serial.println(mac_hex);
-  Serial.print("short_id: ");
-  Serial.println(short_id_hex);
+  log_println("=== Node identity ===");
+  log_print("full_id_u64: ");
+  log_println(full_id_hex);
+  log_print("full_id_mac: ");
+  log_println(mac_hex);
+  log_print("short_id: ");
+  log_println(short_id_hex);
 
   const DeviceInfoData device_info = {
       .fw_version = kFirmwareVersion,
@@ -76,7 +96,7 @@ void AppServices::tick(uint32_t now_ms) {
   if (gnss_stub.tick(now_ms)) {
     const GnssSample sample = gnss_stub.latest();
     if (sample.has_fix && !fix_logged_) {
-      Serial.println("GNSS: FIX acquired");
+      log_println("GNSS: FIX acquired");
       fix_logged_ = true;
     }
 
@@ -102,23 +122,23 @@ void AppServices::tick(uint32_t now_ms) {
           break;
       }
 
-      Serial.print("SELF_POS: updated reason=");
-      Serial.print(reason_str);
-      Serial.print(" lat_e7=");
-      Serial.print(sample.lat_e7);
-      Serial.print(" lon_e7=");
-      Serial.print(sample.lon_e7);
-      Serial.print(" d=");
-      Serial.print(decision.distance_m, 2);
-      Serial.print(" dt=");
-      Serial.println(decision.dt_ms);
+      log_print("SELF_POS: updated reason=");
+      log_print(reason_str);
+      log_print(" lat_e7=");
+      log_print(sample.lat_e7);
+      log_print(" lon_e7=");
+      log_print(sample.lon_e7);
+      log_print(" d=");
+      log_print(decision.distance_m, 2);
+      log_print(" dt=");
+      log_println(decision.dt_ms);
     }
   }
 
   if ((now_ms - last_heartbeat_ms_) >= 1000U) {
     last_heartbeat_ms_ = now_ms;
-    Serial.print("tick: ");
-    Serial.println(now_ms);
+    log_print("tick: ");
+    log_println(now_ms);
   }
 
   if ((now_ms - last_summary_ms_) >= 5000U) {
@@ -127,10 +147,10 @@ void AppServices::tick(uint32_t now_ms) {
     const size_t bytes = node_table.get_page(0, NodeTable::kDefaultPageSize, page_buffer,
                                              sizeof(page_buffer));
     const size_t page0_count = bytes / NodeTable::kEntryBytes;
-    Serial.print("nodetable: size=");
-    Serial.print(node_table.size());
-    Serial.print(" page0_count=");
-    Serial.println(page0_count);
+    log_print("nodetable: size=");
+    log_print(static_cast<uint32_t>(node_table.size()));
+    log_print(" page0_count=");
+    log_println(static_cast<uint32_t>(page0_count));
   }
 }
 

@@ -1,0 +1,10 @@
+{
+  "name": "NavigaCore",
+  "version": "0.0.1",
+  "frameworks": "*",
+  "platforms": "*",
+  "build": {
+    "includeDir": "include",
+    "srcDir": "src"
+  }
+}
