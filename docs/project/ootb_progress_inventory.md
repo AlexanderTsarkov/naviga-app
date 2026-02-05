@@ -33,7 +33,7 @@
 ## E) Next 3 suggested steps (from OOTB plan)
 1) **[#21] HAL radio driver** — start real TX/RX path (per decision in issue).  
 2) **[#23] GEO_BEACON codec** — radio payload encode/decode for end-to-end.  
-3) **[#19] Firmware module tree** — align structure for upcoming domain/protocol layers.
+3) **[#20] Logging v0** — ring-buffer + export (if needed before beacon logic).
 
 ## OOTB Plan Issues (2–36)
 | Issue | Title | Planned Scope | Status | Evidence |
