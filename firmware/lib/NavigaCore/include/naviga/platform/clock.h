@@ -21,6 +21,11 @@ struct IClock {
    * @brief Return time since boot in milliseconds.
    */
   virtual millis_t uptime_ms() const = 0;
+
+  /**
+   * @brief Sleep for the specified number of milliseconds.
+   */
+  virtual void sleep_ms(millis_t duration_ms) const = 0;
 };
 
 } // namespace naviga::platform
