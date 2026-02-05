@@ -48,12 +48,12 @@
 | [#9](https://github.com/AlexanderTsarkov/naviga-app/issues/9) | 0.5.3 Archive cleanup | Repo hygiene | Done | `_archive/` (per issue) |
 | [#10](https://github.com/AlexanderTsarkov/naviga-app/issues/10) | 1.1 Architecture Index | Doc | Done | `docs/architecture/index.md` |
 | [#11](https://github.com/AlexanderTsarkov/naviga-app/issues/11) | 1.2 Firmware architecture | Doc + steps 11.1–11.4 | Partial | PRs #51/#52/#53/#55 |
-| [#12](https://github.com/AlexanderTsarkov/naviga-app/issues/12) | 1.3 NodeTable spec | Doc | Open | N/A |
-| [#13](https://github.com/AlexanderTsarkov/naviga-app/issues/13) | 1.4 HAL contracts | Doc | Open | N/A |
-| [#14](https://github.com/AlexanderTsarkov/naviga-app/issues/14) | 1.5 OOTB Radio v0 spec | Doc | Open | N/A |
-| [#15](https://github.com/AlexanderTsarkov/naviga-app/issues/15) | 1.6 OOTB BLE v0 spec | Doc | Open | N/A |
-| [#16](https://github.com/AlexanderTsarkov/naviga-app/issues/16) | 1.7 Test Plan v0 | Doc | Open | N/A |
-| [#17](https://github.com/AlexanderTsarkov/naviga-app/issues/17) | 1.8 ADR: OOTB scope | Doc | Open | N/A |
+| [#12](https://github.com/AlexanderTsarkov/naviga-app/issues/12) | 1.3 NodeTable spec | Doc | Done | [docs/firmware/ootb_node_table_v0.md](../firmware/ootb_node_table_v0.md) |
+| [#13](https://github.com/AlexanderTsarkov/naviga-app/issues/13) | 1.4 HAL contracts | Doc | Done | [docs/firmware/hal_contracts_v0.md](../firmware/hal_contracts_v0.md) |
+| [#14](https://github.com/AlexanderTsarkov/naviga-app/issues/14) | 1.5 OOTB Radio v0 spec | Doc | Done | [docs/protocols/ootb_radio_v0.md](../protocols/ootb_radio_v0.md) |
+| [#15](https://github.com/AlexanderTsarkov/naviga-app/issues/15) | 1.6 OOTB BLE v0 spec | Doc | Done | [docs/protocols/ootb_ble_v0.md](../protocols/ootb_ble_v0.md) |
+| [#16](https://github.com/AlexanderTsarkov/naviga-app/issues/16) | 1.7 Test Plan v0 | Doc | Done | [docs/product/ootb_test_plan_v0.md](../product/ootb_test_plan_v0.md) |
+| [#17](https://github.com/AlexanderTsarkov/naviga-app/issues/17) | 1.8 ADR: OOTB scope | Doc | Done | [docs/product/ootb_scope_v0.md](../product/ootb_scope_v0.md) (issue refs docs/adr; file is in docs/product) |
 | [#18](https://github.com/AlexanderTsarkov/naviga-app/issues/18) | 2.0 HAL interfaces + mocks | Code | Done | PR [#57](https://github.com/AlexanderTsarkov/naviga-app/pull/57) |
 | [#19](https://github.com/AlexanderTsarkov/naviga-app/issues/19) | 2.1 Firmware module tree | Code structure | Done | PR [#60](https://github.com/AlexanderTsarkov/naviga-app/pull/60), PR [#61](https://github.com/AlexanderTsarkov/naviga-app/pull/61) — Core purity: platform abstractions + platform adapters; removed Arduino/Serial/delay from app/services; CI guardrails added. |
 | [#20](https://github.com/AlexanderTsarkov/naviga-app/issues/20) | 2.2 Logging v0 | Code | Done | PR [#65](https://github.com/AlexanderTsarkov/naviga-app/pull/65) — Logging v0: RAM ring buffer + UART export; TX/RX, NodeTable update, BLE connect/read events; test_native. |
