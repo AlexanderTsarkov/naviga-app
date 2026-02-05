@@ -8,7 +8,7 @@
 #include "platform/arduino_gpio.h"
 #include "platform/arduino_logger.h"
 #include "platform/device_id.h"
-#include "platform/esp_device_id_provider.h"
+#include "platform/device_id_provider.h"
 #include "platform/e220_radio.h"
 #include "platform/timebase.h"
 #include "services/ble_service.h"
@@ -30,7 +30,7 @@ E220Radio* radio = nullptr;
 
 platform::ArduinoClock clock_;
 platform::ArduinoLogger logger_;
-platform::EspDeviceIdProvider device_id_provider_;
+platform::DefaultDeviceIdProvider device_id_provider_;
 
 constexpr const char* kLogTag = "app";
 
