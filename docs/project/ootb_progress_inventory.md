@@ -59,7 +59,7 @@
 | [#20](https://github.com/AlexanderTsarkov/naviga-app/issues/20) | 2.2 Logging v0 | Code | Open | N/A |
 | [#21](https://github.com/AlexanderTsarkov/naviga-app/issues/21) | 2.3 HAL radio driver | Code | Open | N/A |
 | [#22](https://github.com/AlexanderTsarkov/naviga-app/issues/22) | 2.4 HAL BLE transport | Code | Open | N/A |
-| [#23](https://github.com/AlexanderTsarkov/naviga-app/issues/23) | 2.5 GEO_BEACON codec | Code | Open | N/A |
+| [#23](https://github.com/AlexanderTsarkov/naviga-app/issues/23) | 2.5 GEO_BEACON codec | Code | Done | PR [#63](https://github.com/AlexanderTsarkov/naviga-app/pull/63). GEO_BEACON codec: fixed 24-byte core, little-endian; decode ignores trailing bytes; pos_valid==0 skips range-check (fields parsed as-is); unit tests (test_native). |
 | [#24](https://github.com/AlexanderTsarkov/naviga-app/issues/24) | 2.6 NodeTable domain | Code | Open | N/A |
 | [#25](https://github.com/AlexanderTsarkov/naviga-app/issues/25) | 2.7 Beacon logic | Code | Open | N/A |
 | [#26](https://github.com/AlexanderTsarkov/naviga-app/issues/26) | 2.8 BLE NodeTable bridge | Code | Open | N/A |
