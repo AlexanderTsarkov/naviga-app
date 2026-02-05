@@ -9,6 +9,7 @@
 #include <cstring>
 
 #include "app/node_table.h"
+#include "platform/timebase.h"
 
 namespace naviga {
 
@@ -24,6 +25,14 @@ constexpr char kNodeTablePage3Uuid[] = "6e4f0006-1b9a-4c3a-9a3b-000000000001";
 constexpr size_t kMaxDeviceInfoPayload = 64;
 constexpr size_t kPageSize = 10;
 
+enum class BleReadKind : uint8_t {
+  DeviceInfo = 1,
+  NodeTablePage0 = 2,
+  NodeTablePage1 = 3,
+  NodeTablePage2 = 4,
+  NodeTablePage3 = 5,
+};
+
 constexpr const char* kLogTag = "ble";
 
 inline void log_line(platform::ILogger* logger, const char* msg) {
@@ -33,27 +42,44 @@ inline void log_line(platform::ILogger* logger, const char* msg) {
   logger->log(platform::LogLevel::kInfo, kLogTag, msg);
 }
 
+inline void log_event(domain::Logger* logger,
+                      domain::LogEventId event_id,
+                      const uint8_t* payload,
+                      uint8_t len) {
+  if (!logger) {
+    return;
+  }
+  logger->log(uptime_ms(), event_id, domain::LogLevel::kInfo, payload, len);
+}
+
 class NavigaServerCallbacks : public BLEServerCallbacks {
  public:
-  explicit NavigaServerCallbacks(platform::ILogger* logger) : logger_(logger) {}
+  NavigaServerCallbacks(platform::ILogger* logger, domain::Logger* event_logger)
+      : logger_(logger), event_logger_(event_logger) {}
 
   void onConnect(BLEServer* /*server*/) override {
     log_line(logger_, "BLE: connected");
+    log_event(event_logger_, domain::LogEventId::BLE_CONNECT, nullptr, 0);
   }
   void onDisconnect(BLEServer* server) override {
     log_line(logger_, "BLE: disconnected");
+    log_event(event_logger_, domain::LogEventId::BLE_DISCONNECT, nullptr, 0);
     server->getAdvertising()->start();
   }
 
  private:
   platform::ILogger* logger_;
+  domain::Logger* event_logger_;
 };
 
 class DeviceInfoCallbacks : public BLECharacteristicCallbacks {
  public:
-  explicit DeviceInfoCallbacks(const DeviceInfoData& info) : info_(info) {}
+  DeviceInfoCallbacks(const DeviceInfoData& info, domain::Logger* event_logger)
+      : info_(info), event_logger_(event_logger) {}
 
   void onRead(BLECharacteristic* characteristic) override {
+    const uint8_t kind = static_cast<uint8_t>(BleReadKind::DeviceInfo);
+    log_event(event_logger_, domain::LogEventId::BLE_READ, &kind, 1);
     std::array<uint8_t, kMaxDeviceInfoPayload> buffer{};
     size_t offset = 0;
 
@@ -101,14 +127,23 @@ class DeviceInfoCallbacks : public BLECharacteristicCallbacks {
 
  private:
   DeviceInfoData info_;
+  domain::Logger* event_logger_ = nullptr;
 };
 
 class NodeTablePageCallbacks : public BLECharacteristicCallbacks {
  public:
-  NodeTablePageCallbacks(const NodeTable* node_table, size_t page_index)
-      : node_table_(node_table), page_index_(page_index) {}
+  NodeTablePageCallbacks(const NodeTable* node_table,
+                         size_t page_index,
+                         BleReadKind read_kind,
+                         domain::Logger* event_logger)
+      : node_table_(node_table),
+        page_index_(page_index),
+        read_kind_(read_kind),
+        event_logger_(event_logger) {}
 
   void onRead(BLECharacteristic* characteristic) override {
+    const uint8_t kind = static_cast<uint8_t>(read_kind_);
+    log_event(event_logger_, domain::LogEventId::BLE_READ, &kind, 1);
     if (!node_table_) {
       characteristic->setValue(nullptr, 0);
       return;
@@ -122,33 +157,42 @@ class NodeTablePageCallbacks : public BLECharacteristicCallbacks {
  private:
   const NodeTable* node_table_;
   size_t page_index_;
+  BleReadKind read_kind_;
+  domain::Logger* event_logger_ = nullptr;
 };
 
 } // namespace
 
-void BleService::init(const DeviceInfoData& info, const NodeTable* node_table,
-                      platform::ILogger* logger) {
+void BleService::init(const DeviceInfoData& info,
+                      const NodeTable* node_table,
+                      platform::ILogger* logger,
+                      domain::Logger* event_logger) {
   node_table_ = node_table;
   logger_ = logger;
+  event_logger_ = event_logger;
 
   BLEDevice::init("Naviga");
   BLEServer* server = BLEDevice::createServer();
-  server->setCallbacks(new NavigaServerCallbacks(logger_));
+  server->setCallbacks(new NavigaServerCallbacks(logger_, event_logger_));
 
   BLEService* service = server->createService(kServiceUuid);
 
   auto* device_info = service->createCharacteristic(kDeviceInfoUuid, BLECharacteristic::PROPERTY_READ);
-  device_info->setCallbacks(new DeviceInfoCallbacks(info));
+  device_info->setCallbacks(new DeviceInfoCallbacks(info, event_logger_));
 
   auto* page0 = service->createCharacteristic(kNodeTablePage0Uuid, BLECharacteristic::PROPERTY_READ);
   auto* page1 = service->createCharacteristic(kNodeTablePage1Uuid, BLECharacteristic::PROPERTY_READ);
   auto* page2 = service->createCharacteristic(kNodeTablePage2Uuid, BLECharacteristic::PROPERTY_READ);
   auto* page3 = service->createCharacteristic(kNodeTablePage3Uuid, BLECharacteristic::PROPERTY_READ);
 
-  page0->setCallbacks(new NodeTablePageCallbacks(node_table_, 0));
-  page1->setCallbacks(new NodeTablePageCallbacks(node_table_, 1));
-  page2->setCallbacks(new NodeTablePageCallbacks(node_table_, 2));
-  page3->setCallbacks(new NodeTablePageCallbacks(node_table_, 3));
+  page0->setCallbacks(new NodeTablePageCallbacks(node_table_, 0, BleReadKind::NodeTablePage0,
+                                                 event_logger_));
+  page1->setCallbacks(new NodeTablePageCallbacks(node_table_, 1, BleReadKind::NodeTablePage1,
+                                                 event_logger_));
+  page2->setCallbacks(new NodeTablePageCallbacks(node_table_, 2, BleReadKind::NodeTablePage2,
+                                                 event_logger_));
+  page3->setCallbacks(new NodeTablePageCallbacks(node_table_, 3, BleReadKind::NodeTablePage3,
+                                                 event_logger_));
 
   service->start();
 

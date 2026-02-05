@@ -10,6 +10,7 @@
 #include "platform/device_id.h"
 #include "platform/device_id_provider.h"
 #include "platform/e220_radio.h"
+#include "platform/log_export_uart.h"
 #include "platform/timebase.h"
 #include "services/ble_service.h"
 #include "services/gnss_stub_service.h"
@@ -50,6 +51,14 @@ inline void log_kv_u32(const char* key, uint32_t value) {
   log_line(buffer);
 }
 
+inline void write_i32_le(uint8_t* out, int32_t value) {
+  const uint32_t raw = static_cast<uint32_t>(value);
+  out[0] = static_cast<uint8_t>(raw & 0xFF);
+  out[1] = static_cast<uint8_t>((raw >> 8) & 0xFF);
+  out[2] = static_cast<uint8_t>((raw >> 16) & 0xFF);
+  out[3] = static_cast<uint8_t>((raw >> 24) & 0xFF);
+}
+
 } // namespace
 
 void AppServices::init() {
@@ -78,7 +87,7 @@ void AppServices::init() {
   static E220Radio radio_instance(profile.pins);
   radio = &radio_instance;
   const bool radio_ready = radio->begin();
-  radio_smoke_.init(radio, role_, radio_ready, radio->rssi_available());
+  radio_smoke_.init(radio, role_, radio_ready, radio->rssi_available(), &event_logger_);
   oled_.init(profile, kFirmwareVersion, role_);
 
   char full_id_hex[20] = {0};
@@ -101,7 +110,7 @@ void AppServices::init() {
       .full_id_u64 = full_id,
       .short_id = short_id,
   };
-  ble_service.init(device_info, &node_table, &logger_);
+  ble_service.init(device_info, &node_table, &logger_, &event_logger_);
 }
 
 void AppServices::tick(uint32_t now_ms) {
@@ -116,6 +125,11 @@ void AppServices::tick(uint32_t now_ms) {
     if (decision.reason != SelfUpdateReason::NONE) {
       self_policy.commit(now_ms, sample);
       node_table.update_self_position(sample.lat_e7, sample.lon_e7, now_ms);
+      uint8_t payload[8] = {};
+      write_i32_le(payload, sample.lat_e7);
+      write_i32_le(payload + 4, sample.lon_e7);
+      event_logger_.log(now_ms, domain::LogEventId::NODETABLE_UPDATE,
+                        domain::LogLevel::kInfo, payload, sizeof(payload));
 
       const char* reason_str = "NONE";
       switch (decision.reason) {
@@ -164,6 +178,7 @@ void AppServices::tick(uint32_t now_ms) {
                   static_cast<unsigned long>(node_table.size()),
                   static_cast<unsigned long>(page0_count));
     log_line(buffer);
+    platform::drain_logs_uart(event_logger_);
   }
 }
 

@@ -20,15 +20,32 @@ struct RadioMsg {
 
 static_assert(sizeof(RadioMsg) == 5, "RadioMsg must be packed to 5 bytes.");
 
+void log_radio_event(domain::Logger* logger,
+                     uint32_t t_ms,
+                     domain::LogEventId event_id,
+                     domain::LogLevel level,
+                     uint8_t msg_type) {
+  if (!logger) {
+    return;
+  }
+  const uint8_t payload[1] = {msg_type};
+  logger->log(t_ms, event_id, level, payload, sizeof(payload));
+}
+
 } // namespace
 
-void RadioSmokeService::init(IRadio* radio, RadioRole role, bool radio_ready, bool rssi_available) {
+void RadioSmokeService::init(IRadio* radio,
+                             RadioRole role,
+                             bool radio_ready,
+                             bool rssi_available,
+                             domain::Logger* event_logger) {
   radio_ = radio;
   role_ = role;
   next_ping_ms_ = 0;
   stats_ = {};
   stats_.radio_ready = radio_ready;
   stats_.rssi_available = rssi_available;
+  event_logger_ = event_logger;
 }
 
 void RadioSmokeService::tick(uint32_t now_ms) {
@@ -61,6 +78,11 @@ void RadioSmokeService::send_ping(uint32_t now_ms) {
     stats_.last_seq = msg.seq;
     stats_.tx_count++;
     stats_.last_tx_ms = now_ms;
+    log_radio_event(event_logger_, now_ms, domain::LogEventId::RADIO_TX_OK,
+                    domain::LogLevel::kInfo, msg.type);
+  } else {
+    log_radio_event(event_logger_, now_ms, domain::LogEventId::RADIO_TX_ERR,
+                    domain::LogLevel::kWarn, msg.type);
   }
 }
 
@@ -70,6 +92,11 @@ void RadioSmokeService::send_pong(uint32_t seq, uint32_t now_ms) {
     stats_.last_seq = msg.seq;
     stats_.tx_count++;
     stats_.last_tx_ms = now_ms;
+    log_radio_event(event_logger_, now_ms, domain::LogEventId::RADIO_TX_OK,
+                    domain::LogLevel::kInfo, msg.type);
+  } else {
+    log_radio_event(event_logger_, now_ms, domain::LogEventId::RADIO_TX_ERR,
+                    domain::LogLevel::kWarn, msg.type);
   }
 }
 
@@ -80,6 +107,8 @@ void RadioSmokeService::handle_rx(uint32_t now_ms) {
     return;
   }
   if (out_len != sizeof(msg)) {
+    log_radio_event(event_logger_, now_ms, domain::LogEventId::RADIO_RX_ERR,
+                    domain::LogLevel::kWarn, 0x00);
     return;
   }
 
@@ -87,6 +116,8 @@ void RadioSmokeService::handle_rx(uint32_t now_ms) {
     stats_.last_rx_was_pong = false;
     stats_.rx_count++;
     stats_.last_rx_ms = now_ms;
+    log_radio_event(event_logger_, now_ms, domain::LogEventId::RADIO_RX_OK,
+                    domain::LogLevel::kInfo, msg.type);
     if (stats_.rssi_available) {
       stats_.last_rssi_dbm = radio_->last_rssi_dbm();
     }
@@ -99,9 +130,14 @@ void RadioSmokeService::handle_rx(uint32_t now_ms) {
     stats_.rx_count++;
     stats_.last_rx_ms = now_ms;
     stats_.last_seq = msg.seq;
+    log_radio_event(event_logger_, now_ms, domain::LogEventId::RADIO_RX_OK,
+                    domain::LogLevel::kInfo, msg.type);
     if (stats_.rssi_available) {
       stats_.last_rssi_dbm = radio_->last_rssi_dbm();
     }
+  } else {
+    log_radio_event(event_logger_, now_ms, domain::LogEventId::RADIO_RX_ERR,
+                    domain::LogLevel::kWarn, msg.type);
   }
 }
 

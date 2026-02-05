@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstddef>
 
+#include "domain/logger.h"
 #include "naviga/platform/log.h"
 
 namespace naviga {
@@ -20,12 +21,15 @@ class NodeTable;
 
 class BleService {
  public:
-  void init(const DeviceInfoData& info, const NodeTable* node_table,
-            platform::ILogger* logger);
+  void init(const DeviceInfoData& info,
+            const NodeTable* node_table,
+            platform::ILogger* logger,
+            domain::Logger* event_logger);
 
  private:
   const NodeTable* node_table_ = nullptr;
   platform::ILogger* logger_ = nullptr;
+  domain::Logger* event_logger_ = nullptr;
 };
 
 } // namespace naviga

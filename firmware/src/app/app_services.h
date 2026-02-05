@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "domain/logger.h"
 #include "services/oled_status.h"
 #include "services/radio_smoke_service.h"
 
@@ -17,6 +18,7 @@ class AppServices {
   uint32_t last_summary_ms_ = 0;
   bool fix_logged_ = false;
   RadioRole role_ = RadioRole::RESP;
+  domain::Logger event_logger_;
   RadioSmokeService radio_smoke_;
   OledStatus oled_;
 };

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "domain/logger.h"
 #include "naviga/hal/interfaces.h"
 
 namespace naviga {
@@ -25,7 +26,11 @@ struct RadioSmokeStats {
 
 class RadioSmokeService {
  public:
-  void init(IRadio* radio, RadioRole role, bool radio_ready, bool rssi_available);
+  void init(IRadio* radio,
+            RadioRole role,
+            bool radio_ready,
+            bool rssi_available,
+            domain::Logger* event_logger);
   void tick(uint32_t now_ms);
 
   const RadioSmokeStats& stats() const;
@@ -37,6 +42,7 @@ class RadioSmokeService {
   void handle_rx(uint32_t now_ms);
 
   IRadio* radio_ = nullptr;
+  domain::Logger* event_logger_ = nullptr;
   RadioRole role_ = RadioRole::RESP;
   uint32_t next_ping_ms_ = 0;
   RadioSmokeStats stats_{};
