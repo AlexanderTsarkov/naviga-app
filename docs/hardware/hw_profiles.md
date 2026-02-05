@@ -13,6 +13,8 @@
 - **I2C OLED**
   - SCL = GPIO17
   - SDA = GPIO18
+- **Role strap**
+  - ROLE_PIN = GPIO8 (INPUT_PULLUP; LOW at boot => INIT, else RESP)
 - **Power:** shared 3V3, common GND
 
 **HW notes:**

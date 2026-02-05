@@ -2,6 +2,9 @@
 
 #include <cstdint>
 
+#include "services/oled_status.h"
+#include "services/radio_smoke_service.h"
+
 namespace naviga {
 
 class AppServices {
@@ -13,6 +16,9 @@ class AppServices {
   uint32_t last_heartbeat_ms_ = 0;
   uint32_t last_summary_ms_ = 0;
   bool fix_logged_ = false;
+  RadioRole role_ = RadioRole::RESP;
+  RadioSmokeService radio_smoke_;
+  OledStatus oled_;
 };
 
 } // namespace naviga
