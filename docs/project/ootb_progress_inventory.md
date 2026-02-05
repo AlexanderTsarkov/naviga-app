@@ -55,7 +55,7 @@
 | [#16](https://github.com/AlexanderTsarkov/naviga-app/issues/16) | 1.7 Test Plan v0 | Doc | Open | N/A |
 | [#17](https://github.com/AlexanderTsarkov/naviga-app/issues/17) | 1.8 ADR: OOTB scope | Doc | Open | N/A |
 | [#18](https://github.com/AlexanderTsarkov/naviga-app/issues/18) | 2.0 HAL interfaces + mocks | Code | Done | PR [#57](https://github.com/AlexanderTsarkov/naviga-app/pull/57) |
-| [#19](https://github.com/AlexanderTsarkov/naviga-app/issues/19) | 2.1 Firmware module tree | Code structure | Open | N/A |
+| [#19](https://github.com/AlexanderTsarkov/naviga-app/issues/19) | 2.1 Firmware module tree | Code structure | Done | PR [#60](https://github.com/AlexanderTsarkov/naviga-app/pull/60), PR [#61](https://github.com/AlexanderTsarkov/naviga-app/pull/61) — Core purity: platform abstractions + platform adapters; removed Arduino/Serial/delay from app/services; CI guardrails added. |
 | [#20](https://github.com/AlexanderTsarkov/naviga-app/issues/20) | 2.2 Logging v0 | Code | Open | N/A |
 | [#21](https://github.com/AlexanderTsarkov/naviga-app/issues/21) | 2.3 HAL radio driver | Code | Open | N/A |
 | [#22](https://github.com/AlexanderTsarkov/naviga-app/issues/22) | 2.4 HAL BLE transport | Code | Open | N/A |
