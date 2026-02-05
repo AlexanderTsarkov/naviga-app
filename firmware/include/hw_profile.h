@@ -8,6 +8,7 @@ struct Pins {
   int lora_rx;
   int lora_tx;
   int lora_aux;
+  int role_pin;
   int i2c_scl;
   int i2c_sda;
   int gps_rx; // optional, -1 if not present

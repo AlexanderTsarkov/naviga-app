@@ -10,6 +10,7 @@ extern const HwProfile kDevkitE220OledProfile = {
         .lora_rx = 12,
         .lora_tx = 13,
         .lora_aux = 14,
+        .role_pin = 8,
         .i2c_scl = 17,
         .i2c_sda = 18,
         .gps_rx = -1,

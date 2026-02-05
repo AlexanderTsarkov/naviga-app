@@ -7,6 +7,7 @@
 #include "app/node_table.h"
 #include "hw_profile.h"
 #include "platform/device_id.h"
+#include "platform/e220_radio.h"
 #include "platform/timebase.h"
 #include "services/ble_service.h"
 #include "services/gnss_stub_service.h"
@@ -17,12 +18,13 @@ namespace naviga {
 
 namespace {
 
-constexpr const char* kFirmwareVersion = "ootb-11.3-ble";
+constexpr const char* kFirmwareVersion = "ootb-21-radio-smoke";
 
 NodeTable node_table;
 BleService ble_service;
 GnssStubService gnss_stub;
 SelfUpdatePolicy self_policy;
+E220Radio* radio = nullptr;
 
 #ifdef ARDUINO
 inline void log_print(const char* value) { Serial.print(value); }
@@ -50,6 +52,9 @@ void AppServices::init() {
   fix_logged_ = false;
 
   const auto& profile = get_hw_profile();
+  pinMode(profile.pins.role_pin, INPUT_PULLUP);
+  delay(30);
+  role_ = (digitalRead(profile.pins.role_pin) == LOW) ? RadioRole::INIT : RadioRole::RESP;
 
   log_println("");
   log_println("=== Naviga OOTB skeleton ===");
@@ -57,6 +62,8 @@ void AppServices::init() {
   log_println(kFirmwareVersion);
   log_print("hw_profile: ");
   log_println(profile.name);
+  log_print("role: ");
+  log_println(role_ == RadioRole::INIT ? "INIT (PING)" : "RESP (PONG)");
 
   uint8_t mac[6] = {0};
   get_device_mac_bytes(mac);
@@ -65,6 +72,12 @@ void AppServices::init() {
   node_table.init_self(full_id, short_id, uptime_ms());
   gnss_stub.init(full_id);
   self_policy.init();
+
+  static E220Radio radio_instance(profile.pins);
+  radio = &radio_instance;
+  const bool radio_ready = radio->begin();
+  radio_smoke_.init(radio, role_, radio_ready, radio->rssi_available());
+  oled_.init(profile, kFirmwareVersion, role_);
 
   char full_id_hex[20] = {0};
   char mac_hex[13] = {0};
@@ -134,6 +147,9 @@ void AppServices::tick(uint32_t now_ms) {
       log_println(decision.dt_ms);
     }
   }
+
+  radio_smoke_.tick(now_ms);
+  oled_.update(now_ms, radio_smoke_.stats());
 
   if ((now_ms - last_heartbeat_ms_) >= 1000U) {
     last_heartbeat_ms_ = now_ms;
