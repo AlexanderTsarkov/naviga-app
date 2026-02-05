@@ -35,7 +35,7 @@ jobs:
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
 
-      - name: Guardrail: platform leak check
+      - name: "Guardrail: platform leak check"
         run: bash scripts/check_platform_leaks.sh
 
       - name: Build firmware (embedded envs)
