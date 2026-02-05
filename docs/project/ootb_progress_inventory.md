@@ -58,7 +58,7 @@
 | [#19](https://github.com/AlexanderTsarkov/naviga-app/issues/19) | 2.1 Firmware module tree | Code structure | Done | PR [#60](https://github.com/AlexanderTsarkov/naviga-app/pull/60), PR [#61](https://github.com/AlexanderTsarkov/naviga-app/pull/61) — Core purity: platform abstractions + platform adapters; removed Arduino/Serial/delay from app/services; CI guardrails added. |
 | [#20](https://github.com/AlexanderTsarkov/naviga-app/issues/20) | 2.2 Logging v0 | Code | Done | PR [#65](https://github.com/AlexanderTsarkov/naviga-app/pull/65) — Logging v0: RAM ring buffer + UART export; TX/RX, NodeTable update, BLE connect/read events; test_native. |
 | [#21](https://github.com/AlexanderTsarkov/naviga-app/issues/21) | 2.3 HAL radio driver | Code | Open | N/A |
-| [#22](https://github.com/AlexanderTsarkov/naviga-app/issues/22) | 2.4 HAL BLE transport | Code | Open | N/A |
+| [#22](https://github.com/AlexanderTsarkov/naviga-app/issues/22) | 2.4 HAL BLE transport | Code | Done | `firmware/src/platform/ble_transport_core.{h,cpp}`, `firmware/src/platform/ble_esp32_transport.{h,cpp}`, `firmware/test/test_ble_transport_core/test_ble_transport_core.cpp` |
 | [#23](https://github.com/AlexanderTsarkov/naviga-app/issues/23) | 2.5 GEO_BEACON codec | Code | Done | PR [#63](https://github.com/AlexanderTsarkov/naviga-app/pull/63). GEO_BEACON codec: fixed 24-byte core, little-endian; decode ignores trailing bytes; pos_valid==0 skips range-check (fields parsed as-is); unit tests (test_native). |
 | [#24](https://github.com/AlexanderTsarkov/naviga-app/issues/24) | 2.6 NodeTable domain | Code | Open | N/A |
 | [#25](https://github.com/AlexanderTsarkov/naviga-app/issues/25) | 2.7 Beacon logic | Code | Open | N/A |
