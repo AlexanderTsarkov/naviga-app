@@ -73,3 +73,4 @@
 | [#34](https://github.com/AlexanderTsarkov/naviga-app/issues/34) | 3.7 App integration/E2E test | App | Open | N/A |
 | [#35](https://github.com/AlexanderTsarkov/naviga-app/issues/35) | 4.1 Field test 2–5 nodes | Test | Open | N/A |
 | [#36](https://github.com/AlexanderTsarkov/naviga-app/issues/36) | 4.2 Results + doc updates | Docs | Open | N/A |
+| [#74](https://github.com/AlexanderTsarkov/naviga-app/issues/74) | M1 Runtime wiring (GEO_BEACON ↔ NodeTable ↔ BLE) | Firmware | Done | PR [#77](https://github.com/AlexanderTsarkov/naviga-app/pull/77) — `firmware/src/app/m1_runtime.{h,cpp}`, `firmware/src/app/app_services.cpp`, `firmware/src/protocol/ble_node_table_bridge.cpp`, `firmware/src/protocol/geo_beacon_codec.cpp` |
