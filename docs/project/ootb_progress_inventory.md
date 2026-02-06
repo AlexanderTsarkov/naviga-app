@@ -60,7 +60,7 @@
 | [#21](https://github.com/AlexanderTsarkov/naviga-app/issues/21) | 2.3 HAL radio driver | Code | Open | N/A |
 | [#22](https://github.com/AlexanderTsarkov/naviga-app/issues/22) | 2.4 HAL BLE transport | Code | Done | PR [#69](https://github.com/AlexanderTsarkov/naviga-app/pull/69) — BLE transport core + ESP32 IBleTransport adapter; test_native unit tests. |
 | [#23](https://github.com/AlexanderTsarkov/naviga-app/issues/23) | 2.5 GEO_BEACON codec | Code | Done | PR [#63](https://github.com/AlexanderTsarkov/naviga-app/pull/63). GEO_BEACON codec: fixed 24-byte core, little-endian; decode ignores trailing bytes; pos_valid==0 skips range-check (fields parsed as-is); unit tests (test_native). |
-| [#24](https://github.com/AlexanderTsarkov/naviga-app/issues/24) | 2.6 NodeTable domain | Code | Open | N/A |
+| [#24](https://github.com/AlexanderTsarkov/naviga-app/issues/24) | 2.6 NodeTable domain | Code | Done | PR [#71](https://github.com/AlexanderTsarkov/naviga-app/pull/71) — `firmware/src/domain/node_table.{h,cpp}`, `firmware/test/test_node_table_domain/test_node_table_domain.cpp` |
 | [#25](https://github.com/AlexanderTsarkov/naviga-app/issues/25) | 2.7 Beacon logic | Code | Open | N/A |
 | [#26](https://github.com/AlexanderTsarkov/naviga-app/issues/26) | 2.8 BLE NodeTable bridge | Code | Open | N/A |
 | [#27](https://github.com/AlexanderTsarkov/naviga-app/issues/27) | 2.9 Firmware integration test | Test | Open | N/A |
