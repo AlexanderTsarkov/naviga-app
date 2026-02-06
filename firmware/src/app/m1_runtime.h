@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "domain/beacon_logic.h"
+#include "domain/beacon_send_policy.h"
 #include "domain/logger.h"
 #include "domain/node_table.h"
 #include "naviga/hal/interfaces.h"
@@ -23,7 +24,8 @@ class M1Runtime {
             IRadio* radio,
             bool radio_ready,
             bool rssi_available,
-            domain::Logger* event_logger);
+            domain::Logger* event_logger,
+            IChannelSense* channel_sense);
 
   void set_self_position(bool pos_valid,
                          int32_t lat_e7,
@@ -53,14 +55,18 @@ class M1Runtime {
   BleEsp32Transport ble_transport_{};
   protocol::DeviceInfoModel device_info_{};
   protocol::GeoBeaconFields self_fields_{};
+  domain::BeaconSendPolicy send_policy_{};
 
   IRadio* radio_ = nullptr;
   domain::Logger* event_logger_ = nullptr;
+  IChannelSense* channel_sense_ = nullptr;
   bool radio_ready_ = false;
   bool rssi_available_ = false;
   uint32_t last_ble_update_ms_ = 0;
 
   RadioSmokeStats stats_{};
+  uint8_t pending_payload_[protocol::kGeoBeaconSize] = {};
+  size_t pending_len_ = 0;
 };
 
 } // namespace naviga

@@ -8,6 +8,7 @@ namespace {
 
 constexpr uint32_t kBleUpdateIntervalMs = 1000U;
 constexpr uint8_t kGeoBeaconMsgType = protocol::kGeoBeaconMsgType;
+constexpr uint32_t kSenseTimeoutMs = 20U;
 constexpr size_t kMaxRxPerTick = 4;
 
 } // namespace
@@ -19,9 +20,11 @@ void M1Runtime::init(uint64_t self_id,
                      IRadio* radio,
                      bool radio_ready,
                      bool rssi_available,
-                     domain::Logger* event_logger) {
+                     domain::Logger* event_logger,
+                     IChannelSense* channel_sense) {
   radio_ = radio;
   event_logger_ = event_logger;
+  channel_sense_ = channel_sense;
   radio_ready_ = radio_ready;
   rssi_available_ = rssi_available;
   last_ble_update_ms_ = 0;
@@ -44,6 +47,11 @@ void M1Runtime::init(uint64_t self_id,
   device_info_ = device_info;
   device_info_.node_id = self_id;
   device_info_.short_id = short_id;
+
+  send_policy_.init(static_cast<uint32_t>(self_id));
+  send_policy_.set_jitter_ms(250);
+  send_policy_.set_backoff_ms(200, 2000);
+  send_policy_.enable_sense(false);
 
   ble_transport_.init();
 }
@@ -89,20 +97,40 @@ size_t M1Runtime::node_count() const {
 }
 
 void M1Runtime::handle_tx(uint32_t now_ms) {
-  uint8_t payload[protocol::kGeoBeaconSize] = {};
-  size_t out_len = 0;
-  if (!beacon_logic_.build_tx(now_ms, self_fields_, payload, sizeof(payload), &out_len)) {
+  if (!send_policy_.has_pending()) {
+    size_t out_len = 0;
+    if (!beacon_logic_.build_tx(now_ms, self_fields_, pending_payload_, sizeof(pending_payload_),
+                                &out_len)) {
+      return;
+    }
+    pending_len_ = out_len;
+    send_policy_.on_payload_built(now_ms);
+  }
+
+  if (!send_policy_.ready_to_attempt(now_ms)) {
     return;
   }
 
+  if (send_policy_.should_sense(channel_sense_)) {
+    const ChannelSenseResult result = channel_sense_->sense(kSenseTimeoutMs);
+    if (result.state == ChannelSenseState::BUSY || result.state == ChannelSenseState::ERROR) {
+      send_policy_.on_channel_busy(now_ms);
+      log_event(now_ms, domain::LogEventId::RADIO_TX_ERR, domain::LogLevel::kWarn, &kGeoBeaconMsgType,
+                1);
+      return;
+    }
+  }
+
   const uint32_t next_seq = stats_.last_seq + 1;
-  if (radio_->send(payload, out_len)) {
+  const bool ok = radio_->send(pending_payload_, pending_len_);
+  send_policy_.on_send_result(ok, now_ms);
+  stats_.last_seq = next_seq;
+  if (ok) {
     stats_.tx_count++;
     stats_.last_tx_ms = now_ms;
-    stats_.last_seq = next_seq;
     log_event(now_ms, domain::LogEventId::RADIO_TX_OK, domain::LogLevel::kInfo, &kGeoBeaconMsgType, 1);
+    pending_len_ = 0;
   } else {
-    stats_.last_seq = next_seq;
     log_event(now_ms, domain::LogEventId::RADIO_TX_ERR, domain::LogLevel::kWarn, &kGeoBeaconMsgType, 1);
   }
 }

@@ -19,6 +19,25 @@ class IRadio {
   virtual int8_t last_rssi_dbm() const = 0;
 };
 
+enum class ChannelSenseState : uint8_t {
+  IDLE = 0,
+  BUSY = 1,
+  UNSUPPORTED = 2,
+  ERROR = 3,
+};
+
+struct ChannelSenseResult {
+  ChannelSenseState state;
+  int16_t noise_dbm;
+};
+
+class IChannelSense {
+ public:
+  virtual ~IChannelSense() = default;
+  virtual bool can_sense() const = 0;
+  virtual ChannelSenseResult sense(uint32_t timeout_ms) = 0;
+};
+
 class IBleTransport {
  public:
   virtual ~IBleTransport() = default;
