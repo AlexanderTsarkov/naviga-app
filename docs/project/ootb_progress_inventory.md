@@ -63,7 +63,7 @@
 | [#24](https://github.com/AlexanderTsarkov/naviga-app/issues/24) | 2.6 NodeTable domain | Code | Done | PR [#71](https://github.com/AlexanderTsarkov/naviga-app/pull/71) — `firmware/src/domain/node_table.{h,cpp}`, `firmware/test/test_node_table_domain/test_node_table_domain.cpp` |
 | [#25](https://github.com/AlexanderTsarkov/naviga-app/issues/25) | 2.7 Beacon logic | Code | Done | PR [#72](https://github.com/AlexanderTsarkov/naviga-app/pull/72) — `firmware/src/domain/beacon_logic.{h,cpp}`, `firmware/test/test_beacon_logic/test_beacon_logic.cpp` |
 | [#26](https://github.com/AlexanderTsarkov/naviga-app/issues/26) | 2.8 BLE NodeTable bridge | Code | Done | PR [#73](https://github.com/AlexanderTsarkov/naviga-app/pull/73) — `firmware/protocol/ble_node_table_bridge.{h,cpp}`, `firmware/test/test_ble_node_table_bridge/test_ble_node_table_bridge.cpp` |
-| [#27](https://github.com/AlexanderTsarkov/naviga-app/issues/27) | 2.9 Firmware integration test | Test | Open | N/A |
+| [#27](https://github.com/AlexanderTsarkov/naviga-app/issues/27) | 2.9 Firmware integration test | Test | Done | PR [#75](https://github.com/AlexanderTsarkov/naviga-app/pull/75) — `firmware/test/test_ootb_e2e_native/test_ootb_e2e_native.cpp`, `docs/firmware/stand_tests/issue_27_stand_report.md` |
 | [#28](https://github.com/AlexanderTsarkov/naviga-app/issues/28) | 3.1 App module structure | App | Open | N/A |
 | [#29](https://github.com/AlexanderTsarkov/naviga-app/issues/29) | 3.2 BLE client + contract | App | Open | N/A |
 | [#30](https://github.com/AlexanderTsarkov/naviga-app/issues/30) | 3.3 Domain model (Node/NodeTable) | App | Open | N/A |
