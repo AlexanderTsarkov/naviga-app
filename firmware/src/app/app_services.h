@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "app/m1_runtime.h"
 #include "domain/logger.h"
 #include "services/oled_status.h"
 #include "services/radio_smoke_service.h"
@@ -19,7 +20,7 @@ class AppServices {
   bool fix_logged_ = false;
   RadioRole role_ = RadioRole::RESP;
   domain::Logger event_logger_;
-  RadioSmokeService radio_smoke_;
+  M1Runtime runtime_;
   OledStatus oled_;
 };
 

@@ -8,7 +8,7 @@
 
 namespace {
 
-constexpr const char* kFirmwareVersion = "ootb-21-radio-smoke";
+constexpr const char* kFirmwareVersion = "ootb-74-m1-runtime";
 
 } // namespace
 
