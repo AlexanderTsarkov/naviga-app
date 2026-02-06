@@ -2,7 +2,7 @@
 
 #include <cstdio>
 
-#include "app/node_table.h"
+#include "domain/node_table.h"
 #include "hw_profile.h"
 #include "platform/arduino_clock.h"
 #include "platform/arduino_gpio.h"
@@ -12,7 +12,6 @@
 #include "platform/e220_radio.h"
 #include "platform/log_export_uart.h"
 #include "platform/timebase.h"
-#include "services/ble_service.h"
 #include "services/gnss_stub_service.h"
 #include "services/self_update_policy.h"
 #include "utils/geo_utils.h"
@@ -21,10 +20,8 @@ namespace naviga {
 
 namespace {
 
-constexpr const char* kFirmwareVersion = "ootb-21-radio-smoke";
+constexpr const char* kFirmwareVersion = "ootb-74-m1-runtime";
 
-NodeTable node_table;
-BleService ble_service;
 GnssStubService gnss_stub;
 SelfUpdatePolicy self_policy;
 E220Radio* radio = nullptr;
@@ -75,19 +72,17 @@ void AppServices::init() {
   log_line("=== Naviga OOTB skeleton ===");
   log_kv("fw: ", kFirmwareVersion);
   log_kv("hw_profile: ", profile.name);
-  log_kv("role: ", role_ == RadioRole::INIT ? "INIT (PING)" : "RESP (PONG)");
+  log_kv("role: ", role_ == RadioRole::INIT ? "INIT" : "RESP");
 
   const platform::DeviceId device_id = device_id_provider_.get();
   const uint64_t full_id = full_id_from_mac(device_id.bytes);
-  const uint16_t short_id = short_id_from_mac(device_id.bytes);
-  node_table.init_self(full_id, short_id, uptime_ms());
+  const uint16_t short_id = domain::NodeTable::compute_short_id(full_id);
   gnss_stub.init(full_id);
   self_policy.init();
 
   static E220Radio radio_instance(profile.pins);
   radio = &radio_instance;
   const bool radio_ready = radio->begin();
-  radio_smoke_.init(radio, role_, radio_ready, radio->rssi_available(), &event_logger_);
   oled_.init(profile, kFirmwareVersion, role_);
 
   char full_id_hex[20] = {0};
@@ -102,15 +97,26 @@ void AppServices::init() {
   log_kv("full_id_mac: ", mac_hex);
   log_kv("short_id: ", short_id_hex);
 
-  const DeviceInfoData device_info = {
-      .fw_version = kFirmwareVersion,
-      .hw_profile_name = profile.name,
-      .band_id = 433,
-      .public_channel_id = 1,
-      .full_id_u64 = full_id,
-      .short_id = short_id,
-  };
-  ble_service.init(device_info, &node_table, &logger_, &event_logger_);
+  protocol::DeviceInfoModel device_info{};
+  device_info.format_ver = 1;
+  device_info.ble_schema_ver = 1;
+  device_info.radio_proto_ver = 0;
+  device_info.include_radio_proto_ver = true;
+  device_info.node_id = full_id;
+  device_info.short_id = short_id;
+  device_info.device_type = 1;
+  device_info.firmware_version = kFirmwareVersion;
+  device_info.radio_module_model = "E220";
+  device_info.band_id = 433;
+  device_info.channel_min = 0;
+  device_info.channel_max = 255;
+  device_info.network_mode = 0;
+  device_info.channel_id = 1;
+  device_info.public_channel_id = 1;
+  device_info.capabilities = 0;
+
+  runtime_.init(full_id, short_id, uptime_ms(), device_info, radio, radio_ready,
+                radio->rssi_available(), &event_logger_);
 }
 
 void AppServices::tick(uint32_t now_ms) {
@@ -124,7 +130,7 @@ void AppServices::tick(uint32_t now_ms) {
     const SelfUpdateDecision decision = self_policy.evaluate(now_ms, sample);
     if (decision.reason != SelfUpdateReason::NONE) {
       self_policy.commit(now_ms, sample);
-      node_table.update_self_position(sample.lat_e7, sample.lon_e7, now_ms);
+      runtime_.set_self_position(sample.has_fix, sample.lat_e7, sample.lon_e7, 0, now_ms);
       uint8_t payload[8] = {};
       write_i32_le(payload, sample.lat_e7);
       write_i32_le(payload + 4, sample.lon_e7);
@@ -156,11 +162,13 @@ void AppServices::tick(uint32_t now_ms) {
                     static_cast<double>(decision.distance_m),
                     static_cast<unsigned long>(decision.dt_ms));
       log_line(buffer);
+    } else if (!sample.has_fix) {
+      runtime_.set_self_position(false, 0, 0, 0, now_ms);
     }
   }
 
-  radio_smoke_.tick(now_ms);
-  oled_.update(now_ms, radio_smoke_.stats());
+  runtime_.tick(now_ms);
+  oled_.update(now_ms, runtime_.stats());
 
   if ((now_ms - last_heartbeat_ms_) >= 1000U) {
     last_heartbeat_ms_ = now_ms;
@@ -169,14 +177,9 @@ void AppServices::tick(uint32_t now_ms) {
 
   if ((now_ms - last_summary_ms_) >= 5000U) {
     last_summary_ms_ = now_ms;
-    uint8_t page_buffer[NodeTable::kEntryBytes * NodeTable::kDefaultPageSize] = {0};
-    const size_t bytes = node_table.get_page(0, NodeTable::kDefaultPageSize, page_buffer,
-                                             sizeof(page_buffer));
-    const size_t page0_count = bytes / NodeTable::kEntryBytes;
     char buffer[128] = {0};
-    std::snprintf(buffer, sizeof(buffer), "nodetable: size=%lu page0_count=%lu",
-                  static_cast<unsigned long>(node_table.size()),
-                  static_cast<unsigned long>(page0_count));
+    std::snprintf(buffer, sizeof(buffer), "nodetable: size=%lu",
+                  static_cast<unsigned long>(runtime_.node_count()));
     log_line(buffer);
     platform::drain_logs_uart(event_logger_);
   }

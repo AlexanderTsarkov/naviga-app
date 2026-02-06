@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "../../src/domain/node_table.h"
+#include "domain/node_table.h"
 #include "naviga/hal/interfaces.h"
 
 namespace naviga {
