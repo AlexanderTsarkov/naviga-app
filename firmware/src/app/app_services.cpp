@@ -116,7 +116,7 @@ void AppServices::init() {
   device_info.capabilities = 0;
 
   runtime_.init(full_id, short_id, uptime_ms(), device_info, radio, radio_ready,
-                radio->rssi_available(), &event_logger_);
+                radio->rssi_available(), &event_logger_, nullptr);
 }
 
 void AppServices::tick(uint32_t now_ms) {
