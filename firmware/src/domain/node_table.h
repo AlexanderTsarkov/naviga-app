@@ -5,6 +5,7 @@
 #include <cstdint>
 
 namespace naviga {
+namespace domain {
 
 struct NodeEntry {
   uint64_t node_id = 0;
@@ -81,4 +82,5 @@ class NodeTable {
   size_t build_ordered_indices(std::array<size_t, kMaxNodes>& out_indices) const;
 };
 
+} // namespace domain
 } // namespace naviga

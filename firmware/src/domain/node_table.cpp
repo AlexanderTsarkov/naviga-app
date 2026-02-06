@@ -3,6 +3,7 @@
 #include <algorithm>
 
 namespace naviga {
+namespace domain {
 
 namespace {
 
@@ -437,4 +438,5 @@ size_t NodeTable::build_ordered_indices(std::array<size_t, kMaxNodes>& out_indic
   return count;
 }
 
+} // namespace domain
 } // namespace naviga

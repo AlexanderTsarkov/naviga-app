@@ -6,7 +6,7 @@
 #include "../../src/domain/node_table.h"
 #include "../../src/domain/node_table.cpp"
 
-using naviga::NodeTable;
+using naviga::domain::NodeTable;
 
 namespace {
 
