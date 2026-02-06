@@ -5,7 +5,6 @@
 #include "../../protocol/ble_node_table_bridge.h"
 #include "../../protocol/ble_node_table_bridge.cpp"
 #include "../../protocol/geo_beacon_codec.h"
-#include "../../protocol/geo_beacon_codec.cpp"
 #include "../../src/domain/beacon_logic.h"
 #include "../../src/domain/beacon_logic.cpp"
 #include "../../src/domain/node_table.h"
