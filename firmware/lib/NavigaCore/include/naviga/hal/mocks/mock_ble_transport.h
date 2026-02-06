@@ -15,12 +15,13 @@ class MockBleTransport : public IBleTransport {
   size_t device_info_len() const;
   size_t page_len(uint8_t page_index) const;
   const uint8_t* device_info() const;
+  const uint8_t* page_data(uint8_t page_index) const;
 
  private:
   uint8_t device_info_[256] = {0};
   size_t device_info_len_ = 0;
 
-  uint8_t page_buf_[4][256] = {{0}};
+  uint8_t page_buf_[4][320] = {{0}};
   size_t page_len_[4] = {0, 0, 0, 0};
 };
 

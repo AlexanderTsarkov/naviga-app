@@ -9,7 +9,7 @@ namespace naviga {
 class BleTransportCore {
  public:
   static constexpr size_t kMaxDeviceInfoLen = 256;
-  static constexpr size_t kMaxPageLen = 256;
+  static constexpr size_t kMaxPageLen = 320;
   static constexpr uint8_t kPageCount = 4;
 
   void set_device_info(const uint8_t* data, size_t len);

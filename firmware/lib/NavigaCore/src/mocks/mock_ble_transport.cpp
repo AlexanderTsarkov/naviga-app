@@ -36,4 +36,8 @@ const uint8_t* MockBleTransport::device_info() const {
   return device_info_;
 }
 
+const uint8_t* MockBleTransport::page_data(uint8_t page_index) const {
+  return page_index < 4 ? page_buf_[page_index] : nullptr;
+}
+
 } // namespace naviga
