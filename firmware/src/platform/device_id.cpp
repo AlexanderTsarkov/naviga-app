@@ -36,6 +36,18 @@ void get_device_mac_bytes(uint8_t out_mac[6]) {
   }
   std::memset(out_mac, 0, 6);
   uint8_t base_mac[6] = {0};
+#if defined(ESP_MAC_BLE)
+  if (esp_read_mac(base_mac, ESP_MAC_BLE) == ESP_OK) {
+    std::memcpy(out_mac, base_mac, 6);
+    return;
+  }
+#endif
+#if defined(ESP_MAC_BT)
+  if (esp_read_mac(base_mac, ESP_MAC_BT) == ESP_OK) {
+    std::memcpy(out_mac, base_mac, 6);
+    return;
+  }
+#endif
   if (esp_efuse_mac_get_default(base_mac) == ESP_OK) {
     std::memcpy(out_mac, base_mac, 6);
   }
