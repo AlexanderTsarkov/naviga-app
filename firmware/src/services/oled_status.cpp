@@ -1,22 +1,46 @@
 #include "services/oled_status.h"
 
+#include <cstdio>
+#include <cstring>
+
 namespace naviga {
 
 namespace {
 
 constexpr uint8_t kOledAddress = 0x3C;
-constexpr uint32_t kRenderIntervalMs = 250U;
+constexpr uint32_t kRenderIntervalMs = 500U;
 
-const char* role_label(RadioRole role) {
-  return role == RadioRole::INIT ? "INIT (PING)" : "RESP (PONG)";
+const char* safe_text(const char* text) {
+  return text ? text : "-";
+}
+
+void format_uptime_mmss(uint32_t uptime_ms, char* out, size_t out_len) {
+  if (!out || out_len == 0) {
+    return;
+  }
+  const uint32_t total_seconds = uptime_ms / 1000U;
+  const uint32_t minutes = total_seconds / 60U;
+  const uint32_t seconds = total_seconds % 60U;
+  std::snprintf(out, out_len, "%02lu:%02lu",
+                static_cast<unsigned long>(minutes),
+                static_cast<unsigned long>(seconds));
+}
+
+void format_fw_short(const char* fw, char* out, size_t out_len) {
+  if (!out || out_len == 0) {
+    return;
+  }
+  if (!fw) {
+    std::snprintf(out, out_len, "-");
+    return;
+  }
+  std::strncpy(out, fw, out_len - 1);
+  out[out_len - 1] = '\0';
 }
 
 } // namespace
 
-void OledStatus::init(const HwProfile& profile, const char* firmware_version, RadioRole role) {
-  role_ = role;
-  profile_name_ = profile.name;
-  firmware_version_ = firmware_version;
+void OledStatus::init(const HwProfile& profile) {
 
   Wire.begin(profile.pins.i2c_sda, profile.pins.i2c_scl);
   ready_ = display_.begin(SSD1306_SWITCHCAPVCC, kOledAddress);
@@ -32,7 +56,7 @@ void OledStatus::init(const HwProfile& profile, const char* firmware_version, Ra
   display_.display();
 }
 
-void OledStatus::update(uint32_t now_ms, const RadioSmokeStats& stats) {
+void OledStatus::update(uint32_t now_ms, const RadioSmokeStats& stats, const OledStatusData& data) {
   if (!ready_) {
     return;
   }
@@ -40,53 +64,46 @@ void OledStatus::update(uint32_t now_ms, const RadioSmokeStats& stats) {
     return;
   }
   last_render_ms_ = now_ms;
-  render(stats);
+  render(stats, data);
 }
 
-void OledStatus::render(const RadioSmokeStats& stats) {
+void OledStatus::render(const RadioSmokeStats& stats, const OledStatusData& data) {
   display_.clearDisplay();
 
   display_.fillRect(0, 0, 128, 16, SSD1306_WHITE);
   display_.setTextColor(SSD1306_BLACK);
   display_.setTextSize(1);
-  display_.setCursor(0, 4);
-  display_.print(role_label(role_));
+  display_.setCursor(0, 0);
+  display_.print("BT_MAC:");
+  display_.setTextSize(2);
+  display_.setCursor(48, 0);
+  display_.print(safe_text(data.bt_short));
 
   display_.setTextColor(SSD1306_WHITE);
   display_.setTextSize(1);
+  char fw_short[13] = {0};
+  format_fw_short(data.firmware_version, fw_short, sizeof(fw_short));
   display_.setCursor(0, 18);
-  display_.print("env: ");
-  display_.print(profile_name_ ? profile_name_ : "-");
+  display_.print("FW ");
+  display_.print(fw_short);
+  display_.print(" B:");
+  display_.print(data.ble_connected ? "C" : "A");
 
-  display_.setCursor(0, 26);
-  display_.print("fw: ");
-  display_.print(firmware_version_ ? firmware_version_ : "-");
-
+  char uptime_buf[12] = {0};
+  format_uptime_mmss(data.uptime_ms, uptime_buf, sizeof(uptime_buf));
   display_.setCursor(0, 34);
-  display_.print("radio: ");
-  display_.print(stats.radio_ready ? "OK" : "ERR");
-
-  display_.setCursor(0, 42);
-  display_.print("tx ");
-  display_.print(stats.tx_count);
-  display_.print(" rx ");
-  display_.print(stats.rx_count);
+  display_.print("N:");
+  display_.print(static_cast<unsigned long>(data.nodes_seen));
+  display_.print(" U:");
+  display_.print(uptime_buf);
 
   display_.setCursor(0, 50);
-  display_.print("seq ");
-  display_.print(stats.last_seq);
-
-  display_.setCursor(0, 56);
-  display_.print("tx@");
-  display_.print(stats.last_tx_ms);
-  display_.print(" rx@");
-  display_.print(stats.last_rx_ms);
-
-  if (stats.rssi_available) {
-    display_.setCursor(96, 34);
-    display_.print("R");
-    display_.print(stats.last_rssi_dbm);
-  }
+  display_.print("S:");
+  display_.print(data.geo_seq);
+  display_.print(" T:");
+  display_.print(stats.tx_count);
+  display_.print(" R:");
+  display_.print(stats.rx_count);
 
   display_.display();
 }
