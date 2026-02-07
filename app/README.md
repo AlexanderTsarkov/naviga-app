@@ -1,8 +1,8 @@
 # Naviga — мобильное приложение
 
-Flutter-приложение проекта Naviga (iOS + Android). Каркас «с чистого листа»: код добавляется шаг за шагом.
+Flutter-приложение проекта Naviga (Android-first). Каркас Mobile v1 с базовой навигацией и feature-структурой.
 
-## Запуск
+## Запуск (Android)
 
 ```bash
 cd app
@@ -10,9 +10,23 @@ flutter pub get
 flutter run
 ```
 
+## Анализ и тесты
+
+```bash
+cd app
+flutter analyze
+flutter test
+```
+
+## Notes
+
+- **minSdkVersion = 28** (Android 9 / Samsung S8 compatible).
+- Для будущего BLE-сканирования Android потребует Location permissions — это будет добавлено позже.
+
 ## Структура
 
-- `lib/main.dart` — точка входа и минимальный UI.
-- Остальной код — по мере разработки продукта.
+- `lib/app/` — app shell, routing, state.
+- `lib/features/` — feature-based экраны.
+- `lib/shared/` — общие виджеты и утилиты.
 
-Документация по приложению: `docs/mobile-app/`.
+Документация по приложению: `docs/mobile/`.
