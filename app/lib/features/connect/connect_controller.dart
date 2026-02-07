@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -11,6 +13,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../shared/logging.dart';
 
 const String kNavigaServiceUuid = '6e4f0001-1b9a-4c3a-9a3b-000000000001';
+const String kNavigaDeviceInfoUuid = '6e4f0002-1b9a-4c3a-9a3b-000000000001';
+const String kNavigaHealthUuid = '6e4f0007-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaNamePrefix = 'Naviga';
 const int? kNavigaManufacturerId =
     null; // TODO: set when manufacturer id is known
@@ -29,9 +33,12 @@ class ConnectController extends StateNotifier<ConnectState> {
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<bool>? _isScanningSub;
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
+  StreamSubscription<List<int>>? _healthSub;
   Timer? _scanRestartTimer;
   SharedPreferences? _prefs;
   BluetoothDevice? _activeDevice;
+  BluetoothCharacteristic? _deviceInfoCharacteristic;
+  BluetoothCharacteristic? _healthCharacteristic;
 
   static const _prefsLastDeviceKey = 'naviga.last_device_id';
 
@@ -155,18 +162,27 @@ class ConnectController extends StateNotifier<ConnectState> {
 
     await stopScan();
 
+    if (_activeDevice != null && _activeDevice!.remoteId.toString() != device.id) {
+      await _teardownGatt(clearState: true);
+      try {
+        await _activeDevice!.disconnect();
+      } catch (_) {}
+    }
+
     final bluetoothDevice = BluetoothDevice.fromId(device.id);
     _activeDevice = bluetoothDevice;
 
     _connectionSub?.cancel();
-    _connectionSub = bluetoothDevice.connectionState.listen((event) {
+    _connectionSub = bluetoothDevice.connectionState.listen((event) async {
       if (event == BluetoothConnectionState.connected) {
         state = state.copyWith(
           connectionStatus: ConnectionStatus.connected,
           connectedDeviceId: device.id,
         );
+        await _handleConnected(bluetoothDevice);
       }
       if (event == BluetoothConnectionState.disconnected) {
+        await _teardownGatt(clearState: true);
         state = state.copyWith(
           connectionStatus: ConnectionStatus.idle,
           connectedDeviceId: null,
@@ -204,12 +220,199 @@ class ConnectController extends StateNotifier<ConnectState> {
 
     state = state.copyWith(connectionStatus: ConnectionStatus.disconnecting);
     try {
+      await _teardownGatt(clearState: true);
       await _activeDevice!.disconnect();
     } catch (error) {
       state = state.copyWith(
         connectionStatus: ConnectionStatus.failed,
         lastError: error.toString(),
       );
+    }
+  }
+
+  Future<void> _handleConnected(BluetoothDevice device) async {
+    if (_activeDevice?.remoteId != device.remoteId) {
+      return;
+    }
+    state = state.copyWith(
+      isDiscoveringServices: true,
+      telemetryError: null,
+      deviceInfo: null,
+      deviceInfoWarning: null,
+      health: null,
+      healthWarning: null,
+    );
+
+    try {
+      final services = await device.discoverServices();
+      if (kDebugMode) {
+        _logServices(services);
+      }
+
+      final navigaService = services
+          .cast<BluetoothService?>()
+          .firstWhere(
+            (service) => service?.uuid == Guid(kNavigaServiceUuid),
+            orElse: () => null,
+          );
+      if (navigaService == null) {
+        state = state.copyWith(
+          isDiscoveringServices: false,
+          telemetryError: 'Expected service missing: $kNavigaServiceUuid',
+        );
+        return;
+      }
+
+      _deviceInfoCharacteristic = _findCharacteristic(
+        navigaService,
+        Guid(kNavigaDeviceInfoUuid),
+      );
+      _healthCharacteristic = _findCharacteristic(
+        navigaService,
+        Guid(kNavigaHealthUuid),
+      );
+
+      final missing = <String>[];
+      if (_deviceInfoCharacteristic == null) {
+        missing.add('DeviceInfo');
+      }
+      if (_healthCharacteristic == null) {
+        missing.add('Health');
+      }
+      final issues = <String>[];
+      if (_deviceInfoCharacteristic != null &&
+          !_deviceInfoCharacteristic!.properties.read) {
+        issues.add('DeviceInfo not readable');
+      }
+      if (_healthCharacteristic != null &&
+          !_healthCharacteristic!.properties.notify &&
+          !_healthCharacteristic!.properties.indicate) {
+        issues.add('Health not notifiable');
+      }
+      final errors = <String>[];
+      if (missing.isNotEmpty) {
+        errors.add('Expected characteristic missing: ${missing.join(', ')}');
+      }
+      if (issues.isNotEmpty) {
+        errors.addAll(issues);
+      }
+      if (errors.isNotEmpty) {
+        state = state.copyWith(telemetryError: errors.join(' · '));
+      }
+
+      if (_deviceInfoCharacteristic != null &&
+          _deviceInfoCharacteristic!.properties.read) {
+        await _readDeviceInfo();
+      }
+
+      if (_healthCharacteristic != null &&
+          (_healthCharacteristic!.properties.notify ||
+              _healthCharacteristic!.properties.indicate)) {
+        await _subscribeHealth();
+      }
+    } catch (error) {
+      state = state.copyWith(
+        telemetryError: error.toString(),
+      );
+    } finally {
+      state = state.copyWith(isDiscoveringServices: false);
+    }
+  }
+
+  BluetoothCharacteristic? _findCharacteristic(
+    BluetoothService service,
+    Guid uuid,
+  ) {
+    for (final characteristic in service.characteristics) {
+      if (characteristic.uuid == uuid) {
+        return characteristic;
+      }
+    }
+    return null;
+  }
+
+  Future<void> _readDeviceInfo() async {
+    try {
+      final payload = await _deviceInfoCharacteristic!.read();
+      final result = BleDeviceInfoParser.parse(payload);
+      state = state.copyWith(
+        deviceInfo: result.data,
+        deviceInfoWarning: result.warning,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        telemetryError: 'DeviceInfo read failed: $error',
+      );
+    }
+  }
+
+  Future<void> _subscribeHealth() async {
+    _healthSub?.cancel();
+    try {
+      await _healthCharacteristic!.setNotifyValue(true);
+      _healthSub = _healthCharacteristic!.onValueReceived.listen((payload) {
+        final result = BleHealthParser.parse(payload);
+        state = state.copyWith(
+          health: result.data ?? state.health,
+          healthWarning: result.warning,
+        );
+      });
+
+      if (_healthCharacteristic!.properties.read) {
+        final initial = await _healthCharacteristic!.read();
+        final initialResult = BleHealthParser.parse(initial);
+        state = state.copyWith(
+          health: initialResult.data ?? state.health,
+          healthWarning: initialResult.warning,
+        );
+      }
+    } catch (error) {
+      state = state.copyWith(
+        telemetryError: 'Health notify failed: $error',
+      );
+    }
+  }
+
+  Future<void> _teardownGatt({required bool clearState}) async {
+    _healthSub?.cancel();
+    _healthSub = null;
+
+    final healthChar = _healthCharacteristic;
+    if (healthChar != null) {
+      try {
+        if (healthChar.isNotifying) {
+          await healthChar.setNotifyValue(false);
+        }
+      } catch (_) {}
+    }
+
+    _deviceInfoCharacteristic = null;
+    _healthCharacteristic = null;
+
+    if (clearState) {
+      state = state.copyWith(
+        deviceInfo: null,
+        deviceInfoWarning: null,
+        health: null,
+        healthWarning: null,
+        telemetryError: null,
+        isDiscoveringServices: false,
+      );
+    }
+  }
+
+  void _logServices(List<BluetoothService> services) {
+    for (final service in services) {
+      logInfo('Service ${service.uuid}');
+      for (final characteristic in service.characteristics) {
+        final props = <String>[];
+        if (characteristic.properties.read) props.add('read');
+        if (characteristic.properties.notify) props.add('notify');
+        if (characteristic.properties.indicate) props.add('indicate');
+        if (characteristic.properties.write) props.add('write');
+        if (characteristic.properties.writeWithoutResponse) props.add('writeNoRsp');
+        logInfo('  Char ${characteristic.uuid} props=${props.join(',')}');
+      }
     }
   }
 
@@ -283,6 +486,7 @@ class ConnectController extends StateNotifier<ConnectState> {
     _scanSub?.cancel();
     _isScanningSub?.cancel();
     _connectionSub?.cancel();
+    _healthSub?.cancel();
     _scanRestartTimer?.cancel();
     super.dispose();
   }
@@ -301,7 +505,13 @@ class ConnectState {
     required this.connectionStatus,
     required this.connectedDeviceId,
     required this.lastConnectedDeviceId,
+    required this.isDiscoveringServices,
+    required this.deviceInfo,
+    required this.deviceInfoWarning,
+    required this.health,
+    required this.healthWarning,
     this.lastError,
+    this.telemetryError,
   });
 
   final BluetoothAdapterState adapterState;
@@ -313,7 +523,13 @@ class ConnectState {
   final ConnectionStatus connectionStatus;
   final String? connectedDeviceId;
   final String? lastConnectedDeviceId;
+  final bool isDiscoveringServices;
+  final DeviceInfoData? deviceInfo;
+  final String? deviceInfoWarning;
+  final HealthData? health;
+  final String? healthWarning;
   final String? lastError;
+  final String? telemetryError;
 
   factory ConnectState.initial() => ConnectState(
     adapterState: BluetoothAdapterState.unknown,
@@ -325,6 +541,11 @@ class ConnectState {
     connectionStatus: ConnectionStatus.idle,
     connectedDeviceId: null,
     lastConnectedDeviceId: null,
+    isDiscoveringServices: false,
+    deviceInfo: null,
+    deviceInfoWarning: null,
+    health: null,
+    healthWarning: null,
   );
 
   ConnectState copyWith({
@@ -338,6 +559,12 @@ class ConnectState {
     String? connectedDeviceId,
     String? lastConnectedDeviceId,
     String? lastError,
+    bool? isDiscoveringServices,
+    DeviceInfoData? deviceInfo,
+    String? deviceInfoWarning,
+    HealthData? health,
+    String? healthWarning,
+    String? telemetryError,
   }) {
     return ConnectState(
       adapterState: adapterState ?? this.adapterState,
@@ -352,6 +579,13 @@ class ConnectState {
       lastConnectedDeviceId:
           lastConnectedDeviceId ?? this.lastConnectedDeviceId,
       lastError: lastError ?? this.lastError,
+      isDiscoveringServices:
+          isDiscoveringServices ?? this.isDiscoveringServices,
+      deviceInfo: deviceInfo ?? this.deviceInfo,
+      deviceInfoWarning: deviceInfoWarning ?? this.deviceInfoWarning,
+      health: health ?? this.health,
+      healthWarning: healthWarning ?? this.healthWarning,
+      telemetryError: telemetryError ?? this.telemetryError,
     );
   }
 
@@ -374,4 +608,321 @@ class NavigaScanDevice {
   final String name;
   final int rssi;
   final DateTime lastSeen;
+}
+
+class BleParseResult<T> {
+  const BleParseResult({required this.data, this.warning});
+
+  final T? data;
+  final String? warning;
+}
+
+class DeviceInfoData {
+  const DeviceInfoData({
+    required this.formatVer,
+    required this.bleSchemaVer,
+    required this.raw,
+    this.radioProtoVer,
+    this.nodeId,
+    this.shortId,
+    this.deviceType,
+    this.firmwareVersion,
+    this.radioModuleModel,
+    this.bandId,
+    this.powerMin,
+    this.powerMax,
+    this.channelMin,
+    this.channelMax,
+    this.networkMode,
+    this.channelId,
+    this.publicChannelId,
+    this.privateChannelMin,
+    this.privateChannelMax,
+    this.capabilities,
+  });
+
+  final int formatVer;
+  final int bleSchemaVer;
+  final int? radioProtoVer;
+  final int? nodeId;
+  final int? shortId;
+  final int? deviceType;
+  final String? firmwareVersion;
+  final String? radioModuleModel;
+  final int? bandId;
+  final int? powerMin;
+  final int? powerMax;
+  final int? channelMin;
+  final int? channelMax;
+  final int? networkMode;
+  final int? channelId;
+  final int? publicChannelId;
+  final int? privateChannelMin;
+  final int? privateChannelMax;
+  final int? capabilities;
+  final List<int> raw;
+}
+
+class HealthData {
+  const HealthData({
+    required this.formatVer,
+    required this.raw,
+    this.uptimeSeconds,
+    this.gnssState,
+    this.posValid,
+    this.posAgeSeconds,
+    this.batteryMv,
+    this.radioTxCount,
+    this.radioRxCount,
+    this.lastRxRssi,
+    this.lastErrorCode,
+  });
+
+  final int formatVer;
+  final int? uptimeSeconds;
+  final int? gnssState;
+  final bool? posValid;
+  final int? posAgeSeconds;
+  final int? batteryMv;
+  final int? radioTxCount;
+  final int? radioRxCount;
+  final int? lastRxRssi;
+  final int? lastErrorCode;
+  final List<int> raw;
+}
+
+class BleDeviceInfoParser {
+  static BleParseResult<DeviceInfoData> parse(List<int> data) {
+    final reader = BleByteReader(data);
+    final formatVer = reader.readU8();
+    final bleSchemaVer = reader.readU8();
+    if (formatVer == null || bleSchemaVer == null) {
+      return const BleParseResult(
+        data: null,
+        warning: 'DeviceInfo payload too short',
+      );
+    }
+
+    if (formatVer != 1) {
+      return BleParseResult(
+        data: DeviceInfoData(
+          formatVer: formatVer,
+          bleSchemaVer: bleSchemaVer,
+          raw: data,
+        ),
+        warning: 'Unknown DeviceInfo format_ver=$formatVer',
+      );
+    }
+
+    final withRadio = _parseV1(data, includeRadioProto: true);
+    if (withRadio != null) {
+      return BleParseResult(data: withRadio);
+    }
+
+    final withoutRadio = _parseV1(data, includeRadioProto: false);
+    if (withoutRadio != null) {
+      return BleParseResult(
+        data: withoutRadio,
+        warning: 'DeviceInfo radio_proto_ver missing',
+      );
+    }
+
+    return const BleParseResult(
+      data: null,
+      warning: 'DeviceInfo payload malformed',
+    );
+  }
+
+  static DeviceInfoData? _parseV1(
+    List<int> data, {
+    required bool includeRadioProto,
+  }) {
+    final reader = BleByteReader(data);
+    final formatVer = reader.readU8();
+    final bleSchemaVer = reader.readU8();
+    if (formatVer == null || bleSchemaVer == null) {
+      return null;
+    }
+
+    int? radioProtoVer;
+    if (includeRadioProto) {
+      radioProtoVer = reader.readU8();
+      if (radioProtoVer == null) {
+        return null;
+      }
+    }
+
+    final nodeId = reader.readU64Le();
+    final shortId = reader.readU16Le();
+    final deviceType = reader.readU8();
+    final firmwareVersion = reader.readLenPrefixedString();
+    final radioModuleModel = reader.readLenPrefixedString();
+    final bandId = reader.readU16Le();
+    final powerMin = reader.readU16Le();
+    final powerMax = reader.readU16Le();
+    final channelMin = reader.readU16Le();
+    final channelMax = reader.readU16Le();
+    final networkMode = reader.readU8();
+    final channelId = reader.readU16Le();
+    final publicChannelId = reader.readU16Le();
+    final privateChannelMin = reader.readU16Le();
+    final privateChannelMax = reader.readU16Le();
+    final capabilities = reader.readU32Le();
+
+    if (reader.hasErrors) {
+      return null;
+    }
+
+    return DeviceInfoData(
+      formatVer: formatVer,
+      bleSchemaVer: bleSchemaVer,
+      radioProtoVer: radioProtoVer,
+      nodeId: nodeId,
+      shortId: shortId,
+      deviceType: deviceType,
+      firmwareVersion: firmwareVersion,
+      radioModuleModel: radioModuleModel,
+      bandId: bandId,
+      powerMin: powerMin,
+      powerMax: powerMax,
+      channelMin: channelMin,
+      channelMax: channelMax,
+      networkMode: networkMode,
+      channelId: channelId,
+      publicChannelId: publicChannelId,
+      privateChannelMin: privateChannelMin,
+      privateChannelMax: privateChannelMax,
+      capabilities: capabilities,
+      raw: data,
+    );
+  }
+}
+
+class BleHealthParser {
+  static BleParseResult<HealthData> parse(List<int> data) {
+    final reader = BleByteReader(data);
+    final formatVer = reader.readU8();
+    if (formatVer == null) {
+      return const BleParseResult(
+        data: null,
+        warning: 'Health payload too short',
+      );
+    }
+
+    if (formatVer != 1) {
+      return BleParseResult(
+        data: HealthData(formatVer: formatVer, raw: data),
+        warning: 'Unknown Health format_ver=$formatVer',
+      );
+    }
+
+    final uptimeSeconds = reader.readU32Le();
+    final gnssState = reader.readU8();
+    final posValidRaw = reader.readU8();
+    final posAgeSeconds = reader.readU16Le();
+    final batteryMv = reader.readU16Le();
+    final radioTxCount = reader.readU32Le();
+    final radioRxCount = reader.readU32Le();
+    final lastRxRssi = reader.readI8();
+    final lastErrorCode = reader.remaining >= 2 ? reader.readU16Le() : null;
+
+    if (reader.hasErrors) {
+      return const BleParseResult(
+        data: null,
+        warning: 'Health payload malformed',
+      );
+    }
+
+    return BleParseResult(
+      data: HealthData(
+        formatVer: formatVer,
+        uptimeSeconds: uptimeSeconds,
+        gnssState: gnssState,
+        posValid: posValidRaw == null ? null : posValidRaw != 0,
+        posAgeSeconds: posAgeSeconds,
+        batteryMv: batteryMv,
+        radioTxCount: radioTxCount,
+        radioRxCount: radioRxCount,
+        lastRxRssi: lastRxRssi,
+        lastErrorCode: lastErrorCode,
+        raw: data,
+      ),
+    );
+  }
+}
+
+class BleByteReader {
+  BleByteReader(this._data);
+
+  final List<int> _data;
+  int _offset = 0;
+  bool hasErrors = false;
+
+  int get remaining => _data.length - _offset;
+
+  int? readU8() {
+    if (_offset + 1 > _data.length) {
+      hasErrors = true;
+      return null;
+    }
+    return _data[_offset++];
+  }
+
+  int? readI8() {
+    final value = readU8();
+    if (value == null) {
+      return null;
+    }
+    return value > 127 ? value - 256 : value;
+  }
+
+  int? readU16Le() {
+    if (_offset + 2 > _data.length) {
+      hasErrors = true;
+      return null;
+    }
+    final value = _data[_offset] | (_data[_offset + 1] << 8);
+    _offset += 2;
+    return value;
+  }
+
+  int? readU32Le() {
+    if (_offset + 4 > _data.length) {
+      hasErrors = true;
+      return null;
+    }
+    final value = _data[_offset] |
+        (_data[_offset + 1] << 8) |
+        (_data[_offset + 2] << 16) |
+        (_data[_offset + 3] << 24);
+    _offset += 4;
+    return value;
+  }
+
+  int? readU64Le() {
+    if (_offset + 8 > _data.length) {
+      hasErrors = true;
+      return null;
+    }
+    var value = 0;
+    for (var i = 0; i < 8; i++) {
+      value |= _data[_offset + i] << (8 * i);
+    }
+    _offset += 8;
+    return value;
+  }
+
+  String? readLenPrefixedString() {
+    final len = readU8();
+    if (len == null) {
+      return null;
+    }
+    if (_offset + len > _data.length) {
+      hasErrors = true;
+      return null;
+    }
+    final bytes = _data.sublist(_offset, _offset + len);
+    _offset += len;
+    return utf8.decode(bytes, allowMalformed: true);
+  }
 }

@@ -39,6 +39,15 @@ class ConnectScreen extends ConsumerWidget {
             onDisconnect: controller.disconnect,
           ),
         ),
+        if (state.connectionStatus == ConnectionStatus.connected ||
+            state.deviceInfo != null ||
+            state.health != null ||
+            state.isDiscoveringServices ||
+            state.telemetryError != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
+            child: _TelemetryCard(state: state),
+          ),
         const SizedBox(height: 12),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -396,6 +405,223 @@ class _ConnectionCard extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _TelemetryCard extends StatelessWidget {
+  const _TelemetryCard({required this.state});
+
+  final ConnectState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final deviceInfo = state.deviceInfo;
+    final health = state.health;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Telemetry', style: Theme.of(context).textTheme.titleMedium),
+            if (state.isDiscoveringServices) ...[
+              const SizedBox(height: 8),
+              const Text('Discovering services…'),
+            ],
+            if (state.telemetryError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                state.telemetryError!,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: Colors.redAccent),
+              ),
+            ],
+            if (deviceInfo != null) ...[
+              const SizedBox(height: 12),
+              Text('DeviceInfo', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 6),
+              _TelemetryRow(
+                label: 'Format',
+                value: '${deviceInfo.formatVer} (BLE ${deviceInfo.bleSchemaVer})',
+              ),
+              _TelemetryRow(
+                label: 'Node ID',
+                value: _formatHex(deviceInfo.nodeId, digits: 16),
+              ),
+              _TelemetryRow(
+                label: 'Short ID',
+                value: _formatHex(deviceInfo.shortId, digits: 4),
+              ),
+              _TelemetryRow(
+                label: 'Firmware',
+                value: deviceInfo.firmwareVersion ?? '—',
+              ),
+              _TelemetryRow(
+                label: 'Radio module',
+                value: deviceInfo.radioModuleModel ?? '—',
+              ),
+              _TelemetryRow(
+                label: 'Band',
+                value: _formatInt(deviceInfo.bandId),
+              ),
+              _TelemetryRow(
+                label: 'Power',
+                value: _formatRange(deviceInfo.powerMin, deviceInfo.powerMax),
+              ),
+              _TelemetryRow(
+                label: 'Channel range',
+                value: _formatRange(
+                  deviceInfo.channelMin,
+                  deviceInfo.channelMax,
+                ),
+              ),
+              _TelemetryRow(
+                label: 'Network mode',
+                value: _formatInt(deviceInfo.networkMode),
+              ),
+              _TelemetryRow(
+                label: 'Channel ID',
+                value: _formatInt(deviceInfo.channelId),
+              ),
+              _TelemetryRow(
+                label: 'Capabilities',
+                value: _formatHex(deviceInfo.capabilities, digits: 8),
+              ),
+              if (state.deviceInfoWarning != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    state.deviceInfoWarning!,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: Colors.orange),
+                  ),
+                ),
+            ],
+            if (health != null) ...[
+              const SizedBox(height: 12),
+              Text('Health', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 6),
+              _TelemetryRow(
+                label: 'Uptime',
+                value: _formatInt(health.uptimeSeconds, unit: 's'),
+              ),
+              _TelemetryRow(
+                label: 'GNSS state',
+                value: _formatInt(health.gnssState),
+              ),
+              _TelemetryRow(
+                label: 'Pos valid',
+                value: health.posValid == null
+                    ? '—'
+                    : (health.posValid! ? 'Yes' : 'No'),
+              ),
+              _TelemetryRow(
+                label: 'Pos age',
+                value: _formatInt(health.posAgeSeconds, unit: 's'),
+              ),
+              _TelemetryRow(
+                label: 'Battery',
+                value: _formatInt(health.batteryMv, unit: 'mV'),
+              ),
+              _TelemetryRow(
+                label: 'Radio TX/RX',
+                value: _formatPair(health.radioTxCount, health.radioRxCount),
+              ),
+              _TelemetryRow(
+                label: 'Last RSSI',
+                value: _formatInt(health.lastRxRssi, unit: 'dBm'),
+              ),
+              _TelemetryRow(
+                label: 'Last error',
+                value: _formatInt(health.lastErrorCode),
+              ),
+              if (state.healthWarning != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    state.healthWarning!,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: Colors.orange),
+                  ),
+                ),
+            ],
+            if (deviceInfo == null &&
+                health == null &&
+                !state.isDiscoveringServices &&
+                state.telemetryError == null)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text('No telemetry available yet.'),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatInt(int? value, {String? unit}) {
+    if (value == null) {
+      return '—';
+    }
+    if (unit == null) {
+      return '$value';
+    }
+    return '$value $unit';
+  }
+
+  String _formatRange(int? min, int? max) {
+    if (min == null || max == null) {
+      return '—';
+    }
+    return '$min–$max';
+  }
+
+  String _formatPair(int? first, int? second) {
+    if (first == null || second == null) {
+      return '—';
+    }
+    return '$first / $second';
+  }
+
+  String _formatHex(int? value, {required int digits}) {
+    if (value == null) {
+      return '—';
+    }
+    return value.toRadixString(16).padLeft(digits, '0').toUpperCase();
+  }
+}
+
+class _TelemetryRow extends StatelessWidget {
+  const _TelemetryRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          Expanded(child: Text(value)),
+        ],
       ),
     );
   }
