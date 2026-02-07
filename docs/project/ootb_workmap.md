@@ -94,6 +94,24 @@ Start here — Architecture Index: [docs/architecture/index.md](../architecture/
 
 **Mapping UART↔SPI:** маппинг channel_id/speed_preset_id/power между UART (E22/E220) и будущими SPI модулями имеет владельца — отдельный тикет [#44](https://github.com/AlexanderTsarkov/naviga-app/issues/44) (research + обновление radio_profile_presets_v0.md).
 
+### 3.2. Next deliverable: Mobile v1 (Android-first, Flutter)
+
+**Epic:** [#80](https://github.com/AlexanderTsarkov/naviga-app/issues/80)  
+**Doc:** [docs/mobile/mobile_v1_screens.md](../mobile/mobile_v1_screens.md)
+
+**Scope (MVP):**
+- Tabs: Connect, My Node, Nodes, Map, Settings + Node Details
+- BLE read-only: DeviceInfo + Health + NodeTableSnapshot (no write/config)
+- Map v1: flutter_map, online tiles only
+- Lightweight local cache: last NodeTable snapshot
+- Android-first now, iOS follow-up later
+
+**Non-goals:**
+- Messages / chat
+- Tracks / routes / breadcrumbs
+- Offline maps
+- BLE config/write actions (channel/power/profile)
+
 ---
 
 ## 4. Future / Deferred (not in seed sprint 1)

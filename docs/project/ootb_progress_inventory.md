@@ -35,6 +35,28 @@
 2) **[#23] GEO_BEACON codec** — radio payload encode/decode for end-to-end.  
 3) **[#20] Logging v0** — ring-buffer + export (if needed before beacon logic).
 
+## F) Mobile v1 planned (Android-first, Flutter)
+
+**Epic:** [#80](https://github.com/AlexanderTsarkov/naviga-app/issues/80)  
+**Spec:** [docs/mobile/mobile_v1_screens.md](../mobile/mobile_v1_screens.md)
+
+**Child issues:**
+- [#81](https://github.com/AlexanderTsarkov/naviga-app/issues/81) Flutter app bootstrap + module structure
+- [#82](https://github.com/AlexanderTsarkov/naviga-app/issues/82) Android permissions + BLE scan
+- [#83](https://github.com/AlexanderTsarkov/naviga-app/issues/83) BLE connection state machine
+- [#84](https://github.com/AlexanderTsarkov/naviga-app/issues/84) BLE read/notify for DeviceInfo + Health
+- [#85](https://github.com/AlexanderTsarkov/naviga-app/issues/85) NodeTableSnapshot paging + DTO decode
+- [#86](https://github.com/AlexanderTsarkov/naviga-app/issues/86) Repository + NodeTable state
+- [#87](https://github.com/AlexanderTsarkov/naviga-app/issues/87) Local cache for last NodeTable snapshot
+- [#88](https://github.com/AlexanderTsarkov/naviga-app/issues/88) Core UI screens (Connect/My Node/Nodes/Details)
+- [#89](https://github.com/AlexanderTsarkov/naviga-app/issues/89) Map v1 (flutter_map + markers)
+- [#90](https://github.com/AlexanderTsarkov/naviga-app/issues/90) Settings v1 (about + diagnostics)
+
+**Definition of Done (planning):**
+- Epic + all child issues created and on Project board
+- Old mobile issues (#28–#34) closed as replaced
+- Spec doc approved as baseline (data scope = BLE v0 read-only)
+
 ## OOTB Plan Issues (2–36)
 | Issue | Title | Planned Scope | Status | Evidence |
 |---|---|---|---|---|
