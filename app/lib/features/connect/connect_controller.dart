@@ -159,13 +159,6 @@ class ConnectController extends StateNotifier<ConnectState> {
 
     await stopScan();
 
-    if (_activeDevice != null && _activeDevice!.remoteId.toString() != device.id) {
-      await _teardownGatt(clearState: true);
-      try {
-        await _activeDevice!.disconnect();
-      } catch (_) {}
-    }
-
     final bluetoothDevice = BluetoothDevice.fromId(device.id);
     _activeDevice = bluetoothDevice;
 
@@ -228,9 +221,6 @@ class ConnectController extends StateNotifier<ConnectState> {
   }
 
   Future<void> _handleConnected(BluetoothDevice device) async {
-    if (_activeDevice?.remoteId != device.remoteId) {
-      return;
-    }
     state = state.copyWith(
       isDiscoveringServices: true,
       telemetryError: null,
@@ -253,7 +243,7 @@ class ConnectController extends StateNotifier<ConnectState> {
       if (navigaService == null) {
         state = state.copyWith(
           isDiscoveringServices: false,
-          telemetryError: 'Expected service missing: $kNavigaServiceUuid',
+          telemetryError: 'Telemetry not available (firmware too old?)',
         );
         return;
       }
@@ -263,30 +253,20 @@ class ConnectController extends StateNotifier<ConnectState> {
         Guid(kNavigaDeviceInfoUuid),
       );
 
-      final missing = <String>[];
       if (_deviceInfoCharacteristic == null) {
-        missing.add('DeviceInfo');
+        state = state.copyWith(
+          telemetryError: 'Telemetry not available (firmware too old?)',
+        );
+        return;
       }
-      final issues = <String>[];
-      if (_deviceInfoCharacteristic != null &&
-          !_deviceInfoCharacteristic!.properties.read) {
-        issues.add('DeviceInfo not readable');
-      }
-      final errors = <String>[];
-      if (missing.isNotEmpty) {
-        errors.add('Expected characteristic missing: ${missing.join(', ')}');
-      }
-      if (issues.isNotEmpty) {
-        errors.addAll(issues);
-      }
-      if (errors.isNotEmpty) {
-        state = state.copyWith(telemetryError: errors.join(' · '));
+      if (!_deviceInfoCharacteristic!.properties.read) {
+        state = state.copyWith(
+          telemetryError: 'DeviceInfo not readable',
+        );
+        return;
       }
 
-      if (_deviceInfoCharacteristic != null &&
-          _deviceInfoCharacteristic!.properties.read) {
-        await _readDeviceInfo();
-      }
+      await _readDeviceInfo();
     } catch (error) {
       state = state.copyWith(
         telemetryError: error.toString(),
@@ -325,7 +305,6 @@ class ConnectController extends StateNotifier<ConnectState> {
 
   Future<void> _teardownGatt({required bool clearState}) async {
     _deviceInfoCharacteristic = null;
-
     if (clearState) {
       state = state.copyWith(
         deviceInfo: null,
@@ -709,14 +688,6 @@ class BleByteReader {
       return null;
     }
     return _data[_offset++];
-  }
-
-  int? readI8() {
-    final value = readU8();
-    if (value == null) {
-      return null;
-    }
-    return value > 127 ? value - 256 : value;
   }
 
   int? readU16Le() {
