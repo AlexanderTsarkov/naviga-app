@@ -13,6 +13,9 @@ class ConnectScreen extends ConsumerWidget {
     final state = ref.watch(connectControllerProvider);
     final controller = ref.read(connectControllerProvider.notifier);
     final isReady = controller.isReadyToScan;
+    final scanActive = state.scanRequested;
+    final canStartScan =
+        isReady && state.connectionStatus == ConnectionStatus.idle;
 
     return Column(
       children: [
@@ -29,15 +32,25 @@ class ConnectScreen extends ConsumerWidget {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: _ConnectionCard(
+            status: state.connectionStatus,
+            connectedDeviceId: state.connectedDeviceId,
+            lastConnectedDeviceId: state.lastConnectedDeviceId,
+            onDisconnect: controller.disconnect,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: state.isScanning
                       ? controller.stopScan
-                      : (isReady ? controller.startScan : null),
-                  icon: Icon(state.isScanning ? Icons.stop : Icons.search),
-                  label: Text(state.isScanning ? 'Stop scan' : 'Start scan'),
+                      : (canStartScan ? controller.startScan : null),
+                  icon: Icon(scanActive ? Icons.stop : Icons.search),
+                  label: Text(scanActive ? 'Stop scan' : 'Start scan'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -56,7 +69,15 @@ class ConnectScreen extends ConsumerWidget {
             ),
           ),
         const SizedBox(height: 12),
-        Expanded(child: _DeviceList(devices: state.deviceList)),
+        Expanded(
+          child: _DeviceList(
+            devices: state.deviceList,
+            connectionStatus: state.connectionStatus,
+            connectedDeviceId: state.connectedDeviceId,
+            onConnect: controller.connectToDevice,
+            onDisconnect: controller.disconnect,
+          ),
+        ),
       ],
     );
   }
@@ -245,9 +266,19 @@ class _ScanStatusIndicator extends StatelessWidget {
 }
 
 class _DeviceList extends StatelessWidget {
-  const _DeviceList({required this.devices});
+  const _DeviceList({
+    required this.devices,
+    required this.connectionStatus,
+    required this.connectedDeviceId,
+    required this.onConnect,
+    required this.onDisconnect,
+  });
 
   final List<NavigaScanDevice> devices;
+  final ConnectionStatus connectionStatus;
+  final String? connectedDeviceId;
+  final void Function(NavigaScanDevice device) onConnect;
+  final VoidCallback onDisconnect;
 
   @override
   Widget build(BuildContext context) {
@@ -273,15 +304,99 @@ class _DeviceList extends StatelessWidget {
               'last seen ${lastSeenSeconds}s ago',
             ),
             isThreeLine: true,
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Connect not implemented yet.')),
-              );
-            },
+            onTap: () => _handleDeviceTap(context, device),
+            trailing: _trailingIcon(device),
           ),
         );
       },
+    );
+  }
+
+  void _handleDeviceTap(BuildContext context, NavigaScanDevice device) {
+    if (connectionStatus == ConnectionStatus.connecting ||
+        connectionStatus == ConnectionStatus.disconnecting) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Connection in progress. Please wait.')),
+      );
+      return;
+    }
+
+    final isConnected =
+        connectedDeviceId == device.id &&
+        connectionStatus == ConnectionStatus.connected;
+    if (isConnected) {
+      onDisconnect();
+    } else {
+      onConnect(device);
+    }
+  }
+
+  Widget _trailingIcon(NavigaScanDevice device) {
+    final isConnected =
+        connectedDeviceId == device.id &&
+        connectionStatus == ConnectionStatus.connected;
+    if (isConnected) {
+      return const Icon(Icons.link, color: Colors.green);
+    }
+    if (connectionStatus == ConnectionStatus.connecting &&
+        connectedDeviceId == device.id) {
+      return const SizedBox(
+        height: 18,
+        width: 18,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+    return const Icon(Icons.chevron_right);
+  }
+}
+
+class _ConnectionCard extends StatelessWidget {
+  const _ConnectionCard({
+    required this.status,
+    required this.connectedDeviceId,
+    required this.lastConnectedDeviceId,
+    required this.onDisconnect,
+  });
+
+  final ConnectionStatus status;
+  final String? connectedDeviceId;
+  final String? lastConnectedDeviceId;
+  final VoidCallback onDisconnect;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusLabel = switch (status) {
+      ConnectionStatus.idle => 'Idle',
+      ConnectionStatus.connecting => 'Connecting…',
+      ConnectionStatus.connected => 'Connected',
+      ConnectionStatus.disconnecting => 'Disconnecting…',
+      ConnectionStatus.failed => 'Failed',
+    };
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Connection', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text('Status: $statusLabel'),
+            if (connectedDeviceId != null)
+              Text('Connected: $connectedDeviceId'),
+            if (connectedDeviceId == null && lastConnectedDeviceId != null)
+              Text('Last device: $lastConnectedDeviceId'),
+            if (status == ConnectionStatus.connected)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: onDisconnect,
+                  child: const Text('Disconnect'),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

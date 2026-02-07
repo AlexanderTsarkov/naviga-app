@@ -6,6 +6,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../shared/logging.dart';
 
@@ -27,8 +28,20 @@ class ConnectController extends StateNotifier<ConnectState> {
   StreamSubscription<BluetoothAdapterState>? _adapterSub;
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<bool>? _isScanningSub;
+  StreamSubscription<BluetoothConnectionState>? _connectionSub;
+  Timer? _scanRestartTimer;
+  SharedPreferences? _prefs;
+  BluetoothDevice? _activeDevice;
+
+  static const _prefsLastDeviceKey = 'naviga.last_device_id';
 
   Future<void> _init() async {
+    _prefs = await SharedPreferences.getInstance();
+    final lastDeviceId = _prefs?.getString(_prefsLastDeviceKey);
+    if (lastDeviceId != null) {
+      state = state.copyWith(lastConnectedDeviceId: lastDeviceId);
+    }
+
     final supported = await _isBleSupported();
     if (supported) {
       _adapterSub = FlutterBluePlus.adapterState.listen((state) {
@@ -37,6 +50,9 @@ class ConnectController extends StateNotifier<ConnectState> {
 
       _isScanningSub = FlutterBluePlus.isScanning.listen((isScanning) {
         state = state.copyWith(isScanning: isScanning);
+        if (!isScanning && state.scanRequested) {
+          _scheduleScanRestart();
+        }
       });
 
       _scanSub = FlutterBluePlus.scanResults.listen(_handleScanResults);
@@ -96,20 +112,105 @@ class ConnectController extends StateNotifier<ConnectState> {
       return;
     }
 
-    state = state.copyWith(lastError: null);
+    state = state.copyWith(lastError: null, scanRequested: true);
+
+    await _startScanWindow();
+  }
+
+  Future<void> stopScan() async {
+    state = state.copyWith(scanRequested: false);
+    _scanRestartTimer?.cancel();
+    await FlutterBluePlus.stopScan();
+  }
+
+  Future<void> _startScanWindow() async {
+    if (!state.scanRequested) {
+      return;
+    }
 
     try {
       await FlutterBluePlus.startScan(
-        timeout: const Duration(seconds: 15),
+        timeout: const Duration(seconds: 12),
         androidUsesFineLocation: true,
+        continuousUpdates: true,
+        continuousDivisor: 1,
       );
     } catch (error) {
       state = state.copyWith(lastError: error.toString());
     }
   }
 
-  Future<void> stopScan() async {
-    await FlutterBluePlus.stopScan();
+  void _scheduleScanRestart() {
+    _scanRestartTimer?.cancel();
+    _scanRestartTimer = Timer(const Duration(seconds: 1), () {
+      _startScanWindow();
+    });
+  }
+
+  Future<void> connectToDevice(NavigaScanDevice device) async {
+    if (state.connectionStatus == ConnectionStatus.connecting ||
+        state.connectionStatus == ConnectionStatus.disconnecting) {
+      return;
+    }
+
+    await stopScan();
+
+    final bluetoothDevice = BluetoothDevice.fromId(device.id);
+    _activeDevice = bluetoothDevice;
+
+    _connectionSub?.cancel();
+    _connectionSub = bluetoothDevice.connectionState.listen((event) {
+      if (event == BluetoothConnectionState.connected) {
+        state = state.copyWith(
+          connectionStatus: ConnectionStatus.connected,
+          connectedDeviceId: device.id,
+        );
+      }
+      if (event == BluetoothConnectionState.disconnected) {
+        state = state.copyWith(
+          connectionStatus: ConnectionStatus.idle,
+          connectedDeviceId: null,
+        );
+      }
+    });
+
+    state = state.copyWith(
+      connectionStatus: ConnectionStatus.connecting,
+      connectedDeviceId: device.id,
+      lastError: null,
+    );
+
+    try {
+      await bluetoothDevice.connect(
+        license: License.free,
+        timeout: const Duration(seconds: 12),
+        mtu: null,
+        autoConnect: false,
+      );
+      await _prefs?.setString(_prefsLastDeviceKey, device.id);
+      state = state.copyWith(lastConnectedDeviceId: device.id);
+    } catch (error) {
+      state = state.copyWith(
+        connectionStatus: ConnectionStatus.failed,
+        lastError: error.toString(),
+      );
+    }
+  }
+
+  Future<void> disconnect() async {
+    if (_activeDevice == null) {
+      return;
+    }
+
+    state = state.copyWith(connectionStatus: ConnectionStatus.disconnecting);
+    try {
+      await _activeDevice!.disconnect();
+    } catch (error) {
+      state = state.copyWith(
+        connectionStatus: ConnectionStatus.failed,
+        lastError: error.toString(),
+      );
+    }
   }
 
   void _handleScanResults(List<ScanResult> results) {
@@ -181,9 +282,13 @@ class ConnectController extends StateNotifier<ConnectState> {
     _adapterSub?.cancel();
     _scanSub?.cancel();
     _isScanningSub?.cancel();
+    _connectionSub?.cancel();
+    _scanRestartTimer?.cancel();
     super.dispose();
   }
 }
+
+enum ConnectionStatus { idle, connecting, connected, disconnecting, failed }
 
 class ConnectState {
   const ConnectState({
@@ -191,7 +296,11 @@ class ConnectState {
     required this.locationServiceEnabled,
     required this.locationPermission,
     required this.isScanning,
+    required this.scanRequested,
     required this.devices,
+    required this.connectionStatus,
+    required this.connectedDeviceId,
+    required this.lastConnectedDeviceId,
     this.lastError,
   });
 
@@ -199,7 +308,11 @@ class ConnectState {
   final bool locationServiceEnabled;
   final PermissionStatus locationPermission;
   final bool isScanning;
+  final bool scanRequested;
   final Map<String, NavigaScanDevice> devices;
+  final ConnectionStatus connectionStatus;
+  final String? connectedDeviceId;
+  final String? lastConnectedDeviceId;
   final String? lastError;
 
   factory ConnectState.initial() => ConnectState(
@@ -207,7 +320,11 @@ class ConnectState {
     locationServiceEnabled: false,
     locationPermission: PermissionStatus.denied,
     isScanning: false,
+    scanRequested: false,
     devices: const {},
+    connectionStatus: ConnectionStatus.idle,
+    connectedDeviceId: null,
+    lastConnectedDeviceId: null,
   );
 
   ConnectState copyWith({
@@ -215,7 +332,11 @@ class ConnectState {
     bool? locationServiceEnabled,
     PermissionStatus? locationPermission,
     bool? isScanning,
+    bool? scanRequested,
     Map<String, NavigaScanDevice>? devices,
+    ConnectionStatus? connectionStatus,
+    String? connectedDeviceId,
+    String? lastConnectedDeviceId,
     String? lastError,
   }) {
     return ConnectState(
@@ -224,7 +345,12 @@ class ConnectState {
           locationServiceEnabled ?? this.locationServiceEnabled,
       locationPermission: locationPermission ?? this.locationPermission,
       isScanning: isScanning ?? this.isScanning,
+      scanRequested: scanRequested ?? this.scanRequested,
       devices: devices ?? this.devices,
+      connectionStatus: connectionStatus ?? this.connectionStatus,
+      connectedDeviceId: connectedDeviceId ?? this.connectedDeviceId,
+      lastConnectedDeviceId:
+          lastConnectedDeviceId ?? this.lastConnectedDeviceId,
       lastError: lastError ?? this.lastError,
     );
   }
