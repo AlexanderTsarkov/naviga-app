@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum AppTab {
-  connect,
-  myNode,
-  nodes,
-  map,
-  settings,
-}
+enum AppTab { connect, myNode, nodes, map, settings }
 
 extension AppTabMeta on AppTab {
   String get label {

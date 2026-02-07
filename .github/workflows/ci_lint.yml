@@ -22,8 +22,13 @@ jobs:
         with:
           channel: 'stable'
 
+      - name: Install app dependencies
+        run: flutter pub get
+        working-directory: app
+
       - name: Check Dart formatting
-        run: dart format --output=none --set-exit-if-changed app/
+        run: dart format --output=none --set-exit-if-changed .
+        working-directory: app
 
       - name: Set up Python (for yamllint)
         uses: actions/setup-python@v5
