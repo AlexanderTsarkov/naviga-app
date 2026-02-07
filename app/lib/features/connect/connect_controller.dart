@@ -316,8 +316,9 @@ class ConnectController extends StateNotifier<ConnectState> {
         if (characteristic.properties.notify) props.add('notify');
         if (characteristic.properties.indicate) props.add('indicate');
         if (characteristic.properties.write) props.add('write');
-        if (characteristic.properties.writeWithoutResponse)
+        if (characteristic.properties.writeWithoutResponse) {
           props.add('writeNoRsp');
+        }
         logInfo('  Char ${characteristic.uuid} props=${props.join(',')}');
       }
     }
