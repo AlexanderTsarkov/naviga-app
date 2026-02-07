@@ -1,6 +1,7 @@
 #include "app/app_services.h"
 
 #include <cstdio>
+#include <cstring>
 
 #include "domain/node_table.h"
 #include "hw_profile.h"
@@ -56,6 +57,22 @@ inline void write_i32_le(uint8_t* out, int32_t value) {
   out[3] = static_cast<uint8_t>((raw >> 24) & 0xFF);
 }
 
+void extract_bt_short(const char* mac, char* out, size_t out_len) {
+  if (!out || out_len == 0) {
+    return;
+  }
+  if (!mac) {
+    std::snprintf(out, out_len, "----");
+    return;
+  }
+  const size_t len = std::strlen(mac);
+  if (len < 4) {
+    std::snprintf(out, out_len, "%s", mac);
+    return;
+  }
+  std::snprintf(out, out_len, "%s", mac + (len - 4));
+}
+
 } // namespace
 
 void AppServices::init() {
@@ -75,6 +92,8 @@ void AppServices::init() {
   log_kv("role: ", role_ == RadioRole::INIT ? "INIT" : "RESP");
 
   const platform::DeviceId device_id = device_id_provider_.get();
+  uint8_t mac_bytes[6] = {0};
+  get_device_mac_bytes(mac_bytes);
   const uint64_t full_id = full_id_from_mac(device_id.bytes);
   short_id_ = domain::NodeTable::compute_short_id(full_id);
   gnss_stub.init(full_id);
@@ -84,6 +103,8 @@ void AppServices::init() {
   radio = &radio_instance;
   const bool radio_ready = radio->begin();
   format_short_id_hex(short_id_, short_id_hex_, sizeof(short_id_hex_));
+  format_mac_colon_hex(mac_bytes, mac_hex_, sizeof(mac_hex_));
+  extract_bt_short(mac_hex_, bt_short_, sizeof(bt_short_));
   oled_.init(profile);
 
   char full_id_hex[20] = {0};
@@ -170,7 +191,7 @@ void AppServices::tick(uint32_t now_ms) {
 
   runtime_.tick(now_ms);
   OledStatusData oled_data{};
-  oled_data.short_id = short_id_hex_;
+  oled_data.bt_short = bt_short_;
   oled_data.firmware_version = kFirmwareVersion;
   oled_data.ble_connected = runtime_.ble_connected();
   oled_data.nodes_seen = runtime_.node_count();

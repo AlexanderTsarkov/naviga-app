@@ -1,6 +1,7 @@
 #include "services/oled_status.h"
 
 #include <cstdio>
+#include <cstring>
 
 namespace naviga {
 
@@ -23,6 +24,18 @@ void format_uptime_mmss(uint32_t uptime_ms, char* out, size_t out_len) {
   std::snprintf(out, out_len, "%02lu:%02lu",
                 static_cast<unsigned long>(minutes),
                 static_cast<unsigned long>(seconds));
+}
+
+void format_fw_short(const char* fw, char* out, size_t out_len) {
+  if (!out || out_len == 0) {
+    return;
+  }
+  if (!fw) {
+    std::snprintf(out, out_len, "-");
+    return;
+  }
+  std::strncpy(out, fw, out_len - 1);
+  out[out_len - 1] = '\0';
 }
 
 } // namespace
@@ -59,31 +72,33 @@ void OledStatus::render(const RadioSmokeStats& stats, const OledStatusData& data
 
   display_.fillRect(0, 0, 128, 16, SSD1306_WHITE);
   display_.setTextColor(SSD1306_BLACK);
-  display_.setTextSize(2);
+  display_.setTextSize(1);
   display_.setCursor(0, 0);
-  display_.print("ID:");
-  display_.print(safe_text(data.short_id));
+  display_.print("BT_MAC:");
+  display_.setTextSize(2);
+  display_.setCursor(48, 0);
+  display_.print(safe_text(data.bt_short));
 
   display_.setTextColor(SSD1306_WHITE);
   display_.setTextSize(1);
+  char fw_short[13] = {0};
+  format_fw_short(data.firmware_version, fw_short, sizeof(fw_short));
   display_.setCursor(0, 18);
-  display_.print("FW: ");
-  display_.print(safe_text(data.firmware_version));
-
-  display_.setCursor(0, 26);
-  display_.print("BLE: ");
-  display_.print(data.ble_connected ? "CONN" : "ADV");
+  display_.print("FW ");
+  display_.print(fw_short);
+  display_.print(" B:");
+  display_.print(data.ble_connected ? "C" : "A");
 
   char uptime_buf[12] = {0};
   format_uptime_mmss(data.uptime_ms, uptime_buf, sizeof(uptime_buf));
   display_.setCursor(0, 34);
-  display_.print("NODES:");
+  display_.print("N:");
   display_.print(static_cast<unsigned long>(data.nodes_seen));
-  display_.print(" UPT:");
+  display_.print(" U:");
   display_.print(uptime_buf);
 
-  display_.setCursor(0, 42);
-  display_.print("SEQ:");
+  display_.setCursor(0, 50);
+  display_.print("S:");
   display_.print(data.geo_seq);
   display_.print(" T:");
   display_.print(stats.tx_count);

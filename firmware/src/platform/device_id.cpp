@@ -100,4 +100,16 @@ void format_short_id_hex(uint16_t short_id, char* out, size_t out_len) {
   std::snprintf(out, out_len, "%04X", short_id);
 }
 
+void format_mac_colon_hex(const uint8_t mac[6], char* out, size_t out_len) {
+  if (!out || out_len == 0) {
+    return;
+  }
+  if (!mac) {
+    std::snprintf(out, out_len, "00:00:00:00:00:00");
+    return;
+  }
+  std::snprintf(out, out_len, "%02X:%02X:%02X:%02X:%02X:%02X",
+                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+}
+
 } // namespace naviga

@@ -13,7 +13,7 @@
 namespace naviga {
 
 struct OledStatusData {
-  const char* short_id = nullptr;
+  const char* bt_short = nullptr;
   const char* firmware_version = nullptr;
   bool ble_connected = false;
   size_t nodes_seen = 0;
