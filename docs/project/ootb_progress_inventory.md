@@ -47,7 +47,7 @@
 | # | Issue | Status | PR | Key paths | Verify | Notes |
 |---|-------|--------|-----|-----------|--------|-------|
 | 81 | [#81](https://github.com/AlexanderTsarkov/naviga-app/issues/81) Flutter app bootstrap + module structure | **Done** | [#92](https://github.com/AlexanderTsarkov/naviga-app/pull/92) | `app/lib/app/`, `app/lib/features/*` (placeholders), `app/lib/shared/` | `flutter analyze`; `flutter test`; `flutter run` on Android (minSdk 28) | CI lint runs in `app/`; format check: `dart format .` in `app/` |
-| 82 | [#82](https://github.com/AlexanderTsarkov/naviga-app/issues/82) Android permissions + BLE scan | Planned | — | `app/lib/features/connect/`, BLE client TBD | analyze; test; run on device (scan list) | — |
+| 82 | [#82](https://github.com/AlexanderTsarkov/naviga-app/issues/82) Android permissions + BLE scan | **Done** | [#94](https://github.com/AlexanderTsarkov/naviga-app/pull/94) | `app/lib/features/connect/` (connect_controller, connect_screen) | `flutter analyze`; `flutter test`; run on device: readiness (BT/Location/perm), scan lists Naviga, tap → "Connection not supported yet" | Manual verification: grant CTA → system prompt; Location OFF → open settings; scan lists Naviga dongle; connect not in scope (#83). |
 | 83 | [#83](https://github.com/AlexanderTsarkov/naviga-app/issues/83) BLE connection state machine | Planned | — | `app/lib/` (BLE + connect UI) | analyze; test; run (connect/disconnect) | — |
 | 84 | [#84](https://github.com/AlexanderTsarkov/naviga-app/issues/84) BLE read/notify DeviceInfo + Health | Planned | — | `app/lib/` (BLE, data layer) | analyze; test; run (DeviceInfo/Health) | — |
 | 85 | [#85](https://github.com/AlexanderTsarkov/naviga-app/issues/85) NodeTableSnapshot paging + DTO decode | Planned | — | `app/lib/` (protocol decode, DTOs) | analyze; test; decode NodeRecord v1 | — |
@@ -74,7 +74,7 @@
 | [#8](https://github.com/AlexanderTsarkov/naviga-app/issues/8) | 0.5.2 POC gaps/risks | Doc | Done | `docs/product/poc_gaps_risks.md` |
 | [#9](https://github.com/AlexanderTsarkov/naviga-app/issues/9) | 0.5.3 Archive cleanup | Repo hygiene | Done | `_archive/` (per issue) |
 | [#10](https://github.com/AlexanderTsarkov/naviga-app/issues/10) | 1.1 Architecture Index | Doc | Done | `docs/architecture/index.md` |
-| [#11](https://github.com/AlexanderTsarkov/naviga-app/issues/11) | 1.2 Firmware architecture | Doc + steps 11.1–11.4 | Partial | PRs #51/#52/#53/#55 |
+ | [#11](https://github.com/AlexanderTsarkov/naviga-app/issues/11) | 1.2 Firmware architecture | Doc + steps 11.1–11.4 | Partial | PRs #51/#52/#53/#55 |
 | [#12](https://github.com/AlexanderTsarkov/naviga-app/issues/12) | 1.3 NodeTable spec | Doc | Done | [docs/firmware/ootb_node_table_v0.md](../firmware/ootb_node_table_v0.md) |
 | [#13](https://github.com/AlexanderTsarkov/naviga-app/issues/13) | 1.4 HAL contracts | Doc | Done | [docs/firmware/hal_contracts_v0.md](../firmware/hal_contracts_v0.md) |
 | [#14](https://github.com/AlexanderTsarkov/naviga-app/issues/14) | 1.5 OOTB Radio v0 spec | Doc | Done | [docs/protocols/ootb_radio_v0.md](../protocols/ootb_radio_v0.md) |
