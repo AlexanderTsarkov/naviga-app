@@ -16,6 +16,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Referenced by analysis_options.yaml
   flutter_lints: ^6.0.0
 
 flutter:
