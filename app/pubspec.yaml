@@ -11,10 +11,12 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  flutter_riverpod: ^3.2.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Referenced by analysis_options.yaml
   flutter_lints: ^6.0.0
 
 flutter:

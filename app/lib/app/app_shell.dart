@@ -1,0 +1,46 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../features/connect/connect_screen.dart';
+import '../features/map/map_screen.dart';
+import '../features/my_node/my_node_screen.dart';
+import '../features/nodes/nodes_screen.dart';
+import '../features/settings/settings_screen.dart';
+import '../shared/app_tabs.dart';
+import 'app_state.dart';
+
+class AppShell extends ConsumerWidget {
+  const AppShell({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentTab = ref.watch(selectedTabProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(currentTab.label),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      ),
+      body: IndexedStack(
+        index: currentTab.index,
+        children: const [
+          ConnectScreen(),
+          MyNodeScreen(),
+          NodesScreen(),
+          MapScreen(),
+          SettingsScreen(),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: currentTab.index,
+        onDestinationSelected: (index) {
+          ref.read(selectedTabProvider.notifier).state = AppTab.values[index];
+        },
+        destinations: [
+          for (final tab in AppTab.values)
+            NavigationDestination(icon: Icon(tab.icon), label: tab.label),
+        ],
+      ),
+    );
+  }
+}
