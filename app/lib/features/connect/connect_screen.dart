@@ -432,10 +432,9 @@ class _TelemetryCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 state.telemetryError!,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: Colors.redAccent),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.redAccent),
               ),
             ],
             if (deviceInfo != null) ...[
@@ -444,7 +443,8 @@ class _TelemetryCard extends StatelessWidget {
               const SizedBox(height: 6),
               _TelemetryRow(
                 label: 'Format',
-                value: '${deviceInfo.formatVer} (BLE ${deviceInfo.bleSchemaVer})',
+                value:
+                    '${deviceInfo.formatVer} (BLE ${deviceInfo.bleSchemaVer})',
               ),
               _TelemetryRow(
                 label: 'Node ID',
@@ -494,10 +494,9 @@ class _TelemetryCard extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
                     state.deviceInfoWarning!,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: Colors.orange),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.orange),
                   ),
                 ),
             ],
@@ -554,10 +553,7 @@ class _TelemetryRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 110,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
           ),
           Expanded(child: Text(value)),
         ],

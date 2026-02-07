@@ -234,12 +234,10 @@ class ConnectController extends StateNotifier<ConnectState> {
         _logServices(services);
       }
 
-      final navigaService = services
-          .cast<BluetoothService?>()
-          .firstWhere(
-            (service) => service?.uuid == Guid(kNavigaServiceUuid),
-            orElse: () => null,
-          );
+      final navigaService = services.cast<BluetoothService?>().firstWhere(
+        (service) => service?.uuid == Guid(kNavigaServiceUuid),
+        orElse: () => null,
+      );
       if (navigaService == null) {
         state = state.copyWith(
           isDiscoveringServices: false,
@@ -260,17 +258,13 @@ class ConnectController extends StateNotifier<ConnectState> {
         return;
       }
       if (!_deviceInfoCharacteristic!.properties.read) {
-        state = state.copyWith(
-          telemetryError: 'DeviceInfo not readable',
-        );
+        state = state.copyWith(telemetryError: 'DeviceInfo not readable');
         return;
       }
 
       await _readDeviceInfo();
     } catch (error) {
-      state = state.copyWith(
-        telemetryError: error.toString(),
-      );
+      state = state.copyWith(telemetryError: error.toString());
     } finally {
       state = state.copyWith(isDiscoveringServices: false);
     }
@@ -297,9 +291,7 @@ class ConnectController extends StateNotifier<ConnectState> {
         deviceInfoWarning: result.warning,
       );
     } catch (error) {
-      state = state.copyWith(
-        telemetryError: 'DeviceInfo read failed: $error',
-      );
+      state = state.copyWith(telemetryError: 'DeviceInfo read failed: $error');
     }
   }
 
@@ -324,7 +316,8 @@ class ConnectController extends StateNotifier<ConnectState> {
         if (characteristic.properties.notify) props.add('notify');
         if (characteristic.properties.indicate) props.add('indicate');
         if (characteristic.properties.write) props.add('write');
-        if (characteristic.properties.writeWithoutResponse) props.add('writeNoRsp');
+        if (characteristic.properties.writeWithoutResponse)
+          props.add('writeNoRsp');
         logInfo('  Char ${characteristic.uuid} props=${props.join(',')}');
       }
     }
@@ -705,7 +698,8 @@ class BleByteReader {
       hasErrors = true;
       return null;
     }
-    final value = _data[_offset] |
+    final value =
+        _data[_offset] |
         (_data[_offset + 1] << 8) |
         (_data[_offset + 2] << 16) |
         (_data[_offset + 3] << 24);
