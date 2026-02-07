@@ -1,15 +1,287 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 
-import '../../shared/widgets/placeholder_screen.dart';
+import 'connect_controller.dart';
 
-class ConnectScreen extends StatelessWidget {
+class ConnectScreen extends ConsumerWidget {
   const ConnectScreen({super.key});
 
   @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(connectControllerProvider);
+    final controller = ref.read(connectControllerProvider.notifier);
+    final isReady = controller.isReadyToScan;
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: _ReadinessCard(
+            state: state,
+            onRefresh: controller.refreshReadiness,
+            onOpenBluetooth: controller.openBluetoothSettings,
+            onOpenLocation: controller.openLocationSettings,
+            onRequestPermission: controller.requestLocationPermission,
+            onOpenAppSettings: controller.openAppSettingsPage,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: state.isScanning
+                      ? controller.stopScan
+                      : (isReady ? controller.startScan : null),
+                  icon: Icon(state.isScanning ? Icons.stop : Icons.search),
+                  label: Text(state.isScanning ? 'Stop scan' : 'Start scan'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              _ScanStatusIndicator(isScanning: state.isScanning),
+            ],
+          ),
+        ),
+        if (state.lastError != null)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Scan error: ${state.lastError}',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.redAccent),
+            ),
+          ),
+        const SizedBox(height: 12),
+        Expanded(child: _DeviceList(devices: state.deviceList)),
+      ],
+    );
+  }
+}
+
+class _ReadinessCard extends StatelessWidget {
+  const _ReadinessCard({
+    required this.state,
+    required this.onRefresh,
+    required this.onOpenBluetooth,
+    required this.onOpenLocation,
+    required this.onRequestPermission,
+    required this.onOpenAppSettings,
+  });
+
+  final ConnectState state;
+  final VoidCallback onRefresh;
+  final VoidCallback onOpenBluetooth;
+  final VoidCallback onOpenLocation;
+  final VoidCallback onRequestPermission;
+  final VoidCallback onOpenAppSettings;
+
+  @override
   Widget build(BuildContext context) {
-    return const PlaceholderScreen(
-      title: 'Connect',
-      subtitle: 'TODO: BLE permissions, scan list, connect state machine.',
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Readiness',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Spacer(),
+                TextButton(onPressed: onRefresh, child: const Text('Refresh')),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _ReadinessRow(
+              title: 'Bluetooth',
+              status: _bluetoothStatusLabel(state),
+              isReady: state.adapterState == BluetoothAdapterState.on,
+              actionLabel: 'Open',
+              onAction: _bluetoothNeedsAction(state) ? onOpenBluetooth : null,
+            ),
+            const SizedBox(height: 8),
+            _ReadinessRow(
+              title: 'Location services',
+              status: state.locationServiceEnabled ? 'On' : 'Off',
+              isReady: state.locationServiceEnabled,
+              actionLabel: 'Turn on',
+              onAction: state.locationServiceEnabled ? null : onOpenLocation,
+            ),
+            const SizedBox(height: 8),
+            _ReadinessRow(
+              title: 'Location permission',
+              status: _permissionStatusLabel(state),
+              isReady: state.locationPermission.isGranted,
+              actionLabel: _permissionActionLabel(state),
+              onAction: _permissionAction(
+                state,
+                onRequestPermission,
+                onOpenAppSettings,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool _bluetoothNeedsAction(ConnectState state) {
+    return state.adapterState == BluetoothAdapterState.off ||
+        state.adapterState == BluetoothAdapterState.unavailable ||
+        state.adapterState == BluetoothAdapterState.unauthorized;
+  }
+
+  String _bluetoothStatusLabel(ConnectState state) {
+    switch (state.adapterState) {
+      case BluetoothAdapterState.on:
+        return 'On';
+      case BluetoothAdapterState.off:
+        return 'Off';
+      case BluetoothAdapterState.unavailable:
+        return 'Unavailable';
+      case BluetoothAdapterState.unauthorized:
+        return 'Unauthorized';
+      case BluetoothAdapterState.turningOn:
+        return 'Turning on';
+      case BluetoothAdapterState.turningOff:
+        return 'Turning off';
+      case BluetoothAdapterState.unknown:
+        return 'Unknown';
+    }
+  }
+
+  String _permissionStatusLabel(ConnectState state) {
+    final permission = state.locationPermission;
+    if (permission.isGranted) {
+      return 'Granted';
+    }
+    if (permission.isPermanentlyDenied) {
+      return 'Denied permanently';
+    }
+    if (permission.isRestricted) {
+      return 'Restricted';
+    }
+    return 'Denied';
+  }
+
+  String _permissionActionLabel(ConnectState state) {
+    if (state.locationPermission.isPermanentlyDenied) {
+      return 'Open settings';
+    }
+    return 'Grant';
+  }
+
+  VoidCallback? _permissionAction(
+    ConnectState state,
+    VoidCallback requestPermission,
+    VoidCallback openSettings,
+  ) {
+    if (state.locationPermission.isGranted) {
+      return null;
+    }
+    if (state.locationPermission.isPermanentlyDenied) {
+      return openSettings;
+    }
+    return requestPermission;
+  }
+}
+
+class _ReadinessRow extends StatelessWidget {
+  const _ReadinessRow({
+    required this.title,
+    required this.status,
+    required this.isReady,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  final String title;
+  final String status;
+  final bool isReady;
+  final String actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(
+          isReady ? Icons.check_circle : Icons.error_outline,
+          color: isReady ? Colors.green : Colors.orange,
+        ),
+        const SizedBox(width: 8),
+        Expanded(child: Text('$title: $status')),
+        if (onAction != null)
+          TextButton(onPressed: onAction, child: Text(actionLabel)),
+      ],
+    );
+  }
+}
+
+class _ScanStatusIndicator extends StatelessWidget {
+  const _ScanStatusIndicator({required this.isScanning});
+
+  final bool isScanning;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(
+          isScanning ? Icons.wifi_tethering : Icons.wifi_tethering_off,
+          color: isScanning ? Colors.green : Colors.grey,
+        ),
+        const SizedBox(width: 6),
+        Text(isScanning ? 'Scanning' : 'Idle'),
+      ],
+    );
+  }
+}
+
+class _DeviceList extends StatelessWidget {
+  const _DeviceList({required this.devices});
+
+  final List<NavigaScanDevice> devices;
+
+  @override
+  Widget build(BuildContext context) {
+    if (devices.isEmpty) {
+      return const Center(child: Text('No Naviga devices found yet.'));
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: devices.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final device = devices[index];
+        final lastSeenSeconds = DateTime.now()
+            .difference(device.lastSeen)
+            .inSeconds;
+
+        return Card(
+          child: ListTile(
+            title: Text(device.name),
+            subtitle: Text(
+              'ID: ${device.id}\nRSSI: ${device.rssi} dBm · '
+              'last seen ${lastSeenSeconds}s ago',
+            ),
+            isThreeLine: true,
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Connect not implemented yet.')),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
