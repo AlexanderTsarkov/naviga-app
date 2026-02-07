@@ -14,7 +14,6 @@ import '../../shared/logging.dart';
 
 const String kNavigaServiceUuid = '6e4f0001-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaDeviceInfoUuid = '6e4f0002-1b9a-4c3a-9a3b-000000000001';
-const String kNavigaHealthUuid = '6e4f0007-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaNamePrefix = 'Naviga';
 const int? kNavigaManufacturerId =
     null; // TODO: set when manufacturer id is known
@@ -33,12 +32,10 @@ class ConnectController extends StateNotifier<ConnectState> {
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<bool>? _isScanningSub;
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
-  StreamSubscription<List<int>>? _healthSub;
   Timer? _scanRestartTimer;
   SharedPreferences? _prefs;
   BluetoothDevice? _activeDevice;
   BluetoothCharacteristic? _deviceInfoCharacteristic;
-  BluetoothCharacteristic? _healthCharacteristic;
 
   static const _prefsLastDeviceKey = 'naviga.last_device_id';
 
@@ -239,8 +236,6 @@ class ConnectController extends StateNotifier<ConnectState> {
       telemetryError: null,
       deviceInfo: null,
       deviceInfoWarning: null,
-      health: null,
-      healthWarning: null,
     );
 
     try {
@@ -267,27 +262,15 @@ class ConnectController extends StateNotifier<ConnectState> {
         navigaService,
         Guid(kNavigaDeviceInfoUuid),
       );
-      _healthCharacteristic = _findCharacteristic(
-        navigaService,
-        Guid(kNavigaHealthUuid),
-      );
 
       final missing = <String>[];
       if (_deviceInfoCharacteristic == null) {
         missing.add('DeviceInfo');
       }
-      if (_healthCharacteristic == null) {
-        missing.add('Health');
-      }
       final issues = <String>[];
       if (_deviceInfoCharacteristic != null &&
           !_deviceInfoCharacteristic!.properties.read) {
         issues.add('DeviceInfo not readable');
-      }
-      if (_healthCharacteristic != null &&
-          !_healthCharacteristic!.properties.notify &&
-          !_healthCharacteristic!.properties.indicate) {
-        issues.add('Health not notifiable');
       }
       final errors = <String>[];
       if (missing.isNotEmpty) {
@@ -303,12 +286,6 @@ class ConnectController extends StateNotifier<ConnectState> {
       if (_deviceInfoCharacteristic != null &&
           _deviceInfoCharacteristic!.properties.read) {
         await _readDeviceInfo();
-      }
-
-      if (_healthCharacteristic != null &&
-          (_healthCharacteristic!.properties.notify ||
-              _healthCharacteristic!.properties.indicate)) {
-        await _subscribeHealth();
       }
     } catch (error) {
       state = state.copyWith(
@@ -346,55 +323,13 @@ class ConnectController extends StateNotifier<ConnectState> {
     }
   }
 
-  Future<void> _subscribeHealth() async {
-    _healthSub?.cancel();
-    try {
-      await _healthCharacteristic!.setNotifyValue(true);
-      _healthSub = _healthCharacteristic!.onValueReceived.listen((payload) {
-        final result = BleHealthParser.parse(payload);
-        state = state.copyWith(
-          health: result.data ?? state.health,
-          healthWarning: result.warning,
-        );
-      });
-
-      if (_healthCharacteristic!.properties.read) {
-        final initial = await _healthCharacteristic!.read();
-        final initialResult = BleHealthParser.parse(initial);
-        state = state.copyWith(
-          health: initialResult.data ?? state.health,
-          healthWarning: initialResult.warning,
-        );
-      }
-    } catch (error) {
-      state = state.copyWith(
-        telemetryError: 'Health notify failed: $error',
-      );
-    }
-  }
-
   Future<void> _teardownGatt({required bool clearState}) async {
-    _healthSub?.cancel();
-    _healthSub = null;
-
-    final healthChar = _healthCharacteristic;
-    if (healthChar != null) {
-      try {
-        if (healthChar.isNotifying) {
-          await healthChar.setNotifyValue(false);
-        }
-      } catch (_) {}
-    }
-
     _deviceInfoCharacteristic = null;
-    _healthCharacteristic = null;
 
     if (clearState) {
       state = state.copyWith(
         deviceInfo: null,
         deviceInfoWarning: null,
-        health: null,
-        healthWarning: null,
         telemetryError: null,
         isDiscoveringServices: false,
       );
@@ -486,7 +421,6 @@ class ConnectController extends StateNotifier<ConnectState> {
     _scanSub?.cancel();
     _isScanningSub?.cancel();
     _connectionSub?.cancel();
-    _healthSub?.cancel();
     _scanRestartTimer?.cancel();
     super.dispose();
   }
@@ -508,8 +442,6 @@ class ConnectState {
     required this.isDiscoveringServices,
     required this.deviceInfo,
     required this.deviceInfoWarning,
-    required this.health,
-    required this.healthWarning,
     this.lastError,
     this.telemetryError,
   });
@@ -526,8 +458,6 @@ class ConnectState {
   final bool isDiscoveringServices;
   final DeviceInfoData? deviceInfo;
   final String? deviceInfoWarning;
-  final HealthData? health;
-  final String? healthWarning;
   final String? lastError;
   final String? telemetryError;
 
@@ -544,8 +474,6 @@ class ConnectState {
     isDiscoveringServices: false,
     deviceInfo: null,
     deviceInfoWarning: null,
-    health: null,
-    healthWarning: null,
   );
 
   ConnectState copyWith({
@@ -562,8 +490,6 @@ class ConnectState {
     bool? isDiscoveringServices,
     DeviceInfoData? deviceInfo,
     String? deviceInfoWarning,
-    HealthData? health,
-    String? healthWarning,
     String? telemetryError,
   }) {
     return ConnectState(
@@ -583,8 +509,6 @@ class ConnectState {
           isDiscoveringServices ?? this.isDiscoveringServices,
       deviceInfo: deviceInfo ?? this.deviceInfo,
       deviceInfoWarning: deviceInfoWarning ?? this.deviceInfoWarning,
-      health: health ?? this.health,
-      healthWarning: healthWarning ?? this.healthWarning,
       telemetryError: telemetryError ?? this.telemetryError,
     );
   }
@@ -660,34 +584,6 @@ class DeviceInfoData {
   final int? privateChannelMin;
   final int? privateChannelMax;
   final int? capabilities;
-  final List<int> raw;
-}
-
-class HealthData {
-  const HealthData({
-    required this.formatVer,
-    required this.raw,
-    this.uptimeSeconds,
-    this.gnssState,
-    this.posValid,
-    this.posAgeSeconds,
-    this.batteryMv,
-    this.radioTxCount,
-    this.radioRxCount,
-    this.lastRxRssi,
-    this.lastErrorCode,
-  });
-
-  final int formatVer;
-  final int? uptimeSeconds;
-  final int? gnssState;
-  final bool? posValid;
-  final int? posAgeSeconds;
-  final int? batteryMv;
-  final int? radioTxCount;
-  final int? radioRxCount;
-  final int? lastRxRssi;
-  final int? lastErrorCode;
   final List<int> raw;
 }
 
@@ -794,59 +690,6 @@ class BleDeviceInfoParser {
       privateChannelMax: privateChannelMax,
       capabilities: capabilities,
       raw: data,
-    );
-  }
-}
-
-class BleHealthParser {
-  static BleParseResult<HealthData> parse(List<int> data) {
-    final reader = BleByteReader(data);
-    final formatVer = reader.readU8();
-    if (formatVer == null) {
-      return const BleParseResult(
-        data: null,
-        warning: 'Health payload too short',
-      );
-    }
-
-    if (formatVer != 1) {
-      return BleParseResult(
-        data: HealthData(formatVer: formatVer, raw: data),
-        warning: 'Unknown Health format_ver=$formatVer',
-      );
-    }
-
-    final uptimeSeconds = reader.readU32Le();
-    final gnssState = reader.readU8();
-    final posValidRaw = reader.readU8();
-    final posAgeSeconds = reader.readU16Le();
-    final batteryMv = reader.readU16Le();
-    final radioTxCount = reader.readU32Le();
-    final radioRxCount = reader.readU32Le();
-    final lastRxRssi = reader.readI8();
-    final lastErrorCode = reader.remaining >= 2 ? reader.readU16Le() : null;
-
-    if (reader.hasErrors) {
-      return const BleParseResult(
-        data: null,
-        warning: 'Health payload malformed',
-      );
-    }
-
-    return BleParseResult(
-      data: HealthData(
-        formatVer: formatVer,
-        uptimeSeconds: uptimeSeconds,
-        gnssState: gnssState,
-        posValid: posValidRaw == null ? null : posValidRaw != 0,
-        posAgeSeconds: posAgeSeconds,
-        batteryMv: batteryMv,
-        radioTxCount: radioTxCount,
-        radioRxCount: radioRxCount,
-        lastRxRssi: lastRxRssi,
-        lastErrorCode: lastErrorCode,
-        raw: data,
-      ),
     );
   }
 }

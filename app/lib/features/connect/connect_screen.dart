@@ -41,7 +41,6 @@ class ConnectScreen extends ConsumerWidget {
         ),
         if (state.connectionStatus == ConnectionStatus.connected ||
             state.deviceInfo != null ||
-            state.health != null ||
             state.isDiscoveringServices ||
             state.telemetryError != null)
           Padding(
@@ -418,8 +417,6 @@ class _TelemetryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final deviceInfo = state.deviceInfo;
-    final health = state.health;
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -504,58 +501,7 @@ class _TelemetryCard extends StatelessWidget {
                   ),
                 ),
             ],
-            if (health != null) ...[
-              const SizedBox(height: 12),
-              Text('Health', style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 6),
-              _TelemetryRow(
-                label: 'Uptime',
-                value: _formatInt(health.uptimeSeconds, unit: 's'),
-              ),
-              _TelemetryRow(
-                label: 'GNSS state',
-                value: _formatInt(health.gnssState),
-              ),
-              _TelemetryRow(
-                label: 'Pos valid',
-                value: health.posValid == null
-                    ? '—'
-                    : (health.posValid! ? 'Yes' : 'No'),
-              ),
-              _TelemetryRow(
-                label: 'Pos age',
-                value: _formatInt(health.posAgeSeconds, unit: 's'),
-              ),
-              _TelemetryRow(
-                label: 'Battery',
-                value: _formatInt(health.batteryMv, unit: 'mV'),
-              ),
-              _TelemetryRow(
-                label: 'Radio TX/RX',
-                value: _formatPair(health.radioTxCount, health.radioRxCount),
-              ),
-              _TelemetryRow(
-                label: 'Last RSSI',
-                value: _formatInt(health.lastRxRssi, unit: 'dBm'),
-              ),
-              _TelemetryRow(
-                label: 'Last error',
-                value: _formatInt(health.lastErrorCode),
-              ),
-              if (state.healthWarning != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    state.healthWarning!,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: Colors.orange),
-                  ),
-                ),
-            ],
             if (deviceInfo == null &&
-                health == null &&
                 !state.isDiscoveringServices &&
                 state.telemetryError == null)
               const Padding(
@@ -583,13 +529,6 @@ class _TelemetryCard extends StatelessWidget {
       return '—';
     }
     return '$min–$max';
-  }
-
-  String _formatPair(int? first, int? second) {
-    if (first == null || second == null) {
-      return '—';
-    }
-    return '$first / $second';
   }
 
   String _formatHex(int? value, {required int digits}) {
