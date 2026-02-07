@@ -21,6 +21,8 @@ class BleEsp32Transport : public IBleTransport {
 
   void set_device_info(const uint8_t* data, size_t len) override;
   void set_node_table_page(uint8_t page_index, const uint8_t* data, size_t len) override;
+  bool connected() const;
+  void set_connected(bool connected);
 
  private:
   BleTransportCore core_;
@@ -30,6 +32,7 @@ class BleEsp32Transport : public IBleTransport {
   BLEAdvertising* advertising_ = nullptr;
   BLECharacteristic* device_info_char_ = nullptr;
   BLECharacteristic* page_chars_[BleTransportCore::kPageCount] = {nullptr, nullptr, nullptr, nullptr};
+  bool connected_ = false;
 };
 
 } // namespace naviga

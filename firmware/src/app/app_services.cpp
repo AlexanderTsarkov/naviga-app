@@ -76,21 +76,22 @@ void AppServices::init() {
 
   const platform::DeviceId device_id = device_id_provider_.get();
   const uint64_t full_id = full_id_from_mac(device_id.bytes);
-  const uint16_t short_id = domain::NodeTable::compute_short_id(full_id);
+  short_id_ = domain::NodeTable::compute_short_id(full_id);
   gnss_stub.init(full_id);
   self_policy.init();
 
   static E220Radio radio_instance(profile.pins);
   radio = &radio_instance;
   const bool radio_ready = radio->begin();
-  oled_.init(profile, kFirmwareVersion, role_);
+  format_short_id_hex(short_id_, short_id_hex_, sizeof(short_id_hex_));
+  oled_.init(profile);
 
   char full_id_hex[20] = {0};
   char mac_hex[13] = {0};
   char short_id_hex[5] = {0};
   format_full_id_u64_hex(full_id, full_id_hex, sizeof(full_id_hex));
   format_full_id_mac_hex(device_id.bytes, mac_hex, sizeof(mac_hex));
-  format_short_id_hex(short_id, short_id_hex, sizeof(short_id_hex));
+  format_short_id_hex(short_id_, short_id_hex, sizeof(short_id_hex));
 
   log_line("=== Node identity ===");
   log_kv("full_id_u64: ", full_id_hex);
@@ -103,7 +104,7 @@ void AppServices::init() {
   device_info.radio_proto_ver = 0;
   device_info.include_radio_proto_ver = true;
   device_info.node_id = full_id;
-  device_info.short_id = short_id;
+  device_info.short_id = short_id_;
   device_info.device_type = 1;
   device_info.firmware_version = kFirmwareVersion;
   device_info.radio_module_model = "E220";
@@ -115,7 +116,7 @@ void AppServices::init() {
   device_info.public_channel_id = 1;
   device_info.capabilities = 0;
 
-  runtime_.init(full_id, short_id, uptime_ms(), device_info, radio, radio_ready,
+  runtime_.init(full_id, short_id_, uptime_ms(), device_info, radio, radio_ready,
                 radio->rssi_available(), &event_logger_, nullptr);
 }
 
@@ -168,7 +169,14 @@ void AppServices::tick(uint32_t now_ms) {
   }
 
   runtime_.tick(now_ms);
-  oled_.update(now_ms, runtime_.stats());
+  OledStatusData oled_data{};
+  oled_data.short_id = short_id_hex_;
+  oled_data.firmware_version = kFirmwareVersion;
+  oled_data.ble_connected = runtime_.ble_connected();
+  oled_data.nodes_seen = runtime_.node_count();
+  oled_data.geo_seq = runtime_.geo_seq();
+  oled_data.uptime_ms = now_ms;
+  oled_.update(now_ms, runtime_.stats(), oled_data);
 
   if ((now_ms - last_heartbeat_ms_) >= 1000U) {
     last_heartbeat_ms_ = now_ms;

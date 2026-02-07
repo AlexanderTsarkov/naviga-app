@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 #include <Adafruit_GFX.h>
@@ -11,20 +12,26 @@
 
 namespace naviga {
 
+struct OledStatusData {
+  const char* short_id = nullptr;
+  const char* firmware_version = nullptr;
+  bool ble_connected = false;
+  size_t nodes_seen = 0;
+  uint16_t geo_seq = 0;
+  uint32_t uptime_ms = 0;
+};
+
 class OledStatus {
  public:
-  void init(const HwProfile& profile, const char* firmware_version, RadioRole role);
-  void update(uint32_t now_ms, const RadioSmokeStats& stats);
+  void init(const HwProfile& profile);
+  void update(uint32_t now_ms, const RadioSmokeStats& stats, const OledStatusData& data);
 
  private:
-  void render(const RadioSmokeStats& stats);
+  void render(const RadioSmokeStats& stats, const OledStatusData& data);
 
   Adafruit_SSD1306 display_{128, 64, &Wire, -1};
   bool ready_ = false;
   uint32_t last_render_ms_ = 0;
-  const char* profile_name_ = nullptr;
-  const char* firmware_version_ = nullptr;
-  RadioRole role_ = RadioRole::RESP;
 };
 
 } // namespace naviga

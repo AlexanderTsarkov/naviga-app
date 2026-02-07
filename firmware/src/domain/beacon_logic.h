@@ -28,6 +28,10 @@ class BeaconLogic {
              int8_t rssi_dbm,
              NodeTable& table);
 
+  uint16_t seq() const {
+    return seq_;
+  }
+
  private:
   uint32_t min_interval_ms_ = 5000;
   uint32_t max_silence_ms_ = 30000;
