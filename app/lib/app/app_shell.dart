@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/connect/connect_controller.dart';
 import '../features/connect/connect_screen.dart';
 import '../features/map/map_screen.dart';
 import '../features/my_node/my_node_screen.dart';
 import '../features/nodes/nodes_screen.dart';
+import '../features/nodes/nodes_controller.dart';
 import '../features/settings/settings_screen.dart';
 import '../shared/app_tabs.dart';
 import 'app_state.dart';
@@ -14,6 +16,9 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (kDebugFetchNodeTableOnConnect) {
+      ref.watch(nodesControllerProvider);
+    }
     final currentTab = ref.watch(selectedTabProvider);
 
     return Scaffold(
