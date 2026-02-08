@@ -16,11 +16,25 @@ constexpr char kNodeTableSnapshotUuid[] = "6e4f0003-1b9a-4c3a-9a3b-000000000001"
 
 class NavigaServerCallbacks : public BLEServerCallbacks {
  public:
+  explicit NavigaServerCallbacks(BleEsp32Transport* transport) : transport_(transport) {}
+
+  void onConnect(BLEServer* /*server*/) override {
+    if (transport_) {
+      transport_->set_connected(true);
+    }
+  }
+
   void onDisconnect(BLEServer* server) override {
+    if (transport_) {
+      transport_->set_connected(false);
+    }
     if (server) {
       server->getAdvertising()->start();
     }
   }
+
+ private:
+  BleEsp32Transport* transport_ = nullptr;
 };
 
 class DeviceInfoCallbacks : public BLECharacteristicCallbacks {
@@ -81,7 +95,8 @@ void BleEsp32Transport::init() {
   BLEDevice::init("Naviga");
 
   server_ = BLEDevice::createServer();
-  server_->setCallbacks(new NavigaServerCallbacks());
+  connected_ = false;
+  server_->setCallbacks(new NavigaServerCallbacks(this));
 
   service_ = server_->createService(kServiceUuid);
 
@@ -113,6 +128,14 @@ bool BleEsp32Transport::get_node_table_request(uint16_t* snapshot_id, uint16_t* 
   return core_.get_node_table_request(snapshot_id, page_index);
 }
 
+bool BleEsp32Transport::connected() const {
+  return connected_;
+}
+
+void BleEsp32Transport::set_connected(bool connected) {
+  connected_ = connected;
+}
+
 } // namespace naviga
 
 #else
@@ -133,6 +156,14 @@ void BleEsp32Transport::set_node_table_response(const uint8_t* data, size_t len)
 
 bool BleEsp32Transport::get_node_table_request(uint16_t* snapshot_id, uint16_t* page_index) const {
   return core_.get_node_table_request(snapshot_id, page_index);
+}
+
+bool BleEsp32Transport::connected() const {
+  return connected_;
+}
+
+void BleEsp32Transport::set_connected(bool connected) {
+  connected_ = connected;
 }
 
 } // namespace naviga

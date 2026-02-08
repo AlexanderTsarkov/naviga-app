@@ -37,6 +37,8 @@ class M1Runtime {
 
   const RadioSmokeStats& stats() const;
   size_t node_count() const;
+  uint16_t geo_seq() const;
+  bool ble_connected() const;
 
  private:
   void handle_tx(uint32_t now_ms);

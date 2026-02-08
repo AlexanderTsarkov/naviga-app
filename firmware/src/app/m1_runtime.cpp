@@ -96,6 +96,14 @@ size_t M1Runtime::node_count() const {
   return node_table_.size();
 }
 
+uint16_t M1Runtime::geo_seq() const {
+  return beacon_logic_.seq();
+}
+
+bool M1Runtime::ble_connected() const {
+  return ble_transport_.connected();
+}
+
 void M1Runtime::handle_tx(uint32_t now_ms) {
   if (!send_policy_.has_pending()) {
     size_t out_len = 0;
