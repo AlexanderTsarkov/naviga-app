@@ -42,7 +42,8 @@ class IBleTransport {
  public:
   virtual ~IBleTransport() = default;
   virtual void set_device_info(const uint8_t* data, size_t len) = 0;
-  virtual void set_node_table_page(uint8_t page_index, const uint8_t* data, size_t len) = 0;
+  virtual void set_node_table_response(const uint8_t* data, size_t len) = 0;
+  virtual bool get_node_table_request(uint16_t* snapshot_id, uint16_t* page_index) const = 0;
 };
 
 class IGnss {

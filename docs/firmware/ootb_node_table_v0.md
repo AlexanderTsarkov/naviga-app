@@ -86,6 +86,14 @@
 
 **Экспорт в BLE/приложение (seed):** при отдаче записей в NodeTableSnapshot предпочтительно передавать **last_seen_age_s** (возраст в секундах: (now_ms - last_seen_ms) / 1000), а не сырой last_seen_ms — один консистентный timebase, приложение не зависит от uptime устройства.
 
+**NodeTableSnapshot over BLE (seed):**
+- **Characteristic UUID:** `6e4f0003-1b9a-4c3a-9a3b-000000000001` (READ + WRITE).
+- **Request (4 bytes, LE):** `snapshot_id` u16 + `page_index` u16; initial request `00 00 00 00`.
+- **Response:** header (10 bytes) + NodeRecord v1[] (26 bytes each).
+  - header offsets: `snapshot_id`@0..1, `total_nodes`@2..3, `page_index`@4..5, `page_size`@6, `page_count`@7..8, `record_format_ver`@9.
+- **Paging:** `page_size` fixed 10; `page_count = ceil(total_nodes / page_size)`.
+- **Consistency:** app uses `snapshot_id` returned from page 0; if mismatch occurs, restart from page 0.
+
 ---
 
 ## 5. Future notes

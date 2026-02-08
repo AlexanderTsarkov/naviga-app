@@ -20,7 +20,8 @@ class BleEsp32Transport : public IBleTransport {
   void init();
 
   void set_device_info(const uint8_t* data, size_t len) override;
-  void set_node_table_page(uint8_t page_index, const uint8_t* data, size_t len) override;
+  void set_node_table_response(const uint8_t* data, size_t len) override;
+  bool get_node_table_request(uint16_t* snapshot_id, uint16_t* page_index) const override;
   bool connected() const;
   void set_connected(bool connected);
 
@@ -31,7 +32,7 @@ class BleEsp32Transport : public IBleTransport {
   BLEService* service_ = nullptr;
   BLEAdvertising* advertising_ = nullptr;
   BLECharacteristic* device_info_char_ = nullptr;
-  BLECharacteristic* page_chars_[BleTransportCore::kPageCount] = {nullptr, nullptr, nullptr, nullptr};
+  BLECharacteristic* node_table_char_ = nullptr;
   bool connected_ = false;
 };
 
