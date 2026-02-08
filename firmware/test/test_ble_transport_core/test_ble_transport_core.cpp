@@ -23,22 +23,31 @@ void test_device_info_store_and_truncate() {
   TEST_ASSERT_EQUAL_UINT8(255, out[255]);
 }
 
-void test_node_table_page_bounds_and_truncate() {
+void test_node_table_response_truncate() {
   BleTransportCore core;
   uint8_t page[BleTransportCore::kMaxPageLen + 3] = {0};
   for (size_t i = 0; i < sizeof(page); ++i) {
     page[i] = static_cast<uint8_t>((i + 7) & 0xFF);
   }
 
-  TEST_ASSERT_FALSE(core.set_node_table_page(4, page, sizeof(page)));
-  TEST_ASSERT_EQUAL_UINT32(0, core.page_len(4));
-
-  TEST_ASSERT_TRUE(core.set_node_table_page(2, page, sizeof(page)));
-  TEST_ASSERT_EQUAL_UINT32(BleTransportCore::kMaxPageLen, core.page_len(2));
-  const uint8_t* out = core.page_data(2);
+  core.set_node_table_response(page, sizeof(page));
+  TEST_ASSERT_EQUAL_UINT32(BleTransportCore::kMaxPageLen, core.node_table_response_len());
+  const uint8_t* out = core.node_table_response_data();
   TEST_ASSERT_NOT_NULL(out);
   TEST_ASSERT_EQUAL_UINT8(7, out[0]);
   TEST_ASSERT_EQUAL_UINT8(8, out[1]);
+}
+
+void test_node_table_request_store() {
+  BleTransportCore core;
+  uint16_t snapshot_id = 0;
+  uint16_t page_index = 0;
+  TEST_ASSERT_FALSE(core.get_node_table_request(&snapshot_id, &page_index));
+
+  core.set_node_table_request(42, 3);
+  TEST_ASSERT_TRUE(core.get_node_table_request(&snapshot_id, &page_index));
+  TEST_ASSERT_EQUAL_UINT16(42, snapshot_id);
+  TEST_ASSERT_EQUAL_UINT16(3, page_index);
 }
 
 void test_getters_exact_bytes() {
@@ -53,9 +62,9 @@ void test_getters_exact_bytes() {
   }
 
   const uint8_t page[] = {1, 2, 3, 4, 5};
-  core.set_node_table_page(0, page, sizeof(page));
-  TEST_ASSERT_EQUAL_UINT32(sizeof(page), core.page_len(0));
-  const uint8_t* page_out = core.page_data(0);
+  core.set_node_table_response(page, sizeof(page));
+  TEST_ASSERT_EQUAL_UINT32(sizeof(page), core.node_table_response_len());
+  const uint8_t* page_out = core.node_table_response_data();
   TEST_ASSERT_NOT_NULL(page_out);
   for (size_t i = 0; i < sizeof(page); ++i) {
     TEST_ASSERT_EQUAL_UINT8(page[i], page_out[i]);
@@ -65,7 +74,8 @@ void test_getters_exact_bytes() {
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_device_info_store_and_truncate);
-  RUN_TEST(test_node_table_page_bounds_and_truncate);
+  RUN_TEST(test_node_table_response_truncate);
+  RUN_TEST(test_node_table_request_store);
   RUN_TEST(test_getters_exact_bytes);
   return UNITY_END();
 }

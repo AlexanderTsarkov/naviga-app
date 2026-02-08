@@ -109,12 +109,13 @@ void test_e2e_beacon_to_ble_bridge() {
   info.public_channel_id = 1;
   info.capabilities = 0;
 
+  transport.set_node_table_request(0, 0);
   TEST_ASSERT_TRUE(bridge.update_all(1020, info, table_b, transport));
   TEST_ASSERT_TRUE(transport.device_info_len() > 0);
 
-  const uint8_t* page0 = transport.page_data(0);
+  const uint8_t* page0 = transport.node_table_data();
   TEST_ASSERT_NOT_NULL(page0);
-  const size_t page_len = transport.page_len(0);
+  const size_t page_len = transport.node_table_len();
   TEST_ASSERT_TRUE(page_len > kPageHeaderBytes);
 
   const uint16_t total_nodes = read_u16_le(page0 + 2);

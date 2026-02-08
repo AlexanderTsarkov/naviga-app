@@ -64,10 +64,11 @@ void test_snapshot_header_and_record() {
   table.init_self(self_id, 1000);
   table.update_self_position(123, 456, 5, 1000);
 
+  transport.set_node_table_request(0, 0);
   TEST_ASSERT_TRUE(bridge.update_node_table(1000, table, transport));
-  const size_t len = transport.page_len(0);
+  const size_t len = transport.node_table_len();
   TEST_ASSERT_TRUE(len > 0);
-  const uint8_t* page = transport.page_data(0);
+  const uint8_t* page = transport.node_table_data();
   TEST_ASSERT_NOT_NULL(page);
 
   const uint16_t snapshot_id = read_u16_le(page);
@@ -100,21 +101,24 @@ void test_paging_overflow() {
     table.upsert_remote(base_id + i, false, 0, 0, 0, -70, 1, static_cast<uint32_t>(i));
   }
 
+  transport.set_node_table_request(0, 0);
   TEST_ASSERT_TRUE(bridge.update_node_table(5000, table, transport));
 
-  const uint8_t* page0 = transport.page_data(0);
-  const uint8_t* page1 = transport.page_data(1);
+  const uint8_t* page0 = transport.node_table_data();
   TEST_ASSERT_NOT_NULL(page0);
-  TEST_ASSERT_NOT_NULL(page1);
 
   const uint16_t page_count = read_u16_le(page0 + 7);
   TEST_ASSERT_EQUAL_UINT16(2, page_count);
 
-  const size_t len0 = transport.page_len(0);
-  const size_t len1 = transport.page_len(1);
+  const size_t len0 = transport.node_table_len();
   const size_t records0 = (len0 - 10) / NodeTable::kRecordBytes;
-  const size_t records1 = (len1 - 10) / NodeTable::kRecordBytes;
   TEST_ASSERT_EQUAL_UINT32(10, records0);
+
+  const uint16_t snapshot_id = read_u16_le(page0);
+  transport.set_node_table_request(snapshot_id, 1);
+  TEST_ASSERT_TRUE(bridge.update_node_table(5000, table, transport));
+  const size_t len1 = transport.node_table_len();
+  const size_t records1 = (len1 - 10) / NodeTable::kRecordBytes;
   TEST_ASSERT_EQUAL_UINT32(2, records1);
 }
 

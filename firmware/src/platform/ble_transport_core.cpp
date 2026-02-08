@@ -13,18 +13,18 @@ void BleTransportCore::set_device_info(const uint8_t* data, size_t len) {
   device_info_len_ = copy_len;
 }
 
-bool BleTransportCore::set_node_table_page(uint8_t page_index,
-                                           const uint8_t* data,
-                                           size_t len) {
-  if (page_index >= kPageCount) {
-    return false;
-  }
-  const size_t copy_len = std::min(len, page_buf_[page_index].size());
+void BleTransportCore::set_node_table_response(const uint8_t* data, size_t len) {
+  const size_t copy_len = std::min(len, node_table_buf_.size());
   if (data && copy_len > 0) {
-    std::memcpy(page_buf_[page_index].data(), data, copy_len);
+    std::memcpy(node_table_buf_.data(), data, copy_len);
   }
-  page_len_[page_index] = copy_len;
-  return true;
+  node_table_len_ = copy_len;
+}
+
+void BleTransportCore::set_node_table_request(uint16_t snapshot_id, uint16_t page_index) {
+  req_snapshot_id_ = snapshot_id;
+  req_page_index_ = page_index;
+  has_request_ = true;
 }
 
 const uint8_t* BleTransportCore::device_info_data() const {
@@ -35,12 +35,21 @@ size_t BleTransportCore::device_info_len() const {
   return device_info_len_;
 }
 
-const uint8_t* BleTransportCore::page_data(uint8_t page_index) const {
-  return page_index < kPageCount ? page_buf_[page_index].data() : nullptr;
+bool BleTransportCore::get_node_table_request(uint16_t* snapshot_id, uint16_t* page_index) const {
+  if (!has_request_ || !snapshot_id || !page_index) {
+    return false;
+  }
+  *snapshot_id = req_snapshot_id_;
+  *page_index = req_page_index_;
+  return true;
 }
 
-size_t BleTransportCore::page_len(uint8_t page_index) const {
-  return page_index < kPageCount ? page_len_[page_index] : 0;
+const uint8_t* BleTransportCore::node_table_response_data() const {
+  return node_table_buf_.data();
+}
+
+size_t BleTransportCore::node_table_response_len() const {
+  return node_table_len_;
 }
 
 } // namespace naviga

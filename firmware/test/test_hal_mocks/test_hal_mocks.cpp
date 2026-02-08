@@ -36,8 +36,8 @@ void test_mock_ble_transport_store() {
   TEST_ASSERT_EQUAL_UINT8(0xAA, ble.device_info()[0]);
 
   uint8_t page0[3] = {1, 2, 3};
-  ble.set_node_table_page(0, page0, sizeof(page0));
-  TEST_ASSERT_EQUAL_UINT32(3, ble.page_len(0));
+  ble.set_node_table_response(page0, sizeof(page0));
+  TEST_ASSERT_EQUAL_UINT32(3, ble.node_table_len());
 }
 
 void test_mock_gnss_snapshot() {
