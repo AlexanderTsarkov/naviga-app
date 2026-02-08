@@ -8,6 +8,9 @@ class NodesState {
     required this.isLoading,
     required this.error,
     required this.snapshotId,
+    required this.isFromCache,
+    required this.cacheSavedAtMs,
+    required this.cacheAgeMs,
   });
 
   final List<NodeRecordV1> records;
@@ -16,6 +19,9 @@ class NodesState {
   final bool isLoading;
   final String? error;
   final int? snapshotId;
+  final bool isFromCache;
+  final int? cacheSavedAtMs;
+  final int? cacheAgeMs;
 
   factory NodesState.initial() => const NodesState(
     records: [],
@@ -24,6 +30,9 @@ class NodesState {
     isLoading: false,
     error: null,
     snapshotId: null,
+    isFromCache: false,
+    cacheSavedAtMs: null,
+    cacheAgeMs: null,
   );
 
   NodesState copyWith({
@@ -34,6 +43,9 @@ class NodesState {
     String? error,
     bool clearError = false,
     int? snapshotId,
+    bool? isFromCache,
+    int? cacheSavedAtMs,
+    int? cacheAgeMs,
   }) {
     return NodesState(
       records: records ?? this.records,
@@ -42,6 +54,9 @@ class NodesState {
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
       snapshotId: snapshotId ?? this.snapshotId,
+      isFromCache: isFromCache ?? this.isFromCache,
+      cacheSavedAtMs: cacheSavedAtMs ?? this.cacheSavedAtMs,
+      cacheAgeMs: cacheAgeMs ?? this.cacheAgeMs,
     );
   }
 }
