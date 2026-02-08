@@ -110,32 +110,57 @@ bool BleNodeTableBridge::update_device_info(const DeviceInfoModel& model,
 bool BleNodeTableBridge::update_node_table(uint32_t now_ms,
                                            domain::NodeTable& table,
                                            IBleTransport& transport) const {
-  const uint16_t snapshot_id = table.create_snapshot(now_ms);
-  const size_t total_nodes = table.size();
-  if (total_nodes == 0) {
-    return true;
+  uint16_t req_snapshot_id = 0;
+  uint16_t req_page_index = 0;
+  if (!transport.get_node_table_request(&req_snapshot_id, &req_page_index)) {
+    req_snapshot_id = 0;
+    req_page_index = 0;
   }
 
-  const size_t page_count = (total_nodes + kPageSize - 1) / kPageSize;
+  uint16_t snapshot_id = req_snapshot_id;
+  size_t total_nodes = table.size();
+  size_t page_count = total_nodes == 0 ? 0 : (total_nodes + kPageSize - 1) / kPageSize;
+  size_t page_index = req_page_index;
+
+  bool snapshot_reset = false;
+  if (snapshot_id == 0) {
+    snapshot_id = table.create_snapshot(now_ms);
+    total_nodes = table.size();
+    page_count = total_nodes == 0 ? 0 : (total_nodes + kPageSize - 1) / kPageSize;
+    page_index = 0;
+    snapshot_reset = true;
+  }
+
   std::array<uint8_t, kPageHeaderBytes + domain::NodeTable::kRecordBytes * kPageSize> buffer{};
-
-  for (size_t page_index = 0; page_index < page_count; ++page_index) {
-    write_u16_le(buffer.data(), snapshot_id);
-    write_u16_le(buffer.data() + 2, static_cast<uint16_t>(total_nodes));
-    write_u16_le(buffer.data() + 4, static_cast<uint16_t>(page_index));
-    buffer[6] = kPageSize;
-    write_u16_le(buffer.data() + 7, static_cast<uint16_t>(page_count));
-    buffer[9] = kRecordFormatVer;
-
-    const size_t record_bytes = table.get_snapshot_page(snapshot_id,
-                                                        page_index,
-                                                        kPageSize,
-                                                        buffer.data() + kPageHeaderBytes,
-                                                        buffer.size() - kPageHeaderBytes);
-    const size_t payload_len = kPageHeaderBytes + record_bytes;
-    transport.set_node_table_page(static_cast<uint8_t>(page_index), buffer.data(), payload_len);
+  size_t record_bytes = 0;
+  if (total_nodes > 0 && page_index < page_count) {
+    record_bytes = table.get_snapshot_page(snapshot_id,
+                                           page_index,
+                                           kPageSize,
+                                           buffer.data() + kPageHeaderBytes,
+                                           buffer.size() - kPageHeaderBytes);
+    if (record_bytes == 0 && !snapshot_reset) {
+      snapshot_id = table.create_snapshot(now_ms);
+      total_nodes = table.size();
+      page_count = total_nodes == 0 ? 0 : (total_nodes + kPageSize - 1) / kPageSize;
+      page_index = 0;
+      record_bytes = table.get_snapshot_page(snapshot_id,
+                                             page_index,
+                                             kPageSize,
+                                             buffer.data() + kPageHeaderBytes,
+                                             buffer.size() - kPageHeaderBytes);
+    }
   }
 
+  write_u16_le(buffer.data(), snapshot_id);
+  write_u16_le(buffer.data() + 2, static_cast<uint16_t>(total_nodes));
+  write_u16_le(buffer.data() + 4, static_cast<uint16_t>(page_index));
+  buffer[6] = kPageSize;
+  write_u16_le(buffer.data() + 7, static_cast<uint16_t>(page_count));
+  buffer[9] = kRecordFormatVer;
+
+  const size_t payload_len = kPageHeaderBytes + record_bytes;
+  transport.set_node_table_response(buffer.data(), payload_len);
   return true;
 }
 
