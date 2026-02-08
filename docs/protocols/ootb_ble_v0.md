@@ -73,13 +73,17 @@
 
 ### 1.3. NodeTableSnapshot characteristic
 
-- **Properties:** READ (seed: read-only; no NOTIFY для изменений таблицы).
+- **UUID:** `6e4f0003-1b9a-4c3a-9a3b-000000000001`
+- **Properties:** READ + WRITE (seed: no NOTIFY).
 - **Purpose:** приложение получает снапшот NodeTable **страницами** по **10 записей** (seed: константа page_size = 10). Seed: **best effort** — страницы могут отражать слегка разные моменты; допустимо.
 
-**Read protocol (request semantics, app side):**
+**Request protocol (app side):**
 
-- Приложение **инициирует снапшот** чтением **page 0** с **snapshot_id = 0** (неявный «новый снапшот»; точный способ передачи — например offset = 0 или первый read без параметров — TBD по реализации).
-- Затем читает страницы **1 .. N** используя **snapshot_id**, возвращённый устройством в ответе (например, offset = snapshot_id × 256 + page_index или отдельный механизм; точная кодировка — TBD).
+- Приложение **пишет** запрос (4 байта) в характеристику и затем **читает** ответ.
+- **Request payload (LE):** `snapshot_id` u16 + `page_index` u16.
+- Пример первого запроса: `snapshot_id=0, page_index=0` → `00 00 00 00`.
+- Приложение читает страницу 0, берёт `snapshot_id` из ответа и затем запрашивает страницы `1..N` тем же `snapshot_id`.
+- Если `snapshot_id` в ответе изменился или не совпадает с запросом — **перезапуск** чтения с `snapshot_id=0, page_index=0`.
 
 **Response fields (seed, per page):**
 
@@ -113,7 +117,7 @@
 
 - Seed: **no NOTIFY** при изменении NodeTable; приложение обновляет снапшот по необходимости повторным чтением (новый snapshot_id).
 - **Future:** NOTIFY при обновлении нод (node-updated events) — **FUTURE/TBD**; в seed не входит.
-- Write/config характеристик для NodeTable не добавляем (read-only snapshot).
+- Legacy Page0..Page3 характеристики **удалены**; используется единая request-based характеристика.
 
 **App/UI notes (NodeRecord v1):**
 
