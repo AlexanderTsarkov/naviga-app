@@ -5,7 +5,6 @@ import 'package:naviga_app/features/connect/connect_controller.dart';
 import 'package:naviga_app/features/nodes/node_table_fetcher.dart';
 import 'package:naviga_app/features/nodes/node_table_repository.dart';
 import 'package:naviga_app/features/nodes/nodes_controller.dart';
-import 'package:naviga_app/features/nodes/nodes_state.dart';
 
 class FakeFetcher implements NodeTableFetcher, NodeTableSnapshotIdSource {
   FakeFetcher({required this.records, this.snapshotId, this.error, this.gate});
