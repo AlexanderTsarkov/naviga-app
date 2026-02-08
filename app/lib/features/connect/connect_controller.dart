@@ -11,6 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../shared/logging.dart';
+import '../nodes/node_table_debug_hook.dart';
 
 const String kNavigaServiceUuid = '6e4f0001-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaDeviceInfoUuid = '6e4f0002-1b9a-4c3a-9a3b-000000000001';
@@ -40,6 +41,7 @@ class ConnectController extends StateNotifier<ConnectState> {
   BluetoothDevice? _activeDevice;
   BluetoothCharacteristic? _deviceInfoCharacteristic;
   BluetoothCharacteristic? _nodeTableSnapshotCharacteristic;
+  int? _lastNodeTableSnapshotId;
 
   static const _prefsLastDeviceKey = 'naviga.last_device_id';
 
@@ -271,8 +273,13 @@ class ConnectController extends StateNotifier<ConnectState> {
       }
 
       await _readDeviceInfo();
-      if (kDebugFetchNodeTableOnConnect) {
-        await _fetchNodeTableSnapshot();
+      if (kDebugFetchNodeTableOnConnect &&
+          nodeTableDebugRefreshOnConnect != null) {
+        try {
+          await nodeTableDebugRefreshOnConnect!();
+        } catch (error) {
+          logInfo('NodeTable: debug refresh failed: $error');
+        }
       }
     } catch (error) {
       state = state.copyWith(telemetryError: error.toString());
@@ -343,6 +350,7 @@ class ConnectController extends StateNotifier<ConnectState> {
     while (true) {
       final page0 = await _readNodeTablePage(0, 0);
       final header = page0.header;
+      _lastNodeTableSnapshotId = header.snapshotId;
       var pageCount = header.pageCount;
       if (pageCount > 50) {
         logInfo('NodeTable: page_count capped from $pageCount to 50');
@@ -383,6 +391,7 @@ class ConnectController extends StateNotifier<ConnectState> {
   Future<void> _teardownGatt({required bool clearState}) async {
     _deviceInfoCharacteristic = null;
     _nodeTableSnapshotCharacteristic = null;
+    _lastNodeTableSnapshotId = null;
     if (clearState) {
       state = state.copyWith(
         deviceInfo: null,
@@ -391,6 +400,15 @@ class ConnectController extends StateNotifier<ConnectState> {
         isDiscoveringServices: false,
       );
     }
+  }
+
+  int? get lastNodeTableSnapshotId => _lastNodeTableSnapshotId;
+
+  Future<List<NodeRecordV1>> fetchNodeTableSnapshot() async {
+    if (_nodeTableSnapshotCharacteristic == null) {
+      throw StateError('NodeTableSnapshot characteristic missing');
+    }
+    return _fetchNodeTableSnapshot();
   }
 
   void _logServices(List<BluetoothService> services) {
