@@ -14,9 +14,12 @@ import '../../shared/logging.dart';
 
 const String kNavigaServiceUuid = '6e4f0001-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaDeviceInfoUuid = '6e4f0002-1b9a-4c3a-9a3b-000000000001';
+const String kNavigaNodeTableSnapshotUuid =
+    '6e4f0003-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaNamePrefix = 'Naviga';
 const int? kNavigaManufacturerId =
     null; // TODO: set when manufacturer id is known
+const bool kDebugFetchNodeTableOnConnect = false;
 
 final connectControllerProvider =
     StateNotifierProvider<ConnectController, ConnectState>((ref) {
@@ -36,6 +39,7 @@ class ConnectController extends StateNotifier<ConnectState> {
   SharedPreferences? _prefs;
   BluetoothDevice? _activeDevice;
   BluetoothCharacteristic? _deviceInfoCharacteristic;
+  BluetoothCharacteristic? _nodeTableSnapshotCharacteristic;
 
   static const _prefsLastDeviceKey = 'naviga.last_device_id';
 
@@ -250,6 +254,10 @@ class ConnectController extends StateNotifier<ConnectState> {
         navigaService,
         Guid(kNavigaDeviceInfoUuid),
       );
+      _nodeTableSnapshotCharacteristic = _findCharacteristic(
+        navigaService,
+        Guid(kNavigaNodeTableSnapshotUuid),
+      );
 
       if (_deviceInfoCharacteristic == null) {
         state = state.copyWith(
@@ -263,6 +271,9 @@ class ConnectController extends StateNotifier<ConnectState> {
       }
 
       await _readDeviceInfo();
+      if (kDebugFetchNodeTableOnConnect) {
+        await _fetchNodeTableSnapshot();
+      }
     } catch (error) {
       state = state.copyWith(telemetryError: error.toString());
     } finally {
@@ -295,8 +306,83 @@ class ConnectController extends StateNotifier<ConnectState> {
     }
   }
 
+  Future<void> _writeNodeTableRequest(int snapshotId, int pageIndex) async {
+    if (_nodeTableSnapshotCharacteristic == null) {
+      throw StateError('NodeTableSnapshot characteristic missing');
+    }
+    final payload = <int>[
+      snapshotId & 0xFF,
+      (snapshotId >> 8) & 0xFF,
+      pageIndex & 0xFF,
+      (pageIndex >> 8) & 0xFF,
+    ];
+    await _nodeTableSnapshotCharacteristic!.write(
+      payload,
+      withoutResponse: false,
+    );
+  }
+
+  Future<NodeTableSnapshotPage> _readNodeTablePage(
+    int snapshotId,
+    int pageIndex,
+  ) async {
+    if (_nodeTableSnapshotCharacteristic == null) {
+      throw StateError('NodeTableSnapshot characteristic missing');
+    }
+    await _writeNodeTableRequest(snapshotId, pageIndex);
+    final payload = await _nodeTableSnapshotCharacteristic!.read();
+    final result = BleNodeTableParser.parsePage(payload);
+    if (result.data == null) {
+      throw StateError(result.warning ?? 'NodeTableSnapshot parse failed');
+    }
+    return result.data!;
+  }
+
+  Future<List<NodeRecordV1>> _fetchNodeTableSnapshot() async {
+    var retried = false;
+    while (true) {
+      final page0 = await _readNodeTablePage(0, 0);
+      final header = page0.header;
+      var pageCount = header.pageCount;
+      if (pageCount > 50) {
+        logInfo('NodeTable: page_count capped from $pageCount to 50');
+        pageCount = 50;
+      }
+
+      final records = <NodeRecordV1>[...page0.records];
+      var mismatch = false;
+      for (var i = 1; i < pageCount; i++) {
+        final page = await _readNodeTablePage(header.snapshotId, i);
+        if (page.header.snapshotId != header.snapshotId ||
+            page.header.pageIndex != i) {
+          mismatch = true;
+          break;
+        }
+        records.addAll(page.records);
+      }
+
+      if (!mismatch) {
+        final collisions = records
+            .where((record) => record.shortIdCollision)
+            .length;
+        logInfo(
+          'NodeTable: snapshot=${header.snapshotId} totalNodes=${header.totalNodes} '
+          'pages=$pageCount records=${records.length} collisions=$collisions',
+        );
+        return records;
+      }
+
+      if (retried) {
+        throw StateError('NodeTable snapshot changed during read');
+      }
+      logInfo('NodeTable: snapshot changed, retrying from page 0');
+      retried = true;
+    }
+  }
+
   Future<void> _teardownGatt({required bool clearState}) async {
     _deviceInfoCharacteristic = null;
+    _nodeTableSnapshotCharacteristic = null;
     if (clearState) {
       state = state.copyWith(
         deviceInfo: null,
@@ -664,6 +750,187 @@ class BleDeviceInfoParser {
       capabilities: capabilities,
       raw: data,
     );
+  }
+}
+
+class NodeTableSnapshotHeader {
+  const NodeTableSnapshotHeader({
+    required this.snapshotId,
+    required this.totalNodes,
+    required this.pageIndex,
+    required this.pageSize,
+    required this.pageCount,
+    required this.recordFormatVer,
+  });
+
+  final int snapshotId;
+  final int totalNodes;
+  final int pageIndex;
+  final int pageSize;
+  final int pageCount;
+  final int recordFormatVer;
+}
+
+class NodeRecordV1 {
+  const NodeRecordV1({
+    required this.nodeId,
+    required this.shortId,
+    required this.isSelf,
+    required this.posValid,
+    required this.isGrey,
+    required this.shortIdCollision,
+    required this.lastSeenAgeS,
+    required this.latE7,
+    required this.lonE7,
+    required this.posAgeS,
+    required this.lastRxRssi,
+    required this.lastSeq,
+  });
+
+  final int nodeId;
+  final int shortId;
+  final bool isSelf;
+  final bool posValid;
+  final bool isGrey;
+  final bool shortIdCollision;
+  final int lastSeenAgeS;
+  final int latE7;
+  final int lonE7;
+  final int posAgeS;
+  final int lastRxRssi;
+  final int lastSeq;
+}
+
+class NodeTableSnapshotPage {
+  const NodeTableSnapshotPage({required this.header, required this.records});
+
+  final NodeTableSnapshotHeader header;
+  final List<NodeRecordV1> records;
+}
+
+class BleNodeTableParser {
+  static BleParseResult<NodeTableSnapshotPage> parsePage(List<int> data) {
+    if (data.length < 10) {
+      return const BleParseResult(
+        data: null,
+        warning: 'NodeTableSnapshot payload too short',
+      );
+    }
+    final recordsBytes = data.length - 10;
+    if (recordsBytes % 26 != 0) {
+      return BleParseResult(
+        data: null,
+        warning: 'NodeTableSnapshot payload size invalid (${data.length})',
+      );
+    }
+
+    final reader = BleByteReader(data);
+    final snapshotId = reader.readU16Le();
+    final totalNodes = reader.readU16Le();
+    final pageIndex = reader.readU16Le();
+    final pageSize = reader.readU8();
+    final pageCount = reader.readU16Le();
+    final recordFormatVer = reader.readU8();
+    if (reader.hasErrors ||
+        snapshotId == null ||
+        totalNodes == null ||
+        pageIndex == null ||
+        pageSize == null ||
+        pageCount == null ||
+        recordFormatVer == null) {
+      return const BleParseResult(
+        data: null,
+        warning: 'NodeTableSnapshot header malformed',
+      );
+    }
+    if (recordFormatVer != 1) {
+      return BleParseResult(
+        data: null,
+        warning: 'Unknown NodeRecord format_ver=$recordFormatVer',
+      );
+    }
+
+    final recordCount = recordsBytes ~/ 26;
+    final records = <NodeRecordV1>[];
+    for (var i = 0; i < recordCount; i++) {
+      final nodeId = reader.readU64Le();
+      final shortId = reader.readU16Le();
+      final flags = reader.readU8();
+      final lastSeenAgeS = reader.readU16Le();
+      final latRaw = reader.readU32Le();
+      final lonRaw = reader.readU32Le();
+      final posAgeS = reader.readU16Le();
+      final lastRxRssiRaw = reader.readU8();
+      final lastSeq = reader.readU16Le();
+      if (reader.hasErrors ||
+          nodeId == null ||
+          shortId == null ||
+          flags == null ||
+          lastSeenAgeS == null ||
+          latRaw == null ||
+          lonRaw == null ||
+          posAgeS == null ||
+          lastRxRssiRaw == null ||
+          lastSeq == null) {
+        return const BleParseResult(
+          data: null,
+          warning: 'NodeTableSnapshot record malformed',
+        );
+      }
+
+      final isSelf = (flags & 0x01) != 0;
+      final posValid = (flags & 0x02) != 0;
+      final isGrey = (flags & 0x04) != 0;
+      final shortIdCollision = (flags & 0x08) != 0;
+      final latE7 = _toSigned32(latRaw);
+      final lonE7 = _toSigned32(lonRaw);
+      final lastRxRssi = _toSigned8(lastRxRssiRaw);
+
+      records.add(
+        NodeRecordV1(
+          nodeId: nodeId,
+          shortId: shortId,
+          isSelf: isSelf,
+          posValid: posValid,
+          isGrey: isGrey,
+          shortIdCollision: shortIdCollision,
+          lastSeenAgeS: lastSeenAgeS,
+          latE7: latE7,
+          lonE7: lonE7,
+          posAgeS: posAgeS,
+          lastRxRssi: lastRxRssi,
+          lastSeq: lastSeq,
+        ),
+      );
+    }
+
+    return BleParseResult(
+      data: NodeTableSnapshotPage(
+        header: NodeTableSnapshotHeader(
+          snapshotId: snapshotId,
+          totalNodes: totalNodes,
+          pageIndex: pageIndex,
+          pageSize: pageSize,
+          pageCount: pageCount,
+          recordFormatVer: recordFormatVer,
+        ),
+        records: records,
+      ),
+    );
+  }
+
+  static int _toSigned32(int value) {
+    if (value & 0x80000000 != 0) {
+      return value - 0x100000000;
+    }
+    return value;
+  }
+
+  static int _toSigned8(int value) {
+    if (value & 0x80 != 0) {
+      return value - 0x100;
+    }
+    return value;
   }
 }
 
