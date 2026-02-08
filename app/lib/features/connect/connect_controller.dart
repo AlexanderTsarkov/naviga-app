@@ -227,6 +227,7 @@ class ConnectController extends StateNotifier<ConnectState> {
   }
 
   Future<void> _handleConnected(BluetoothDevice device) async {
+    logInfo('DBG kDebugFetchNodeTableOnConnect=$kDebugFetchNodeTableOnConnect');
     state = state.copyWith(
       isDiscoveringServices: true,
       telemetryError: null,
@@ -273,6 +274,9 @@ class ConnectController extends StateNotifier<ConnectState> {
       }
 
       await _readDeviceInfo();
+      logInfo(
+        'DBG nodeTableDebugRefreshOnConnect=${nodeTableDebugRefreshOnConnect != null}',
+      );
       if (kDebugFetchNodeTableOnConnect &&
           nodeTableDebugRefreshOnConnect != null) {
         try {

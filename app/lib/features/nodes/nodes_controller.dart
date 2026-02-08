@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/legacy.dart';
 
 import '../../shared/logging.dart';
 import '../connect/connect_controller.dart';
+import 'node_table_cache.dart';
 import 'node_table_debug_hook.dart';
 import 'node_table_fetcher.dart';
 import 'node_table_repository.dart';
@@ -16,17 +19,32 @@ final nodeTableRepositoryProvider = StateProvider<NodeTableRepository>((ref) {
 final nodesControllerProvider =
     StateNotifierProvider<NodesController, NodesState>((ref) {
       final repository = ref.read(nodeTableRepositoryProvider);
-      return NodesController(repository);
+      final controller = NodesController(repository);
+      ref.listen<ConnectState>(connectControllerProvider, (previous, next) {
+        unawaited(controller.handleConnectionChange(previous, next));
+      });
+      final lastDeviceId = ref
+          .read(connectControllerProvider)
+          .lastConnectedDeviceId;
+      if (lastDeviceId != null) {
+        unawaited(controller.restoreFromCache(lastDeviceId));
+      }
+      return controller;
     });
 
 class NodesController extends StateNotifier<NodesState> {
-  NodesController(this._repository) : super(NodesState.initial()) {
+  NodesController(this._repository, {NodeTableCacheStore? cacheStore})
+    : _cacheStore = cacheStore ?? NodeTableCacheStore(),
+      super(NodesState.initial()) {
     if (kDebugFetchNodeTableOnConnect) {
       nodeTableDebugRefreshOnConnect = refresh;
     }
   }
 
   final NodeTableRepository _repository;
+  final NodeTableCacheStore _cacheStore;
+  String? _connectedDeviceId;
+  String? _lastRestoredDeviceId;
 
   Future<void> refresh() async {
     logInfo('Nodes: refresh start');
@@ -36,12 +54,32 @@ class NodesController extends StateNotifier<NodesState> {
       final sorted = _sortRecords(records);
       final self = _findSelf(sorted);
       final snapshotId = _repository.lastSnapshotId;
+      final savedAtMs = DateTime.now().millisecondsSinceEpoch;
+      if (_connectedDeviceId != null) {
+        final snapshot = CachedNodeTableSnapshot(
+          deviceId: _connectedDeviceId!,
+          snapshotId: snapshotId,
+          savedAtMs: savedAtMs,
+          records: records,
+        );
+        await _cacheStore.save(
+          deviceId: _connectedDeviceId!,
+          snapshot: snapshot,
+        );
+        logInfo(
+          'NodesCache: save deviceId=$_connectedDeviceId '
+          'snapshot=${snapshotId ?? 'n/a'} records=${records.length}',
+        );
+      }
       state = state.copyWith(
         records: records,
         recordsSorted: sorted,
         self: self,
         isLoading: false,
         snapshotId: snapshotId,
+        isFromCache: false,
+        cacheSavedAtMs: savedAtMs,
+        cacheAgeMs: 0,
         clearError: true,
       );
       logInfo(
@@ -51,6 +89,60 @@ class NodesController extends StateNotifier<NodesState> {
     } catch (error) {
       state = state.copyWith(isLoading: false, error: error.toString());
       logInfo('Nodes: refresh failed error=$error');
+    }
+  }
+
+  Future<void> restoreFromCache(String deviceId) async {
+    if (_lastRestoredDeviceId == deviceId) {
+      return;
+    }
+    _lastRestoredDeviceId = deviceId;
+    final snapshot = await _cacheStore.restore(deviceId);
+    if (snapshot == null) {
+      return;
+    }
+    final sorted = _sortRecords(snapshot.records);
+    final self = _findSelf(sorted);
+    state = state.copyWith(
+      records: snapshot.records,
+      recordsSorted: sorted,
+      self: self,
+      snapshotId: snapshot.snapshotId,
+      isFromCache: true,
+      cacheSavedAtMs: snapshot.savedAtMs,
+      cacheAgeMs: snapshot.cacheAgeMs,
+      clearError: true,
+    );
+    logInfo(
+      'NodesCache: restore deviceId=$deviceId '
+      'snapshot=${snapshot.snapshotId ?? 'n/a'} '
+      'records=${snapshot.records.length} ageMs=${snapshot.cacheAgeMs}',
+    );
+  }
+
+  Future<void> clearCacheForDevice(String deviceId) async {
+    await _cacheStore.clear(deviceId);
+    logInfo('NodesCache: clear deviceId=$deviceId');
+  }
+
+  Future<void> handleConnectionChange(
+    ConnectState? previous,
+    ConnectState next,
+  ) async {
+    final prevId = previous?.connectedDeviceId;
+    final nextId = next.connectedDeviceId;
+    if (prevId != null && nextId == null) {
+      await clearCacheForDevice(prevId);
+      _connectedDeviceId = null;
+      return;
+    }
+    if (nextId != null) {
+      _connectedDeviceId = nextId;
+      await restoreFromCache(nextId);
+      return;
+    }
+    if (_lastRestoredDeviceId == null && next.lastConnectedDeviceId != null) {
+      await restoreFromCache(next.lastConnectedDeviceId!);
     }
   }
 
