@@ -94,40 +94,38 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
           if (nodesState.error != null)
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Text(
                   nodesState.error!,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                 ),
               ),
             ),
           if (nodesState.recordsSorted.isEmpty && !nodesState.isLoading)
             const SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(
-                child: Text('No nodes'),
-              ),
+              child: Center(child: Text('No nodes')),
             )
           else
             SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final r = nodesState.recordsSorted[index];
-                  return ListTile(
-                    title: Text(
-                      '${r.nodeId}',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    subtitle: Text(
-                      'shortId: ${r.shortId}  lastSeen: ${r.lastSeenAgeS}s'
-                      '${r.isSelf ? '  (self)' : ''}',
-                    ),
-                  );
-                },
-                childCount: nodesState.recordsSorted.length,
-              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final r = nodesState.recordsSorted[index];
+                return ListTile(
+                  title: Text(
+                    '${r.nodeId}',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  subtitle: Text(
+                    'shortId: ${r.shortId}  lastSeen: ${r.lastSeenAgeS}s'
+                    '${r.isSelf ? '  (self)' : ''}',
+                  ),
+                );
+              }, childCount: nodesState.recordsSorted.length),
             ),
         ],
       ),
