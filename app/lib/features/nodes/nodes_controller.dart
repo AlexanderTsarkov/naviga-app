@@ -92,6 +92,19 @@ class NodesController extends StateNotifier<NodesState> {
     }
   }
 
+  /// Calls [refresh]; if it fails with "characteristic missing", waits ~600ms
+  /// and retries exactly once. Used for initial auto-fetch race with GATT discovery.
+  Future<void> refreshWithCharacteristicRetryOnce() async {
+    await refresh();
+    final err = state.error;
+    if (err != null &&
+        (err.contains('NodeTableSnapshot characteristic missing') ||
+            err.contains('characteristic missing'))) {
+      await Future.delayed(const Duration(milliseconds: 600));
+      await refresh();
+    }
+  }
+
   Future<void> restoreFromCache(String deviceId) async {
     if (_lastRestoredDeviceId == deviceId) {
       return;
