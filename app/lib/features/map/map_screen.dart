@@ -21,7 +21,8 @@ const double _kFitBoundsPaddingFraction = 0.1;
 
 /// Max lastSeen age (seconds) for "active nodes for map" — fitBounds uses only
 /// nodes seen within this window so the map fits "nodes near me" not stale ones.
-const int _kActiveMaxAgeS = 180;
+/// Kept short (25s) to avoid fitting to ocean-scale when stale/outlier nodes exist.
+const int _kActiveMaxAgeS = 25;
 
 /// Zoom when cluster is very close (span <= 1000 m or single marker).
 const double _kCloseClusterZoom = 17.0;
