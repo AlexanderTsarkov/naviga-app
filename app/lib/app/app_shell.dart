@@ -37,7 +37,11 @@ class AppShell extends ConsumerWidget {
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentTab.index,
         onDestinationSelected: (index) {
-          ref.read(selectedTabProvider.notifier).state = AppTab.values[index];
+          final tab = AppTab.values[index];
+          if (tab == AppTab.map) {
+            ref.read(mapFocusNodeIdProvider.notifier).state = null;
+          }
+          ref.read(selectedTabProvider.notifier).state = tab;
         },
         destinations: [
           for (final tab in AppTab.values)
