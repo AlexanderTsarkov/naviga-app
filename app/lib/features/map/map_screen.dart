@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' show cos, max;
 
 import 'package:flutter/foundation.dart';
@@ -16,19 +17,22 @@ import '../nodes/nodes_state.dart';
 const LatLng _kDefaultCenter = LatLng(55.75, 37.62);
 const double _kDefaultZoom = 4.0;
 
-/// Padding for fitBounds so markers sit in ~80% inner contour.
+/// Padding for fitBounds so markers sit in ~80% inner contour; at least this many px.
 const double _kFitBoundsPaddingFraction = 0.1;
+const double _kMinPaddingPx = 48.0;
 
 /// Max lastSeen age (seconds) for "active nodes for map" — fitBounds uses only
 /// nodes seen within this window so the map fits "nodes near me" not stale ones.
 /// Kept short (25s) to avoid fitting to ocean-scale when stale/outlier nodes exist.
 const int _kActiveMaxAgeS = 25;
 
-/// Zoom when cluster is very close (span <= 1000 m or single marker).
-const double _kCloseClusterZoom = 17.0;
+/// Zoom for single-point view and max zoom when fitting bounds.
+const double _kSinglePointZoom = 17.0;
+const double _kFitMaxZoom = 17.0;
+const double _kFitMinZoom = 3.0;
 
-/// Span threshold in meters below which we use fixed zoom instead of fitBounds.
-const double _kCloseClusterSpanM = 1000.0;
+/// Debounce delay so only the latest scheduleFit applies (avoids tabOpen/onMapReady/focus races).
+const int _kScheduleFitDelayMs = 250;
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -40,6 +44,8 @@ class MapScreen extends ConsumerStatefulWidget {
 class _MapScreenState extends ConsumerState<MapScreen> {
   final MapController _mapController = MapController();
   bool _initialFitApplied = false;
+  int _scheduleFitGeneration = 0;
+  Timer? _scheduleFitTimer;
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +58,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     ref.listen<int?>(mapFocusNodeIdProvider, (prev, next) {
       if (!mounted) return;
       _scheduleFit(next != null ? 'focusSet' : 'focusCleared');
+    });
+    ref.listen<AppTab>(selectedTabProvider, (prev, current) {
+      if (!mounted) return;
+      if (current == AppTab.map && ref.read(mapFocusNodeIdProvider) == null) {
+        _scheduleFit('tabOpen');
+      }
     });
 
     return FlutterMap(
@@ -134,6 +146,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
   }
 
+  @override
+  void dispose() {
+    _scheduleFitTimer?.cancel();
+    super.dispose();
+  }
+
   void _onMapReady(
     List<NodeRecordV1> markersWithPos,
     List<NodeRecordV1> markersForFit,
@@ -147,83 +165,81 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     _scheduleFit('firstOpen');
   }
 
-  /// Runs fit/center after layout; only when Map tab is visible; no-op if active
-  /// markers list is empty (keeps current camera).
+  /// Schedules fit/center with debounce; only the latest schedule runs (avoids
+  /// races between tabOpen/onMapReady/focusCleared/focusSet).
   void _scheduleFit(String reason) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final selectedTab = ref.read(selectedTabProvider);
-      if (selectedTab != AppTab.map) return;
-      final state = ref.read(nodesControllerProvider);
-      final forDisplay = _nodesWithValidPos(state);
-      final forFit = _nodesForFit(state);
-      final focusId = ref.read(mapFocusNodeIdProvider);
-
-      if (kDebugMode) {
-        _mapFitLog(
-          reason: reason,
-          selectedTab: selectedTab,
-          displayCount: forDisplay.length,
-          forFitCount: forFit.length,
-          forFit: forFit,
-        );
-      }
-
-      if (focusId != null) {
-        final target = _findNode(forDisplay, focusId);
-        if (target != null) {
-          _mapController.move(
-            LatLng(_e7ToDeg(target.latE7), _e7ToDeg(target.lonE7)),
-            14,
-          );
-        }
-        return;
-      }
-
-      if (forFit.isEmpty) return;
-
-      final bounds = _boundsFromMarkers(forFit);
-      final center = bounds.center;
-      final spanM = _boundsSpanMeters(bounds);
-
-      if (kDebugMode) {
-        debugPrint(
-          'MAPFIT bounds south=${bounds.south} west=${bounds.west} '
-          'north=${bounds.north} east=${bounds.east} spanM=${spanM.toStringAsFixed(0)}',
-        );
-      }
-
-      if (spanM <= _kCloseClusterSpanM || forFit.length == 1) {
-        _mapController.move(center, _kCloseClusterZoom);
-      } else {
-        _mapController.fitCamera(
-          CameraFit.insideBounds(
-            bounds: bounds,
-            padding: _paddingFromFraction(_kFitBoundsPaddingFraction),
-          ),
-        );
-      }
-    });
+    _scheduleFitTimer?.cancel();
+    final generation = ++_scheduleFitGeneration;
+    _scheduleFitTimer = Timer(
+      const Duration(milliseconds: _kScheduleFitDelayMs),
+      () {
+        if (!mounted) return;
+        if (generation != _scheduleFitGeneration) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          if (generation != _scheduleFitGeneration) return;
+          _runFit(reason);
+        });
+      },
+    );
   }
 
-  static void _mapFitLog({
-    required String reason,
-    required AppTab selectedTab,
-    required int displayCount,
-    required int forFitCount,
-    required List<NodeRecordV1> forFit,
-  }) {
-    assert(kDebugMode);
-    debugPrint(
-      'MAPFIT reason=$reason selectedTab=${selectedTab.name} '
-      'displayMarkers=$displayCount forFit=$forFitCount',
-    );
-    for (final r in forFit) {
-      debugPrint(
-        'MAPFIT forFit nodeId=${r.nodeId} '
-        'latDeg=${_e7ToDeg(r.latE7)} lonDeg=${_e7ToDeg(r.lonE7)} '
-        'lastSeenAgeS=${r.lastSeenAgeS}',
+  /// Runs fit/center; only when Map tab is visible; no-op if active list empty.
+  void _runFit(String reason) {
+    final selectedTab = ref.read(selectedTabProvider);
+    if (selectedTab != AppTab.map) return;
+    final state = ref.read(nodesControllerProvider);
+    final forDisplay = _nodesWithValidPos(state);
+    final forFit = _nodesForFit(state);
+    final focusId = ref.read(mapFocusNodeIdProvider);
+
+    if (focusId != null) {
+      final target = _findNode(forDisplay, focusId);
+      if (target != null) {
+        _mapController.move(
+          LatLng(_e7ToDeg(target.latE7), _e7ToDeg(target.lonE7)),
+          14,
+        );
+      }
+      if (kDebugMode) {
+        debugPrint(
+          'MAPFIT reason=$reason count=${forFit.length} action=centerFocus',
+        );
+      }
+      return;
+    }
+
+    if (forFit.isEmpty) return;
+
+    final bounds = _boundsFromMarkers(forFit);
+    final center = bounds.center;
+    final spanM = _boundsSpanMeters(bounds);
+    final padding = _paddingWithMinimum(_kFitBoundsPaddingFraction);
+
+    if (forFit.length == 1) {
+      _mapController.move(center, _kSinglePointZoom);
+      if (kDebugMode) {
+        debugPrint(
+          'MAPFIT reason=$reason count=1 action=move17 '
+          'center=${center.latitude.toStringAsFixed(5)},${center.longitude.toStringAsFixed(5)} spanM=${spanM.toStringAsFixed(0)}',
+        );
+      }
+    } else {
+      _mapController.fitCamera(
+        CameraFit.insideBounds(
+          bounds: bounds,
+          padding: padding,
+          maxZoom: _kFitMaxZoom,
+          minZoom: _kFitMinZoom,
+        ),
       );
+      if (kDebugMode) {
+        debugPrint(
+          'MAPFIT reason=$reason count=${forFit.length} action=fitBounds '
+          'south=${bounds.south.toStringAsFixed(5)} west=${bounds.west.toStringAsFixed(5)} '
+          'north=${bounds.north.toStringAsFixed(5)} east=${bounds.east.toStringAsFixed(5)} spanM=${spanM.toStringAsFixed(0)}',
+        );
+      }
     }
   }
 
@@ -251,9 +267,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     return LatLngBounds(LatLng(minLat, minLon), LatLng(maxLat, maxLon));
   }
 
-  EdgeInsets _paddingFromFraction(double fraction) {
+  EdgeInsets _paddingWithMinimum(double fraction) {
     final media = MediaQuery.sizeOf(context);
-    final pad = fraction * media.shortestSide;
+    final pad = (fraction * media.shortestSide).clamp(
+      _kMinPaddingPx,
+      double.infinity,
+    );
     return EdgeInsets.all(pad);
   }
 
