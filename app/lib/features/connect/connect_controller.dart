@@ -311,10 +311,20 @@ class ConnectController extends StateNotifier<ConnectState> {
       state = state.copyWith(
         deviceInfo: result.data,
         deviceInfoWarning: result.warning,
+        telemetryError: null,
       );
     } catch (error) {
       state = state.copyWith(telemetryError: 'DeviceInfo read failed: $error');
     }
+  }
+
+  /// Re-reads DeviceInfo from the connected device (e.g. for My Node screen).
+  /// No-op if not connected or characteristic missing.
+  Future<void> refreshDeviceInfo() async {
+    if (_deviceInfoCharacteristic == null) {
+      return;
+    }
+    await _readDeviceInfo();
   }
 
   Future<void> _writeNodeTableRequest(int snapshotId, int pageIndex) async {

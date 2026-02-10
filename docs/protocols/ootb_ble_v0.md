@@ -41,6 +41,43 @@
 | **private_channel_max** | uint16 | Максимальный канал для private: **N** (TBD по возможностям модуля). |
 | **capabilities** | bitmap | Битовая маска: `has_gnss`, `has_radio`; остальные биты — только если известны. |
 
+**Binary layout (format_ver = 1):** Источник упаковки — `firmware/protocol/ble_node_table_bridge.cpp` → `BleNodeTableBridge::update_device_info()`. Все многобайтовые числа — **little-endian**. Строки — **length-prefixed**: u8 длина, затем N байт UTF-8 (без null-terminator). Поле **radio_proto_ver** присутствует в payload только если прошивка устанавливает `include_radio_proto_ver` (seed: да).
+
+| Offset | Size | Type | Endian/Encoding | Field name | Notes |
+|--------|------|------|------------------|------------|-------|
+| 0 | 1 | u8 | — | format_ver | Должен быть 1 для данной раскладки. |
+| 1 | 1 | u8 | — | ble_schema_ver | Версия схемы GATT/payload. |
+| 2 | 1 | u8 | — | radio_proto_ver | Опционально; при отсутствии парсер пробует без него (см. app). |
+| 3 | 8 | uint64 | LE | node_id | NodeID; см. NodeTable v0. |
+| 11 | 2 | uint16 | LE | short_id | Display id (4 hex). |
+| 13 | 1 | u8 | — | device_type | 1 = dongle (seed). |
+| 14 | 1 | u8 | — | firmware_version_len | Длина строки в байтах. |
+| 15 | N | bytes | UTF-8 | firmware_version | N = firmware_version_len. |
+| 15+N | 1 | u8 | — | radio_module_model_len | Длина строки. |
+| 16+N | M | bytes | UTF-8 | radio_module_model | M = radio_module_model_len. |
+| 16+N+M | 2 | uint16 | LE | band_id | 433 / 868 / … |
+| 18+N+M | 2 | uint16 | LE | power_min | Минимальная мощность. |
+| 20+N+M | 2 | uint16 | LE | power_max | Максимальная мощность. |
+| 22+N+M | 2 | uint16 | LE | channel_min | Диапазон каналов. |
+| 24+N+M | 2 | uint16 | LE | channel_max | |
+| 26+N+M | 1 | u8 | — | network_mode | 0 = Public, 1 = Private (TBD). |
+| 27+N+M | 2 | uint16 | LE | channel_id | Текущий канал (1 = Public). |
+| 29+N+M | 2 | uint16 | LE | public_channel_id | Константа 1. |
+| 31+N+M | 2 | uint16 | LE | private_channel_min | Обычно 2. |
+| 33+N+M | 2 | uint16 | LE | private_channel_max | |
+| 35+N+M | 4 | uint32 | LE | capabilities | Битовая маска. |
+
+**Validation (example dump):** Реальный дамп с устройства (hex, по строкам для читаемости):
+
+```
+01 01 00 bc 23 6f 75 dc 3c 00 00 9f de 01
+12 6f 6f 74 62 2d 37 34 2d 6d 31 2d 72 75 6e 74 69 6d 65
+04 45 32 32 30
+b1 01 00 00 00 00 00 ff 00 00 01 00 01 00 02 00 00 00 00 00 00 00 00
+```
+
+Расшифровка: format_ver=1, ble_schema_ver=1, radio_proto_ver=0, node_id=0x003CDC756F23BC, short_id=0xDE9F, device_type=1, firmware_version="ootb-74-m1-runtime" (len=18), radio_module_model="E220" (len=4), band_id=433 (0x01B1 LE), power_min=0, power_max=0, channel_min=0, channel_max=255, network_mode=0, channel_id=1, public_channel_id=1, private_channel_min=2, private_channel_max=0, capabilities=0. Раскладка совпадает с прошивкой и парсером приложения.
+
 **Seed note:** BLE в первой итерации **read-only**; поля network_mode, channel_id и диапазоны — **информационные** (приложение только отображает текущее состояние; смена режима/канала через BLE не входит в seed).
 
 **Time fields (seed):** Любые поля времени в DeviceInfo/Health выражаются как **uptime** (секунды/мс с включения) или **age_s** (возраст в секундах). Wall-clock (реальное время) в seed не передаётся — один консистентный timebase, без смешивания с GNSS/телефоном.
