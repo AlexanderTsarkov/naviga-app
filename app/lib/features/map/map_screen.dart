@@ -19,7 +19,10 @@ const double _kDefaultZoom = 4.0;
 
 /// Padding for fitBounds so markers sit in ~80% inner contour; at least this many px.
 const double _kFitBoundsPaddingFraction = 0.1;
-const double _kMinPaddingPx = 48.0;
+const double _kMinPaddingPx = 96.0;
+
+/// Extra zoom-out applied after fitBounds (2+ points) so both nodes stay visible.
+const double _kFitZoomOutMargin = 0.75;
 
 /// Max lastSeen age (seconds) for "active nodes for map" — fitBounds uses only
 /// nodes seen within this window so the map fits "nodes near me" not stale ones.
@@ -233,9 +236,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           minZoom: _kFitMinZoom,
         ),
       );
+      final camera = _mapController.camera;
+      final zoomOut = (camera.zoom - _kFitZoomOutMargin).clamp(
+        _kFitMinZoom,
+        _kFitMaxZoom,
+      );
+      _mapController.move(camera.center, zoomOut);
       if (kDebugMode) {
+        final paddingPx = padding.left.toInt();
         debugPrint(
           'MAPFIT reason=$reason count=${forFit.length} action=fitBounds '
+          'paddingPx=$paddingPx appliedZoomOutMargin=$_kFitZoomOutMargin '
           'south=${bounds.south.toStringAsFixed(5)} west=${bounds.west.toStringAsFixed(5)} '
           'north=${bounds.north.toStringAsFixed(5)} east=${bounds.east.toStringAsFixed(5)} spanM=${spanM.toStringAsFixed(0)}',
         );
