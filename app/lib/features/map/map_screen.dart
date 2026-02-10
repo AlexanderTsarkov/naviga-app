@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +15,10 @@ const double _kDefaultZoom = 4.0;
 
 /// Padding for fitBounds so markers sit in ~80% inner contour.
 const double _kFitBoundsPaddingFraction = 0.1;
+
+/// Max lastSeen age (seconds) for "active nodes for map" — fitBounds uses only
+/// nodes seen within this window so the map fits "nodes near me" not stale ones.
+const int _kActiveMaxAgeS = 180;
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -32,14 +37,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final mapFocusNodeId = ref.watch(mapFocusNodeIdProvider);
 
     final markersWithPos = _nodesWithValidPos(nodesState);
+    final markersForFit = _nodesForFit(nodesState);
     final selfNodeId = nodesState.self?.nodeId;
 
     ref.listen<int?>(mapFocusNodeIdProvider, (prev, next) {
-      if (!mounted || markersWithPos.isEmpty) return;
+      if (!mounted) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
+        final state = ref.read(nodesControllerProvider);
+        final forDisplay = _nodesWithValidPos(state);
+        final forFit = _nodesForFit(state);
         if (next != null) {
-          final target = _findNode(markersWithPos, next);
+          final target = _findNode(forDisplay, next);
           if (target != null) {
             _mapController.move(
               LatLng(_e7ToDeg(target.latE7), _e7ToDeg(target.lonE7)),
@@ -47,12 +56,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             );
           }
         } else {
-          final state = ref.read(nodesControllerProvider);
-          final list = state.recordsSorted
-              .where((r) => r.posValid && _hasValidLatLon(r))
-              .toList();
-          if (list.isEmpty) return;
-          final bounds = _boundsFromMarkers(list);
+          if (forFit.isEmpty) return;
+          if (kDebugMode) {
+            for (final r in forFit) {
+              debugPrint(
+                'Map bounds marker: nodeId=${r.nodeId} '
+                'lat=${_e7ToDeg(r.latE7)} lon=${_e7ToDeg(r.lonE7)}',
+              );
+            }
+          }
+          final bounds = _boundsFromMarkers(forFit);
           _mapController.fitCamera(
             CameraFit.insideBounds(
               bounds: bounds,
@@ -71,7 +84,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         interactionOptions: const InteractionOptions(
           flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
         ),
-        onMapReady: () => _onMapReady(markersWithPos, mapFocusNodeId),
+        onMapReady: () =>
+            _onMapReady(markersWithPos, markersForFit, mapFocusNodeId),
       ),
       children: [
         TileLayer(
@@ -99,10 +113,24 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
+  /// Nodes shown as markers: pos_valid, non-zero lat/lon, sanity (lat -90..90,
+  /// lon -180..180). Used for display and for centering on "Show on map" target.
   List<NodeRecordV1> _nodesWithValidPos(NodesState state) {
-    return state.recordsSorted
-        .where((r) => r.posValid && _hasValidLatLon(r))
-        .toList();
+    return state.recordsSorted.where((r) {
+      if (!r.posValid) return false;
+      if (r.latE7 == 0 && r.lonE7 == 0) return false;
+      final lat = _e7ToDeg(r.latE7);
+      final lon = _e7ToDeg(r.lonE7);
+      return _sanityLatLon(lat, lon);
+    }).toList();
+  }
+
+  /// Active nodes for map fitBounds only: same as valid pos + lastSeenAgeS <= 180s.
+  /// Fit uses only this list so the map fits "nodes near me" not stale ones.
+  List<NodeRecordV1> _nodesForFit(NodesState state) {
+    return _nodesWithValidPos(
+      state,
+    ).where((r) => r.lastSeenAgeS <= _kActiveMaxAgeS).toList();
   }
 
   NodeRecordV1? _findNode(List<NodeRecordV1> list, int nodeId) {
@@ -112,11 +140,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     return null;
   }
 
-  bool _hasValidLatLon(NodeRecordV1 r) {
-    return r.latE7 != 0 || r.lonE7 != 0;
+  static bool _sanityLatLon(double lat, double lon) {
+    return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
   }
 
-  void _onMapReady(List<NodeRecordV1> markersWithPos, int? mapFocusNodeId) {
+  void _onMapReady(
+    List<NodeRecordV1> markersWithPos,
+    List<NodeRecordV1> markersForFit,
+    int? mapFocusNodeId,
+  ) {
     if (!mounted || _initialFitApplied) return;
 
     if (markersWithPos.isEmpty) {
@@ -136,7 +168,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
     }
 
-    final bounds = _boundsFromMarkers(markersWithPos);
+    if (markersForFit.isEmpty) {
+      _initialFitApplied = true;
+      return;
+    }
+    if (kDebugMode) {
+      for (final r in markersForFit) {
+        debugPrint(
+          'Map bounds marker: nodeId=${r.nodeId} '
+          'lat=${_e7ToDeg(r.latE7)} lon=${_e7ToDeg(r.lonE7)}',
+        );
+      }
+    }
+    final bounds = _boundsFromMarkers(markersForFit);
     final padding = _paddingFromFraction(_kFitBoundsPaddingFraction);
     _mapController.fitCamera(
       CameraFit.insideBounds(bounds: bounds, padding: padding),
