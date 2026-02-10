@@ -1,5 +1,6 @@
 import 'dart:math' show cos, max;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,7 +50,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     ref.listen<int?>(mapFocusNodeIdProvider, (prev, next) {
       if (!mounted) return;
-      _scheduleFit();
+      _scheduleFit(next != null ? 'focusSet' : 'focusCleared');
     });
 
     return FlutterMap(
@@ -83,6 +84,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             markers: markersWithPos
                 .map((r) => _buildMarker(r, selfNodeId: selfNodeId))
                 .toList(),
+          ),
+        if (kDebugMode)
+          SizedBox.expand(
+            child: Stack(
+              alignment: Alignment.topLeft,
+              children: [
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: _MapFitDebugOverlay(forFitCount: markersForFit.length),
+                ),
+              ],
+            ),
           ),
       ],
     );
@@ -129,19 +143,30 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       return;
     }
     _initialFitApplied = true;
-    _scheduleFit();
+    _scheduleFit('firstOpen');
   }
 
   /// Runs fit/center after layout; only when Map tab is visible; no-op if active
   /// markers list is empty (keeps current camera).
-  void _scheduleFit() {
+  void _scheduleFit(String reason) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (ref.read(selectedTabProvider) != AppTab.map) return;
+      final selectedTab = ref.read(selectedTabProvider);
+      if (selectedTab != AppTab.map) return;
       final state = ref.read(nodesControllerProvider);
       final forDisplay = _nodesWithValidPos(state);
       final forFit = _nodesForFit(state);
       final focusId = ref.read(mapFocusNodeIdProvider);
+
+      if (kDebugMode) {
+        _mapFitLog(
+          reason: reason,
+          selectedTab: selectedTab,
+          displayCount: forDisplay.length,
+          forFitCount: forFit.length,
+          forFit: forFit,
+        );
+      }
 
       if (focusId != null) {
         final target = _findNode(forDisplay, focusId);
@@ -159,6 +184,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       final bounds = _boundsFromMarkers(forFit);
       final center = bounds.center;
       final spanM = _boundsSpanMeters(bounds);
+
+      if (kDebugMode) {
+        debugPrint(
+          'MAPFIT bounds south=${bounds.south} west=${bounds.west} '
+          'north=${bounds.north} east=${bounds.east} spanM=${spanM.toStringAsFixed(0)}',
+        );
+      }
+
       if (spanM <= _kCloseClusterSpanM || forFit.length == 1) {
         _mapController.move(center, _kCloseClusterZoom);
       } else {
@@ -170,6 +203,27 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         );
       }
     });
+  }
+
+  static void _mapFitLog({
+    required String reason,
+    required AppTab selectedTab,
+    required int displayCount,
+    required int forFitCount,
+    required List<NodeRecordV1> forFit,
+  }) {
+    assert(kDebugMode);
+    debugPrint(
+      'MAPFIT reason=$reason selectedTab=${selectedTab.name} '
+      'displayMarkers=$displayCount forFit=$forFitCount',
+    );
+    for (final r in forFit) {
+      debugPrint(
+        'MAPFIT forFit nodeId=${r.nodeId} '
+        'latDeg=${_e7ToDeg(r.latE7)} lonDeg=${_e7ToDeg(r.lonE7)} '
+        'lastSeenAgeS=${r.lastSeenAgeS}',
+      );
+    }
   }
 
   /// Approximate bounds span in meters: max of lat span and lon span at center.
@@ -216,6 +270,41 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         color: isSelf
             ? Theme.of(context).colorScheme.primary
             : Theme.of(context).colorScheme.outline,
+      ),
+    );
+  }
+}
+
+/// Debug-only overlay showing zoom, center, forFit count. Rebuilds on map move
+/// via MapCamera.of(context). Must be built as a descendant of FlutterMap.
+class _MapFitDebugOverlay extends StatelessWidget {
+  const _MapFitDebugOverlay({required this.forFitCount});
+
+  final int forFitCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final camera = MapCamera.of(context);
+    return Material(
+      color: Colors.black54,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: DefaultTextStyle(
+          style: const TextStyle(color: Colors.white, fontSize: 11),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('zoom: ${camera.zoom.toStringAsFixed(2)}'),
+              Text(
+                'center: ${camera.center.latitude.toStringAsFixed(5)}, '
+                '${camera.center.longitude.toStringAsFixed(5)}',
+              ),
+              Text('forFit: $forFitCount'),
+            ],
+          ),
+        ),
       ),
     );
   }
