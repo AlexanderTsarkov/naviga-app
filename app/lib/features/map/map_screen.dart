@@ -1,10 +1,10 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../app/app_state.dart';
+import '../../shared/app_tabs.dart';
 import '../connect/connect_controller.dart';
 import '../nodes/nodes_controller.dart';
 import '../nodes/nodes_state.dart';
@@ -34,7 +34,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final nodesState = ref.watch(nodesControllerProvider);
-    final mapFocusNodeId = ref.watch(mapFocusNodeIdProvider);
 
     final markersWithPos = _nodesWithValidPos(nodesState);
     final markersForFit = _nodesForFit(nodesState);
@@ -42,38 +41,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     ref.listen<int?>(mapFocusNodeIdProvider, (prev, next) {
       if (!mounted) return;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        final state = ref.read(nodesControllerProvider);
-        final forDisplay = _nodesWithValidPos(state);
-        final forFit = _nodesForFit(state);
-        if (next != null) {
-          final target = _findNode(forDisplay, next);
-          if (target != null) {
-            _mapController.move(
-              LatLng(_e7ToDeg(target.latE7), _e7ToDeg(target.lonE7)),
-              14,
-            );
-          }
-        } else {
-          if (forFit.isEmpty) return;
-          if (kDebugMode) {
-            for (final r in forFit) {
-              debugPrint(
-                'Map bounds marker: nodeId=${r.nodeId} '
-                'lat=${_e7ToDeg(r.latE7)} lon=${_e7ToDeg(r.lonE7)}',
-              );
-            }
-          }
-          final bounds = _boundsFromMarkers(forFit);
-          _mapController.fitCamera(
-            CameraFit.insideBounds(
-              bounds: bounds,
-              padding: _paddingFromFraction(_kFitBoundsPaddingFraction),
-            ),
-          );
-        }
-      });
+      _scheduleFit();
     });
 
     return FlutterMap(
@@ -84,8 +52,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         interactionOptions: const InteractionOptions(
           flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
         ),
-        onMapReady: () =>
-            _onMapReady(markersWithPos, markersForFit, mapFocusNodeId),
+        onMapReady: () => _onMapReady(markersWithPos, markersForFit),
       ),
       children: [
         TileLayer(
@@ -147,45 +114,48 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   void _onMapReady(
     List<NodeRecordV1> markersWithPos,
     List<NodeRecordV1> markersForFit,
-    int? mapFocusNodeId,
   ) {
     if (!mounted || _initialFitApplied) return;
-
     if (markersWithPos.isEmpty) {
       _initialFitApplied = true;
       return;
     }
+    _initialFitApplied = true;
+    _scheduleFit();
+  }
 
-    if (mapFocusNodeId != null) {
-      final target = _findNode(markersWithPos, mapFocusNodeId);
-      if (target != null) {
-        _mapController.move(
-          LatLng(_e7ToDeg(target.latE7), _e7ToDeg(target.lonE7)),
-          14,
-        );
-        _initialFitApplied = true;
+  /// Runs fit/center after layout; only when Map tab is visible; no-op if active
+  /// markers list is empty (keeps current camera).
+  void _scheduleFit() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (ref.read(selectedTabProvider) != AppTab.map) return;
+      final state = ref.read(nodesControllerProvider);
+      final forDisplay = _nodesWithValidPos(state);
+      final forFit = _nodesForFit(state);
+      final focusId = ref.read(mapFocusNodeIdProvider);
+
+      if (focusId != null) {
+        final target = _findNode(forDisplay, focusId);
+        if (target != null) {
+          _mapController.move(
+            LatLng(_e7ToDeg(target.latE7), _e7ToDeg(target.lonE7)),
+            14,
+          );
+        }
         return;
       }
-    }
 
-    if (markersForFit.isEmpty) {
-      _initialFitApplied = true;
-      return;
-    }
-    if (kDebugMode) {
-      for (final r in markersForFit) {
-        debugPrint(
-          'Map bounds marker: nodeId=${r.nodeId} '
-          'lat=${_e7ToDeg(r.latE7)} lon=${_e7ToDeg(r.lonE7)}',
-        );
-      }
-    }
-    final bounds = _boundsFromMarkers(markersForFit);
-    final padding = _paddingFromFraction(_kFitBoundsPaddingFraction);
-    _mapController.fitCamera(
-      CameraFit.insideBounds(bounds: bounds, padding: padding),
-    );
-    _initialFitApplied = true;
+      if (forFit.isEmpty) return;
+
+      final bounds = _boundsFromMarkers(forFit);
+      _mapController.fitCamera(
+        CameraFit.insideBounds(
+          bounds: bounds,
+          padding: _paddingFromFraction(_kFitBoundsPaddingFraction),
+        ),
+      );
+    });
   }
 
   LatLngBounds _boundsFromMarkers(List<NodeRecordV1> list) {
