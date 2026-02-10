@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_state.dart';
 import '../../shared/app_tabs.dart';
 import '../connect/connect_controller.dart';
+import 'node_details_screen.dart';
 import 'nodes_controller.dart';
 
 class NodesScreen extends ConsumerStatefulWidget {
@@ -124,6 +125,18 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
                     'shortId: ${r.shortId}  lastSeen: ${r.lastSeenAgeS}s'
                     '${r.isSelf ? '  (self)' : ''}',
                   ),
+                  onTap: () {
+                    if (r.isSelf) {
+                      ref.read(selectedTabProvider.notifier).state =
+                          AppTab.myNode;
+                    } else {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => NodeDetailsScreen(nodeId: r.nodeId),
+                        ),
+                      );
+                    }
+                  },
                 );
               }, childCount: nodesState.recordsSorted.length),
             ),
