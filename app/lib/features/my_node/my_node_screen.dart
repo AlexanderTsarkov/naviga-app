@@ -45,6 +45,16 @@ class _MyNodeScreenState extends ConsumerState<MyNodeScreen> {
     return null;
   }
 
+  /// Self has valid position for map: pos_valid, non-zero lat/lon, sanity (lat
+  /// -90..90, lon -180..180). Matches map screen filter for display.
+  static bool _selfHasValidPosForMap(NodeRecordV1? r) {
+    if (r == null || !r.posValid) return false;
+    if (r.latE7 == 0 && r.lonE7 == 0) return false;
+    final lat = r.latE7 / 1e7;
+    final lon = r.lonE7 / 1e7;
+    return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+  }
+
   static String _str(dynamic v) => v?.toString() ?? '—';
   static String _capabilities(int? c) =>
       c == null ? '—' : '0x${c.toRadixString(16).toUpperCase()}';
@@ -98,16 +108,32 @@ class _MyNodeScreenState extends ConsumerState<MyNodeScreen> {
     final listChildren = <Widget>[
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: FilledButton.icon(
-          onPressed: isLoading ? null : _refreshBoth,
-          icon: isLoading
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.refresh),
-          label: const Text('Refresh'),
+        child: Row(
+          children: [
+            FilledButton.icon(
+              onPressed: isLoading ? null : _refreshBoth,
+              icon: isLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh),
+              label: const Text('Refresh'),
+            ),
+            if (_selfHasValidPosForMap(selfRecord)) ...[
+              const SizedBox(width: 8),
+              FilledButton.tonalIcon(
+                onPressed: () {
+                  ref.read(mapFocusNodeIdProvider.notifier).state =
+                      selfRecord!.nodeId;
+                  ref.read(selectedTabProvider.notifier).state = AppTab.map;
+                },
+                icon: const Icon(Icons.map),
+                label: const Text('Show on map'),
+              ),
+            ],
+          ],
         ),
       ),
       if (_lastFetchedAt != null)

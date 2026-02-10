@@ -64,18 +64,35 @@ class NodeDetailsScreen extends ConsumerWidget {
             ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: FilledButton.icon(
-              onPressed: nodesState.isLoading
-                  ? null
-                  : () => nodesController.refresh(),
-              icon: nodesState.isLoading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.refresh),
-              label: const Text('Refresh'),
+            child: Row(
+              children: [
+                FilledButton.icon(
+                  onPressed: nodesState.isLoading
+                      ? null
+                      : () => nodesController.refresh(),
+                  icon: nodesState.isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh),
+                  label: const Text('Refresh'),
+                ),
+                if (record != null && record.posValid) ...[
+                  const SizedBox(width: 8),
+                  FilledButton.tonalIcon(
+                    onPressed: () {
+                      ref.read(mapFocusNodeIdProvider.notifier).state =
+                          record.nodeId;
+                      ref.read(selectedTabProvider.notifier).state = AppTab.map;
+                      Navigator.of(context).pop();
+                    },
+                    icon: const Icon(Icons.map),
+                    label: const Text('Show on map'),
+                  ),
+                ],
+              ],
             ),
           ),
           if (nodesState.error != null)

@@ -22,6 +22,8 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
         state.connectedDeviceId != null;
   }
 
+  static bool _hasValidPos(NodeRecordV1 r) => r.latE7 != 0 || r.lonE7 != 0;
+
   void _goToConnect() {
     ref.read(selectedTabProvider.notifier).state = AppTab.connect;
   }
@@ -125,6 +127,18 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
                     'shortId: ${r.shortId}  lastSeen: ${r.lastSeenAgeS}s'
                     '${r.isSelf ? '  (self)' : ''}',
                   ),
+                  trailing: r.posValid && _hasValidPos(r)
+                      ? IconButton(
+                          icon: const Icon(Icons.map),
+                          tooltip: 'Show on map',
+                          onPressed: () {
+                            ref.read(mapFocusNodeIdProvider.notifier).state =
+                                r.nodeId;
+                            ref.read(selectedTabProvider.notifier).state =
+                                AppTab.map;
+                          },
+                        )
+                      : null,
                   onTap: () {
                     if (r.isSelf) {
                       ref.read(selectedTabProvider.notifier).state =
