@@ -101,19 +101,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 .map((r) => _buildMarker(r, selfNodeId: selfNodeId))
                 .toList(),
           ),
-        if (kDebugMode)
-          SizedBox.expand(
-            child: Stack(
-              alignment: Alignment.topLeft,
-              children: [
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: _MapFitDebugOverlay(forFitCount: markersForFit.length),
-                ),
-              ],
-            ),
-          ),
       ],
     );
   }
@@ -301,41 +288,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         color: isSelf
             ? Theme.of(context).colorScheme.primary
             : Theme.of(context).colorScheme.outline,
-      ),
-    );
-  }
-}
-
-/// Debug-only overlay showing zoom, center, forFit count. Rebuilds on map move
-/// via MapCamera.of(context). Must be built as a descendant of FlutterMap.
-class _MapFitDebugOverlay extends StatelessWidget {
-  const _MapFitDebugOverlay({required this.forFitCount});
-
-  final int forFitCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final camera = MapCamera.of(context);
-    return Material(
-      color: Colors.black54,
-      borderRadius: BorderRadius.circular(4),
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: DefaultTextStyle(
-          style: const TextStyle(color: Colors.white, fontSize: 11),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('zoom: ${camera.zoom.toStringAsFixed(2)}'),
-              Text(
-                'center: ${camera.center.latitude.toStringAsFixed(5)}, '
-                '${camera.center.longitude.toStringAsFixed(5)}',
-              ),
-              Text('forFit: $forFitCount'),
-            ],
-          ),
-        ),
       ),
     );
   }
