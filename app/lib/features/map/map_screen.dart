@@ -1,3 +1,5 @@
+import 'dart:math' show cos, max;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +21,12 @@ const double _kFitBoundsPaddingFraction = 0.1;
 /// Max lastSeen age (seconds) for "active nodes for map" — fitBounds uses only
 /// nodes seen within this window so the map fits "nodes near me" not stale ones.
 const int _kActiveMaxAgeS = 180;
+
+/// Zoom when cluster is very close (span <= 1000 m or single marker).
+const double _kCloseClusterZoom = 17.0;
+
+/// Span threshold in meters below which we use fixed zoom instead of fitBounds.
+const double _kCloseClusterSpanM = 1000.0;
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -149,13 +157,30 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       if (forFit.isEmpty) return;
 
       final bounds = _boundsFromMarkers(forFit);
-      _mapController.fitCamera(
-        CameraFit.insideBounds(
-          bounds: bounds,
-          padding: _paddingFromFraction(_kFitBoundsPaddingFraction),
-        ),
-      );
+      final center = bounds.center;
+      final spanM = _boundsSpanMeters(bounds);
+      if (spanM <= _kCloseClusterSpanM || forFit.length == 1) {
+        _mapController.move(center, _kCloseClusterZoom);
+      } else {
+        _mapController.fitCamera(
+          CameraFit.insideBounds(
+            bounds: bounds,
+            padding: _paddingFromFraction(_kFitBoundsPaddingFraction),
+          ),
+        );
+      }
     });
+  }
+
+  /// Approximate bounds span in meters: max of lat span and lon span at center.
+  static double _boundsSpanMeters(LatLngBounds bounds) {
+    const metersPerDegLat = 111320.0;
+    final metersLat = (bounds.north - bounds.south) * metersPerDegLat;
+    const degToRad = 0.017453292519943295; // pi / 180
+    final centerLatRad = (bounds.south + bounds.north) / 2 * degToRad;
+    final metersLon =
+        (bounds.east - bounds.west) * metersPerDegLat * cos(centerLatRad);
+    return max(metersLat.abs(), metersLon.abs());
   }
 
   LatLngBounds _boundsFromMarkers(List<NodeRecordV1> list) {
