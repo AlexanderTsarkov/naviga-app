@@ -14,6 +14,7 @@
 #include "platform/log_export_uart.h"
 #include "platform/timebase.h"
 #include "services/gnss_stub_service.h"
+#include "services/gnss_ublox_placeholder_service.h"
 #include "services/self_update_policy.h"
 #include "utils/geo_utils.h"
 
@@ -23,7 +24,22 @@ namespace {
 
 constexpr const char* kFirmwareVersion = "ootb-74-m1-runtime";
 
-GnssStubService gnss_stub;
+// Exactly one GNSS provider must be selected at compile-time.
+#if defined(GNSS_PROVIDER_STUB) && defined(GNSS_PROVIDER_UBLOX)
+#error "Select exactly one GNSS provider: GNSS_PROVIDER_STUB or GNSS_PROVIDER_UBLOX"
+#elif !defined(GNSS_PROVIDER_STUB) && !defined(GNSS_PROVIDER_UBLOX)
+#error "No GNSS provider selected. Define GNSS_PROVIDER_STUB or GNSS_PROVIDER_UBLOX"
+#endif
+
+#if defined(GNSS_PROVIDER_STUB)
+GnssStubService gnss_provider_;
+constexpr const char* kGnssProviderName = "STUB";
+#elif defined(GNSS_PROVIDER_UBLOX)
+// TODO(#128): Replace placeholder with real u-blox implementation.
+GnssUbloxPlaceholderService gnss_provider_;
+constexpr const char* kGnssProviderName = "UBLOX";
+#endif
+
 SelfUpdatePolicy self_policy;
 E220Radio* radio = nullptr;
 
@@ -89,6 +105,7 @@ void AppServices::init() {
   log_line("=== Naviga OOTB skeleton ===");
   log_kv("fw: ", kFirmwareVersion);
   log_kv("hw_profile: ", profile.name);
+  log_kv("gnss_provider: ", kGnssProviderName);
   log_kv("role: ", role_ == RadioRole::INIT ? "INIT" : "RESP");
 
   const platform::DeviceId device_id = device_id_provider_.get();
@@ -96,7 +113,7 @@ void AppServices::init() {
   get_device_mac_bytes(mac_bytes);
   const uint64_t full_id = full_id_from_mac(device_id.bytes);
   short_id_ = domain::NodeTable::compute_short_id(full_id);
-  gnss_stub.init(full_id);
+  gnss_provider_.init(full_id);
   self_policy.init();
 
   static E220Radio radio_instance(profile.pins);
@@ -142,20 +159,27 @@ void AppServices::init() {
 }
 
 void AppServices::tick(uint32_t now_ms) {
-  if (gnss_stub.tick(now_ms)) {
-    const GnssSample sample = gnss_stub.latest();
-    if (sample.has_fix && !fix_logged_) {
+  if (gnss_provider_.tick(now_ms)) {
+    GnssSnapshot snapshot{};
+    if (!gnss_provider_.get_snapshot(&snapshot)) {
+      return;
+    }
+    if (snapshot.pos_valid && !fix_logged_) {
       log_line("GNSS: FIX acquired");
       fix_logged_ = true;
     }
 
-    const SelfUpdateDecision decision = self_policy.evaluate(now_ms, sample);
+    const SelfUpdateDecision decision = self_policy.evaluate(now_ms, snapshot);
+    const uint16_t pos_age_s = snapshot.pos_valid && snapshot.last_fix_ms > 0
+                                   ? static_cast<uint16_t>((now_ms - snapshot.last_fix_ms) / 1000U)
+                                   : 0;
     if (decision.reason != SelfUpdateReason::NONE) {
-      self_policy.commit(now_ms, sample);
-      runtime_.set_self_position(sample.has_fix, sample.lat_e7, sample.lon_e7, 0, now_ms);
+      self_policy.commit(now_ms, snapshot);
+      runtime_.set_self_position(snapshot.pos_valid, snapshot.lat_e7, snapshot.lon_e7, pos_age_s,
+                                 now_ms);
       uint8_t payload[8] = {};
-      write_i32_le(payload, sample.lat_e7);
-      write_i32_le(payload + 4, sample.lon_e7);
+      write_i32_le(payload, snapshot.lat_e7);
+      write_i32_le(payload + 4, snapshot.lon_e7);
       event_logger_.log(now_ms, domain::LogEventId::NODETABLE_UPDATE,
                         domain::LogLevel::kInfo, payload, sizeof(payload));
 
@@ -179,12 +203,12 @@ void AppServices::tick(uint32_t now_ms) {
       char buffer[160] = {0};
       std::snprintf(buffer, sizeof(buffer),
                     "SELF_POS: updated reason=%s lat_e7=%ld lon_e7=%ld d=%.2f dt=%lu",
-                    reason_str, static_cast<long>(sample.lat_e7),
-                    static_cast<long>(sample.lon_e7),
+                    reason_str, static_cast<long>(snapshot.lat_e7),
+                    static_cast<long>(snapshot.lon_e7),
                     static_cast<double>(decision.distance_m),
                     static_cast<unsigned long>(decision.dt_ms));
       log_line(buffer);
-    } else if (!sample.has_fix) {
+    } else if (!snapshot.pos_valid) {
       runtime_.set_self_position(false, 0, 0, 0, now_ms);
     }
   }

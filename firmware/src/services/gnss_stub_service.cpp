@@ -10,7 +10,11 @@ constexpr int32_t kBaseLatE7 = 571844000; // Rostov Veliky, RU (approx).
 constexpr int32_t kBaseLonE7 = 383663000; // Rostov Veliky, RU (approx).
 constexpr double kEarthRadiusM = 6371000.0;
 
-constexpr bool kForceNoFix = false;
+// Start in NO_FIX for this many seconds (cold start simulation).
+constexpr uint32_t kNoFixWarmupMs = 5000U;
+// After fix, occasionally lose it: cycle ~60s, duration ~8s.
+constexpr uint32_t kFixLossCycleMs = 60000U;
+constexpr uint32_t kFixLossDurationMs = 8000U;
 
 uint32_t lcg_next(uint32_t& state) {
   state = state * 1664525u + 1013904223u;
@@ -34,10 +38,13 @@ void apply_move_m(int32_t& lat_e7, int32_t& lon_e7, double east_m, double north_
 void GnssStubService::init(uint64_t seed) {
   rng_state_ = static_cast<uint32_t>(seed ^ (seed >> 32));
   last_sample_ms_ = 0;
-  sample_ = {
-      .has_fix = !kForceNoFix,
+  boot_ms_ = 0;
+  snapshot_ = {
+      .fix_state = GNSSFixState::NO_FIX,
+      .pos_valid = false,
       .lat_e7 = kBaseLatE7,
       .lon_e7 = kBaseLonE7,
+      .last_fix_ms = 0,
   };
 }
 
@@ -45,30 +52,55 @@ bool GnssStubService::tick(uint32_t now_ms) {
   if (last_sample_ms_ != 0 && (now_ms - last_sample_ms_) < 1000U) {
     return false;
   }
+  if (boot_ms_ == 0) {
+    boot_ms_ = now_ms;
+  }
   last_sample_ms_ = now_ms;
 
-  if (kForceNoFix) {
-    sample_.has_fix = false;
-    return true;
+  const uint32_t uptime_ms = now_ms - boot_ms_;
+  bool has_fix = false;
+
+  if (uptime_ms < kNoFixWarmupMs) {
+    has_fix = false;
+  } else {
+    const uint32_t phase = uptime_ms % kFixLossCycleMs;
+    if (phase < kFixLossDurationMs) {
+      has_fix = false;
+    } else {
+      has_fix = true;
+    }
   }
 
-  sample_.has_fix = true;
+  if (has_fix) {
+    if (snapshot_.fix_state == GNSSFixState::NO_FIX) {
+      snapshot_.last_fix_ms = now_ms;
+    }
+    snapshot_.fix_state = GNSSFixState::FIX_3D;
+    snapshot_.pos_valid = true;
 
-  // Deterministic drift: sometimes <25m, sometimes >25m.
-  const uint32_t r = lcg_next(rng_state_);
-  const bool small_step = (r % 5u) == 0u;
-  const double step_m = small_step ? (5.0 + (r % 10u)) : (30.0 + (r % 10u));
-  const double angle = (lcg_next(rng_state_) % 360u) * (M_PI / 180.0);
-
-  const double north_m = step_m * std::cos(angle);
-  const double east_m = step_m * std::sin(angle);
-  apply_move_m(sample_.lat_e7, sample_.lon_e7, east_m, north_m);
+    const uint32_t r = lcg_next(rng_state_);
+    const bool small_step = (r % 5u) == 0u;
+    const double step_m = small_step ? (5.0 + (r % 10u)) : (30.0 + (r % 10u));
+    const double angle = (lcg_next(rng_state_) % 360u) * (M_PI / 180.0);
+    const double north_m = step_m * std::cos(angle);
+    const double east_m = step_m * std::sin(angle);
+    apply_move_m(snapshot_.lat_e7, snapshot_.lon_e7, east_m, north_m);
+  } else {
+    snapshot_.fix_state = GNSSFixState::NO_FIX;
+    snapshot_.pos_valid = false;
+    // Keep last lat/lon (don't reset); beacon ignores when pos_valid=false
+    snapshot_.last_fix_ms = snapshot_.last_fix_ms;
+  }
 
   return true;
 }
 
-GnssSample GnssStubService::latest() const {
-  return sample_;
+bool GnssStubService::get_snapshot(GnssSnapshot* out) {
+  if (!out) {
+    return false;
+  }
+  *out = snapshot_;
+  return true;
 }
 
 } // namespace naviga

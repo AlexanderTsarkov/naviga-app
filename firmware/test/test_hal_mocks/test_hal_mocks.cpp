@@ -42,13 +42,15 @@ void test_mock_ble_transport_store() {
 
 void test_mock_gnss_snapshot() {
   MockGnss gnss;
-  GnssSnapshot snap{true, 123, 456};
+  GnssSnapshot snap{GNSSFixState::FIX_3D, true, 123, 456, 1000};
   gnss.set_snapshot(snap);
   GnssSnapshot out{};
   TEST_ASSERT_TRUE(gnss.get_snapshot(&out));
-  TEST_ASSERT_TRUE(out.has_fix);
+  TEST_ASSERT_EQUAL(static_cast<int>(GNSSFixState::FIX_3D), static_cast<int>(out.fix_state));
+  TEST_ASSERT_TRUE(out.pos_valid);
   TEST_ASSERT_EQUAL_INT32(123, out.lat_e7);
   TEST_ASSERT_EQUAL_INT32(456, out.lon_e7);
+  TEST_ASSERT_EQUAL_UINT32(1000, out.last_fix_ms);
 }
 
 void test_mock_log() {

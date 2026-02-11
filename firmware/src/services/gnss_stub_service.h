@@ -2,24 +2,23 @@
 
 #include <cstdint>
 
+#include "naviga/hal/interfaces.h"
+
 namespace naviga {
 
-struct GnssSample {
-  bool has_fix;
-  int32_t lat_e7;
-  int32_t lon_e7;
-};
-
-class GnssStubService {
+/// Stub GNSS provider for dev/testing. Implements IGnss with deterministic
+/// behavior: starts NO_FIX, acquires FIX_3D after warmup, optional fix loss.
+class GnssStubService : public IGnss {
  public:
   void init(uint64_t seed);
   bool tick(uint32_t now_ms);
-  GnssSample latest() const;
+  bool get_snapshot(GnssSnapshot* out) override;
 
  private:
   uint32_t rng_state_ = 0;
   uint32_t last_sample_ms_ = 0;
-  GnssSample sample_{};
+  uint32_t boot_ms_ = 0;  // first tick sets this
+  GnssSnapshot snapshot_{};
 };
 
 } // namespace naviga

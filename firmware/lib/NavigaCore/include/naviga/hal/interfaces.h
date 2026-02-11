@@ -5,10 +5,18 @@
 
 namespace naviga {
 
+enum class GNSSFixState : uint8_t {
+  NO_FIX = 0,
+  FIX_2D = 1,
+  FIX_3D = 2,
+};
+
 struct GnssSnapshot {
-  bool has_fix;
+  GNSSFixState fix_state;
+  bool pos_valid;       // true when fix_state is FIX_2D or FIX_3D
   int32_t lat_e7;
   int32_t lon_e7;
+  uint32_t last_fix_ms; // monotonic uptime ms of last valid fix; 0 when never fixed
 };
 
 class IRadio {
