@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "services/gnss_stub_service.h"
+#include "naviga/hal/interfaces.h"
 
 namespace naviga {
 
@@ -22,8 +22,8 @@ struct SelfUpdateDecision {
 class SelfUpdatePolicy {
  public:
   void init();
-  SelfUpdateDecision evaluate(uint32_t now_ms, const GnssSample& sample);
-  void commit(uint32_t now_ms, const GnssSample& sample);
+  SelfUpdateDecision evaluate(uint32_t now_ms, const GnssSnapshot& snapshot);
+  void commit(uint32_t now_ms, const GnssSnapshot& snapshot);
 
  private:
   bool has_commit_ = false;
