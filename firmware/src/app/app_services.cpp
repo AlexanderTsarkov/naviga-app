@@ -14,7 +14,7 @@
 #include "platform/log_export_uart.h"
 #include "platform/timebase.h"
 #include "services/gnss_stub_service.h"
-#include "services/gnss_ublox_placeholder_service.h"
+#include "services/gnss_ublox_service.h"
 #include "services/self_update_policy.h"
 #include "utils/geo_utils.h"
 
@@ -35,8 +35,7 @@ constexpr const char* kFirmwareVersion = "ootb-74-m1-runtime";
 GnssStubService gnss_provider_;
 constexpr const char* kGnssProviderName = "STUB";
 #elif defined(GNSS_PROVIDER_UBLOX)
-// TODO(#128): Replace placeholder with real u-blox implementation.
-GnssUbloxPlaceholderService gnss_provider_;
+GnssUbloxService gnss_provider_;
 constexpr const char* kGnssProviderName = "UBLOX";
 #endif
 
