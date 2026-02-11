@@ -5,28 +5,22 @@
 namespace naviga {
 
 #if defined(GNSS_PROVIDER_UBLOX)
-namespace {
-
-const char* fix_state_to_cstr(GNSSFixState state) {
-  switch (state) {
-    case GNSSFixState::FIX_2D:
-      return "FIX_2D";
-    case GNSSFixState::FIX_3D:
-      return "FIX_3D";
-    case GNSSFixState::NO_FIX:
-    default:
-      return "NO_FIX";
-  }
-}
-
-} // namespace
-#endif
-
-#if defined(GNSS_PROVIDER_UBLOX)
 void GnssUbloxService::write_ubx_frame(uint8_t msg_class,
                                        uint8_t msg_id,
                                        const uint8_t* payload,
                                        uint16_t payload_len) {
+  if (!io_) {
+    return;
+  }
+
+  uint8_t header[6] = {
+      UbxStreamParser::kSync1,
+      UbxStreamParser::kSync2,
+      msg_class,
+      msg_id,
+      static_cast<uint8_t>(payload_len & 0xFF),
+      static_cast<uint8_t>((payload_len >> 8) & 0xFF),
+  };
   uint8_t ck_a = 0;
   uint8_t ck_b = 0;
   auto accum = [&](uint8_t v) {
@@ -34,26 +28,22 @@ void GnssUbloxService::write_ubx_frame(uint8_t msg_class,
     ck_b = static_cast<uint8_t>(ck_b + ck_a);
   };
 
-  serial_.write(UbxStreamParser::kSync1);
-  serial_.write(UbxStreamParser::kSync2);
-  serial_.write(msg_class);
-  serial_.write(msg_id);
-  serial_.write(static_cast<uint8_t>(payload_len & 0xFF));
-  serial_.write(static_cast<uint8_t>((payload_len >> 8) & 0xFF));
+  io_->write_bytes(header, sizeof(header));
 
   accum(msg_class);
   accum(msg_id);
   accum(static_cast<uint8_t>(payload_len & 0xFF));
   accum(static_cast<uint8_t>((payload_len >> 8) & 0xFF));
 
-  for (uint16_t i = 0; i < payload_len; ++i) {
-    const uint8_t b = payload[i];
-    serial_.write(b);
-    accum(b);
+  if (payload && payload_len > 0) {
+    io_->write_bytes(payload, payload_len);
+    for (uint16_t i = 0; i < payload_len; ++i) {
+      accum(payload[i]);
+    }
   }
 
-  serial_.write(ck_a);
-  serial_.write(ck_b);
+  uint8_t checksum[2] = {ck_a, ck_b};
+  io_->write_bytes(checksum, sizeof(checksum));
 }
 
 void GnssUbloxService::send_cfg_enable_nav_pvt() {
@@ -70,9 +60,13 @@ void GnssUbloxService::send_cfg_enable_nav_pvt() {
       0U,
   };
   write_ubx_frame(0x06U, 0x01U, payload, static_cast<uint16_t>(sizeof(payload)));
-  Serial.println("GNSS_UBX cfg: enable NAV-PVT");
+  cfg_nav_pvt_event_pending_ = true;
 }
 #endif
+
+void GnssUbloxService::set_io(IGnssUbxIo* io) {
+  io_ = io;
+}
 
 void GnssUbloxService::init(uint64_t /*seed*/) {
   snapshot_ = {
@@ -87,26 +81,27 @@ void GnssUbloxService::init(uint64_t /*seed*/) {
   frames_bad_ck_ = 0;
   last_frame_ms_ = 0;
 #if defined(GNSS_PROVIDER_UBLOX)
-  service_start_ms_ = millis();
-  no_data_hint_logged_ = false;
-  nmea_hint_logged_ = false;
+  service_start_ms_ = 0;
   nmea_hint_ = false;
   nmea_window_remaining_ = 0;
-#if GNSS_UBLOX_DIAG
-  next_diag_log_ms_ = service_start_ms_ + kDiagLogPeriodMs;
-#endif
+  cfg_nav_pvt_event_pending_ = false;
+  nmea_hint_event_pending_ = false;
+  no_data_hint_event_pending_ = false;
+  nmea_hint_event_emitted_ = false;
+  no_data_hint_event_emitted_ = false;
 #endif
 
   const auto& profile = get_hw_profile();
-  if (profile.pins.gps_rx < 0 || profile.pins.gps_tx < 0) {
+  if (!io_ || profile.pins.gps_rx < 0 || profile.pins.gps_tx < 0) {
     uart_ready_ = false;
     return;
   }
 
-  serial_.begin(kUartBaud, SERIAL_8N1, profile.pins.gps_rx, profile.pins.gps_tx);
-  uart_ready_ = true;
+  uart_ready_ = io_->begin(kUartBaud, profile.pins.gps_rx, profile.pins.gps_tx);
 #if defined(GNSS_PROVIDER_UBLOX)
-  send_cfg_enable_nav_pvt();
+  if (uart_ready_) {
+    send_cfg_enable_nav_pvt();
+  }
 #endif
 }
 
@@ -150,42 +145,26 @@ void GnssUbloxService::update_nmea_hint(uint8_t byte) {
 
   if (byte == static_cast<uint8_t>('\n')) {
     nmea_hint_ = true;
+    if (!nmea_hint_event_emitted_) {
+      nmea_hint_event_pending_ = true;
+      nmea_hint_event_emitted_ = true;
+    }
     return;
   }
 
   --nmea_window_remaining_;
 }
 
-void GnssUbloxService::maybe_log_diag(uint32_t now_ms) {
-  if (!nmea_hint_logged_ && nmea_hint_) {
-    Serial.println("GNSS_UBX hint=NMEA (parser expects UBX NAV-PVT)");
-    nmea_hint_logged_ = true;
+void GnssUbloxService::update_diag_events(uint32_t now_ms) {
+  if (service_start_ms_ == 0) {
+    service_start_ms_ = now_ms;
   }
 
   const uint32_t since_start_ms = now_ms - service_start_ms_;
-  if (!no_data_hint_logged_ && since_start_ms >= kNoDataHintDelayMs && bytes_rx_ == 0U) {
-    Serial.println("GNSS_UBX no UART data (check power, GND, TX->RX16, baud)");
-    no_data_hint_logged_ = true;
+  if (!no_data_hint_event_emitted_ && since_start_ms >= kNoDataHintDelayMs && bytes_rx_ == 0U) {
+    no_data_hint_event_pending_ = true;
+    no_data_hint_event_emitted_ = true;
   }
-
-#if GNSS_UBLOX_DIAG
-  if (static_cast<int32_t>(now_ms - next_diag_log_ms_) < 0) {
-    return;
-  }
-
-  Serial.printf("GNSS_UBX rx=%lu ok=%lu bad=%lu last=%lu fix=%s lat=%ld lon=%ld\n",
-                static_cast<unsigned long>(bytes_rx_),
-                static_cast<unsigned long>(frames_ok_),
-                static_cast<unsigned long>(frames_bad_ck_),
-                static_cast<unsigned long>(last_frame_ms_),
-                fix_state_to_cstr(snapshot_.fix_state),
-                static_cast<long>(snapshot_.pos_valid ? snapshot_.lat_e7 : 0),
-                static_cast<long>(snapshot_.pos_valid ? snapshot_.lon_e7 : 0));
-
-  next_diag_log_ms_ = now_ms + kDiagLogPeriodMs;
-#else
-  (void)now_ms;
-#endif
 }
 #endif
 
@@ -194,15 +173,15 @@ bool GnssUbloxService::tick(uint32_t now_ms) {
     snapshot_.fix_state = GNSSFixState::NO_FIX;
     snapshot_.pos_valid = false;
 #if defined(GNSS_PROVIDER_UBLOX)
-    maybe_log_diag(now_ms);
+    update_diag_events(now_ms);
 #endif
     return true;
   }
 
-  int available = serial_.available();
+  int available = io_ ? io_->available() : 0;
   if (available <= 0) {
 #if defined(GNSS_PROVIDER_UBLOX)
-    maybe_log_diag(now_ms);
+    update_diag_events(now_ms);
 #endif
     return false;
   }
@@ -214,7 +193,7 @@ bool GnssUbloxService::tick(uint32_t now_ms) {
 
   bool updated = false;
   for (uint16_t i = 0; i < to_read; ++i) {
-    const int c = serial_.read();
+    const int c = io_->read_byte();
     if (c < 0) {
       break;
     }
@@ -247,7 +226,7 @@ bool GnssUbloxService::tick(uint32_t now_ms) {
   }
 
 #if defined(GNSS_PROVIDER_UBLOX)
-  maybe_log_diag(now_ms);
+  update_diag_events(now_ms);
 #endif
   return updated;
 }
@@ -257,6 +236,41 @@ bool GnssUbloxService::get_snapshot(GnssSnapshot* out) {
     return false;
   }
   *out = snapshot_;
+  return true;
+}
+
+bool GnssUbloxService::get_diag(GnssUbloxDiag* out) const {
+  if (!out) {
+    return false;
+  }
+  out->bytes_rx = bytes_rx_;
+  out->frames_ok = frames_ok_;
+  out->frames_bad_ck = frames_bad_ck_;
+  out->last_frame_ms = last_frame_ms_;
+  out->fix_state = snapshot_.fix_state;
+  out->lat_e7 = snapshot_.pos_valid ? snapshot_.lat_e7 : 0;
+  out->lon_e7 = snapshot_.pos_valid ? snapshot_.lon_e7 : 0;
+  return true;
+}
+
+bool GnssUbloxService::take_diag_events(GnssUbloxDiagEvents* out) {
+  if (!out) {
+    return false;
+  }
+
+#if defined(GNSS_PROVIDER_UBLOX)
+  out->cfg_nav_pvt_sent = cfg_nav_pvt_event_pending_;
+  out->hint_nmea = nmea_hint_event_pending_;
+  out->hint_no_data = no_data_hint_event_pending_;
+
+  cfg_nav_pvt_event_pending_ = false;
+  nmea_hint_event_pending_ = false;
+  no_data_hint_event_pending_ = false;
+#else
+  out->cfg_nav_pvt_sent = false;
+  out->hint_nmea = false;
+  out->hint_no_data = false;
+#endif
   return true;
 }
 
