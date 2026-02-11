@@ -14,6 +14,7 @@
 #include "platform/log_export_uart.h"
 #include "platform/timebase.h"
 #include "services/gnss_stub_service.h"
+#include "services/gnss_ublox_placeholder_service.h"
 #include "services/self_update_policy.h"
 #include "utils/geo_utils.h"
 
@@ -23,12 +24,20 @@ namespace {
 
 constexpr const char* kFirmwareVersion = "ootb-74-m1-runtime";
 
-// GNSS provider: GNSS_PROVIDER_STUB (default) or GNSS_PROVIDER_UBLOX (placeholder).
-#if defined(GNSS_PROVIDER_UBLOX)
-// TODO(#128): Replace with UbloxM8nGnss when u-blox driver is implemented.
+// Exactly one GNSS provider must be selected at compile-time.
+#if defined(GNSS_PROVIDER_STUB) && defined(GNSS_PROVIDER_UBLOX)
+#error "Select exactly one GNSS provider: GNSS_PROVIDER_STUB or GNSS_PROVIDER_UBLOX"
+#elif !defined(GNSS_PROVIDER_STUB) && !defined(GNSS_PROVIDER_UBLOX)
+#error "No GNSS provider selected. Define GNSS_PROVIDER_STUB or GNSS_PROVIDER_UBLOX"
+#endif
+
+#if defined(GNSS_PROVIDER_STUB)
 GnssStubService gnss_provider_;
-#else
-GnssStubService gnss_provider_;
+constexpr const char* kGnssProviderName = "STUB";
+#elif defined(GNSS_PROVIDER_UBLOX)
+// TODO(#128): Replace placeholder with real u-blox implementation.
+GnssUbloxPlaceholderService gnss_provider_;
+constexpr const char* kGnssProviderName = "UBLOX";
 #endif
 
 SelfUpdatePolicy self_policy;
@@ -96,6 +105,7 @@ void AppServices::init() {
   log_line("=== Naviga OOTB skeleton ===");
   log_kv("fw: ", kFirmwareVersion);
   log_kv("hw_profile: ", profile.name);
+  log_kv("gnss_provider: ", kGnssProviderName);
   log_kv("role: ", role_ == RadioRole::INIT ? "INIT" : "RESP");
 
   const platform::DeviceId device_id = device_id_provider_.get();
