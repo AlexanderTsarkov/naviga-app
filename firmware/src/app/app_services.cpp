@@ -11,10 +11,11 @@
 #include "platform/device_id.h"
 #include "platform/device_id_provider.h"
 #include "platform/e220_radio.h"
+#include "platform/gnss_ubx_uart_io.h"
 #include "platform/log_export_uart.h"
 #include "platform/timebase.h"
 #include "services/gnss_stub_service.h"
-#include "services/gnss_ublox_placeholder_service.h"
+#include "services/gnss_ublox_service.h"
 #include "services/self_update_policy.h"
 #include "utils/geo_utils.h"
 
@@ -35,9 +36,13 @@ constexpr const char* kFirmwareVersion = "ootb-74-m1-runtime";
 GnssStubService gnss_provider_;
 constexpr const char* kGnssProviderName = "STUB";
 #elif defined(GNSS_PROVIDER_UBLOX)
-// TODO(#128): Replace placeholder with real u-blox implementation.
-GnssUbloxPlaceholderService gnss_provider_;
+GnssUbloxService gnss_provider_;
+platform::GnssUbxUartIo gnss_ubx_io_{1};
 constexpr const char* kGnssProviderName = "UBLOX";
+#if GNSS_UBLOX_DIAG
+constexpr uint32_t kGnssDiagPeriodMs = 2000U;
+uint32_t gnss_diag_next_ms = 0;
+#endif
 #endif
 
 SelfUpdatePolicy self_policy;
@@ -64,6 +69,20 @@ inline void log_kv_u32(const char* key, uint32_t value) {
   std::snprintf(buffer, sizeof(buffer), "%s%lu", key, static_cast<unsigned long>(value));
   log_line(buffer);
 }
+
+#if defined(GNSS_PROVIDER_UBLOX)
+inline const char* fix_state_to_cstr(GNSSFixState state) {
+  switch (state) {
+    case GNSSFixState::FIX_2D:
+      return "FIX_2D";
+    case GNSSFixState::FIX_3D:
+      return "FIX_3D";
+    case GNSSFixState::NO_FIX:
+    default:
+      return "NO_FIX";
+  }
+}
+#endif
 
 inline void write_i32_le(uint8_t* out, int32_t value) {
   const uint32_t raw = static_cast<uint32_t>(value);
@@ -113,8 +132,21 @@ void AppServices::init() {
   get_device_mac_bytes(mac_bytes);
   const uint64_t full_id = full_id_from_mac(device_id.bytes);
   short_id_ = domain::NodeTable::compute_short_id(full_id);
+#if defined(GNSS_PROVIDER_UBLOX)
+  gnss_provider_.set_io(&gnss_ubx_io_);
+#endif
   gnss_provider_.init(full_id);
   self_policy.init();
+#if defined(GNSS_PROVIDER_UBLOX) && GNSS_UBLOX_DIAG
+  gnss_diag_next_ms = 0;
+#endif
+
+#if defined(GNSS_PROVIDER_UBLOX)
+  GnssUbloxDiagEvents startup_events{};
+  if (gnss_provider_.take_diag_events(&startup_events) && startup_events.cfg_nav_pvt_sent) {
+    log_line("GNSS_UBX cfg: enable NAV-PVT");
+  }
+#endif
 
   static E220Radio radio_instance(profile.pins);
   radio = &radio_instance;
@@ -159,6 +191,38 @@ void AppServices::init() {
 }
 
 void AppServices::tick(uint32_t now_ms) {
+#if defined(GNSS_PROVIDER_UBLOX)
+  GnssUbloxDiagEvents ubx_events{};
+  if (gnss_provider_.take_diag_events(&ubx_events)) {
+    if (ubx_events.hint_nmea) {
+      log_line("GNSS_UBX hint=NMEA (parser expects UBX NAV-PVT)");
+    }
+    if (ubx_events.hint_no_data) {
+      log_line("GNSS_UBX no UART data (check power, GND, TX->RX16, baud)");
+    }
+  }
+#endif
+
+#if defined(GNSS_PROVIDER_UBLOX) && GNSS_UBLOX_DIAG
+  if (gnss_diag_next_ms == 0 || static_cast<int32_t>(now_ms - gnss_diag_next_ms) >= 0) {
+    GnssUbloxDiag diag{};
+    if (gnss_provider_.get_diag(&diag)) {
+      char buffer[160] = {0};
+      std::snprintf(buffer, sizeof(buffer),
+                    "GNSS_UBX rx=%lu ok=%lu bad=%lu last=%lu fix=%s lat=%ld lon=%ld",
+                    static_cast<unsigned long>(diag.bytes_rx),
+                    static_cast<unsigned long>(diag.frames_ok),
+                    static_cast<unsigned long>(diag.frames_bad_ck),
+                    static_cast<unsigned long>(diag.last_frame_ms),
+                    fix_state_to_cstr(diag.fix_state),
+                    static_cast<long>(diag.lat_e7),
+                    static_cast<long>(diag.lon_e7));
+      log_line(buffer);
+    }
+    gnss_diag_next_ms = now_ms + kGnssDiagPeriodMs;
+  }
+#endif
+
   if (gnss_provider_.tick(now_ms)) {
     GnssSnapshot snapshot{};
     if (!gnss_provider_.get_snapshot(&snapshot)) {
