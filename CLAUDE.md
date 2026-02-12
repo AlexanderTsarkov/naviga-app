@@ -26,6 +26,12 @@ If a task requires:
 
 You must STOP and request handoff to an execution model.
 
+### Default PR mechanics (allowed)
+After completing a task, you may:
+- **Allowed:** `git push -u origin <branch>` and create a PR via `gh pr create` (when `gh` is configured).
+- **Not allowed:** merge, close PR, or press the merge button — request handoff for those.
+- **If push would require `--force-with-lease`** (e.g. after rebase or rewritten history): **STOP** and request handoff or explicit approval; do not force-push without confirmation.
+
 ## Naviga-specific Critical Zones
 - firmware/domain/*
 - NodeTable logic
