@@ -1,6 +1,6 @@
 # Docs map: canonical vs reference vs working
 
-This document categorizes docs so readers land on canon first. **PR2 (Issue #119) does not move, rename, archive, or delete any files.** PR3 will archive working artifacts into `_archive/ootb_v1/`.
+This document categorizes docs so readers land on canon first. **PR3** moved working artifacts into `_archive/ootb_v1/`. Canon (START_HERE, state_after_ootb_v1) evidence links point to the archive.
 
 ## Canonical (entrypoint and snapshot)
 
@@ -16,10 +16,9 @@ This document categorizes docs so readers land on canon first. **PR2 (Issue #119
 - [../firmware/](../firmware/) — HAL contracts, NodeTable spec, GNSS, firmware arch.
 - [../product/](../product/) — Product core, scope, test plan, OOTB analysis (where still accurate).
 
-## Working (trail / planning; to be archived in PR3)
+## Archived (OOTB v1 working artifacts; PR3)
 
-- [ootb_progress_inventory.md](ootb_progress_inventory.md) — Per-issue PR evidence; Mobile v1 tracking.
-- [ootb_workmap.md](ootb_workmap.md) — Workmap, status table, phase rules.
-- Other `docs/dev/`, `docs/product/` planning and working docs as identified in PR3.
+- [ootb_progress_inventory.md](../../_archive/ootb_v1/project/ootb_progress_inventory.md) — Per-issue PR evidence; Mobile v1 tracking.
+- [ootb_workmap.md](../../_archive/ootb_v1/project/ootb_workmap.md) — Workmap, status table, phase rules.
 
-**Archive plan:** PR3 will move working artifacts into `_archive/ootb_v1/` and update links as needed. No file moves in PR2.
+See [_archive/ootb_v1/README.md](../../_archive/ootb_v1/README.md) for what was archived and why; canon remains above.
