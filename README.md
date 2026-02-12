@@ -31,7 +31,7 @@ Naviga/
 └── README.md
 ```
 
-Documentation: [docs/](docs/) — structure and plans in [docs/CLEAN_SLATE.md](docs/CLEAN_SLATE.md), [docs/REPO_STRUCTURE.md](docs/REPO_STRUCTURE.md).
+Documentation: **Start here → [docs/START_HERE.md](docs/START_HERE.md)**. See also [docs/CLEAN_SLATE.md](docs/CLEAN_SLATE.md).
 
 ## 🛠️ Technology Stack
 
