@@ -13,3 +13,6 @@ firmware-release/
 
 # OS
 .DS_Store
+
+# Map fit debug capture (tools/watch_mapfit.sh)
+tools/mapfit_live.log

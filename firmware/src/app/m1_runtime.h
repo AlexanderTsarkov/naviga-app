@@ -9,6 +9,7 @@
 #include "domain/node_table.h"
 #include "naviga/hal/interfaces.h"
 #include "platform/ble_esp32_transport.h"
+#include "../../protocol/ble_status_bridge.h"
 #include "../../protocol/ble_node_table_bridge.h"
 #include "../../protocol/geo_beacon_codec.h"
 #include "services/radio_smoke_service.h"
@@ -31,6 +32,7 @@ class M1Runtime {
                          int32_t lat_e7,
                          int32_t lon_e7,
                          uint16_t pos_age_s,
+                         GNSSFixState fix_state,
                          uint32_t now_ms);
 
   void tick(uint32_t now_ms);
@@ -54,9 +56,11 @@ class M1Runtime {
   domain::NodeTable node_table_{};
   domain::BeaconLogic beacon_logic_{};
   protocol::BleNodeTableBridge ble_bridge_{};
+  protocol::BleStatusBridge ble_status_bridge_{};
   BleEsp32Transport ble_transport_{};
   protocol::DeviceInfoModel device_info_{};
   protocol::GeoBeaconFields self_fields_{};
+  GnssSnapshot gnss_snapshot_{GNSSFixState::NO_FIX, false, 0, 0, 0};
   domain::BeaconSendPolicy send_policy_{};
 
   IRadio* radio_ = nullptr;

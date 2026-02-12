@@ -239,7 +239,11 @@ void AppServices::tick(uint32_t now_ms) {
                                    : 0;
     if (decision.reason != SelfUpdateReason::NONE) {
       self_policy.commit(now_ms, snapshot);
-      runtime_.set_self_position(snapshot.pos_valid, snapshot.lat_e7, snapshot.lon_e7, pos_age_s,
+      runtime_.set_self_position(snapshot.pos_valid,
+                                 snapshot.lat_e7,
+                                 snapshot.lon_e7,
+                                 pos_age_s,
+                                 snapshot.fix_state,
                                  now_ms);
       uint8_t payload[8] = {};
       write_i32_le(payload, snapshot.lat_e7);
@@ -273,7 +277,7 @@ void AppServices::tick(uint32_t now_ms) {
                     static_cast<unsigned long>(decision.dt_ms));
       log_line(buffer);
     } else if (!snapshot.pos_valid) {
-      runtime_.set_self_position(false, 0, 0, 0, now_ms);
+      runtime_.set_self_position(false, 0, 0, 0, GNSSFixState::NO_FIX, now_ms);
     }
   }
 
