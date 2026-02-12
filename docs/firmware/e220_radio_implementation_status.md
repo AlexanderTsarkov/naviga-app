@@ -89,7 +89,7 @@
 - В POC и при переносе в Naviga был выбран подход **использовать внешнюю библиотеку** для E220 (см. `docs/firmware/poc_e220_evidence.md`): не писать свой низкоуровневый протокол UART и не дублировать код; зафиксировать зависимость в `platformio.ini` и не копировать библиотеку в репо.
 - В `platformio.ini` зафиксирована зависимость `xreef/EByte LoRa E220 library` для env с E220. Это соответствует решению «подтягивать как зависимость».
 - Для текущего этапа (OOTB v0, beacon-обмен, два устройства на стенде) этого достаточно: быстрый вывод в эфир, проверка обмена, единый контракт IRadio для runtime и тестов.
-- **Реальный радиообмен между двумя устройствами** зафиксирован: в `docs/smoke_test_pr59_issue21_results.md` описаны два ESP32 с одной прошивкой (devkit_e220_oled), роли INIT (PING) и RESP (PONG), успешная прошивка и проверка по логам и OLED (TX/RX/SEQ). Итог: «Serial logs confirm correct roles … Final confirmation of PING/PONG is by observing TX/RX/SEQ (and RAD state) on the OLED after ~10 s.»
+- **Реальный радиообмен между двумя устройствами** зафиксирован: в [_archive/research/issue_21/smoke_test_pr59_issue21_results.md](../../_archive/research/issue_21/smoke_test_pr59_issue21_results.md) описаны два ESP32 с одной прошивкой (devkit_e220_oled), роли INIT (PING) и RESP (PONG), успешная прошивка и проверка по логам и OLED (TX/RX/SEQ). Итог: «Serial logs confirm correct roles … Final confirmation of PING/PONG is by observing TX/RX/SEQ (and RAD state) on the OLED after ~10 s.»
 
 ---
 

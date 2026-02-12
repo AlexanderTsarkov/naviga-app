@@ -22,3 +22,5 @@ This document categorizes docs so readers land on canon first. **PR3** moved wor
 - [ootb_workmap.md](../../_archive/ootb_v1/project/ootb_workmap.md) — Workmap, status table, phase rules.
 
 See [_archive/ootb_v1/README.md](../../_archive/ootb_v1/README.md) for what was archived and why; canon remains above.
+
+Process artifacts / issue research notes live under [_archive/research/](../../_archive/research/) (issue_###/ and misc/).
