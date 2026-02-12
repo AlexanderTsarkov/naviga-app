@@ -6,7 +6,7 @@
 
 - **Firmware:** GEO_BEACON TX/RX, NodeTable, BLE NodeTableSnapshot/DeviceInfo. E220 UART LoRa as modem; M1Runtime wires domain ↔ radio ↔ BLE.
 - **Mobile (Flutter):** Connect, My Node, Nodes, Map (online tiles), Settings. BLE read-only; NodeTable cache.
-- **OOTB v1** completed 2026-02-12; issues #2–#35 closed. Evidence: [OOTB progress inventory](project/ootb_progress_inventory.md), [OOTB workmap](project/ootb_workmap.md).
+- **OOTB v1** completed 2026-02-12; issues #2–#35 closed. Evidence (archived): [OOTB progress inventory](../_archive/ootb_v1/project/ootb_progress_inventory.md), [OOTB workmap](../_archive/ootb_v1/project/ootb_workmap.md).
 
 ## How to navigate docs
 
@@ -15,7 +15,7 @@
 | **[State after OOTB v1](project/state_after_ootb_v1.md)** | Snapshot: what’s in, invariants, next steps. |
 | **[Docs map: canonical vs working](project/docs_map.md)** | Which docs are canonical, reference, or to be archived (PR3). |
 | [Architecture index](architecture/index.md) | Layer map, source-of-truth table, repo layout. |
-| [OOTB progress inventory](project/ootb_progress_inventory.md) | Per-issue PR evidence and Mobile v1 tracking. |
-| [OOTB workmap](project/ootb_workmap.md) | Plan, status table, rules. |
+| [OOTB progress inventory](../_archive/ootb_v1/project/ootb_progress_inventory.md) | Per-issue PR evidence and Mobile v1 tracking (archived). |
+| [OOTB workmap](../_archive/ootb_v1/project/ootb_workmap.md) | Plan, status table, rules (archived). |
 
 For development workflow and PR discipline, see repo root **CLAUDE.md** and `docs/dev/` (reference only; open explicitly when needed).
