@@ -60,6 +60,7 @@ void M1Runtime::set_self_position(bool pos_valid,
                                   int32_t lat_e7,
                                   int32_t lon_e7,
                                   uint16_t pos_age_s,
+                                  GNSSFixState fix_state,
                                   uint32_t now_ms) {
   if (pos_valid) {
     node_table_.update_self_position(lat_e7, lon_e7, pos_age_s, now_ms);
@@ -67,12 +68,25 @@ void M1Runtime::set_self_position(bool pos_valid,
     self_fields_.lat_e7 = lat_e7;
     self_fields_.lon_e7 = lon_e7;
     self_fields_.pos_age_s = pos_age_s;
+
+    gnss_snapshot_.fix_state = fix_state;
+    gnss_snapshot_.pos_valid = true;
+    gnss_snapshot_.lat_e7 = lat_e7;
+    gnss_snapshot_.lon_e7 = lon_e7;
+    const uint32_t pos_age_ms = static_cast<uint32_t>(pos_age_s) * 1000U;
+    gnss_snapshot_.last_fix_ms = (now_ms >= pos_age_ms) ? (now_ms - pos_age_ms) : 0U;
   } else {
     node_table_.touch_self(now_ms);
     self_fields_.pos_valid = 0;
     self_fields_.lat_e7 = 0;
     self_fields_.lon_e7 = 0;
     self_fields_.pos_age_s = 0;
+
+    gnss_snapshot_.fix_state = GNSSFixState::NO_FIX;
+    gnss_snapshot_.pos_valid = false;
+    gnss_snapshot_.lat_e7 = 0;
+    gnss_snapshot_.lon_e7 = 0;
+    gnss_snapshot_.last_fix_ms = 0;
   }
   log_event(now_ms, domain::LogEventId::NODETABLE_UPDATE, domain::LogLevel::kInfo);
 }
@@ -178,6 +192,7 @@ void M1Runtime::update_ble(uint32_t now_ms) {
   }
   last_ble_update_ms_ = now_ms;
   ble_bridge_.update_all(now_ms, device_info_, node_table_, ble_transport_);
+  ble_status_bridge_.update_status(now_ms, gnss_snapshot_, ble_transport_);
 }
 
 void M1Runtime::log_event(uint32_t now_ms,

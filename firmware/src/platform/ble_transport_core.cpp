@@ -21,6 +21,14 @@ void BleTransportCore::set_node_table_response(const uint8_t* data, size_t len) 
   node_table_len_ = copy_len;
 }
 
+void BleTransportCore::set_status(const uint8_t* data, size_t len) {
+  const size_t copy_len = std::min(len, status_buf_.size());
+  if (data && copy_len > 0) {
+    std::memcpy(status_buf_.data(), data, copy_len);
+  }
+  status_len_ = copy_len;
+}
+
 void BleTransportCore::set_node_table_request(uint16_t snapshot_id, uint16_t page_index) {
   req_snapshot_id_ = snapshot_id;
   req_page_index_ = page_index;
@@ -50,6 +58,14 @@ const uint8_t* BleTransportCore::node_table_response_data() const {
 
 size_t BleTransportCore::node_table_response_len() const {
   return node_table_len_;
+}
+
+const uint8_t* BleTransportCore::status_data() const {
+  return status_buf_.data();
+}
+
+size_t BleTransportCore::status_len() const {
+  return status_len_;
 }
 
 } // namespace naviga

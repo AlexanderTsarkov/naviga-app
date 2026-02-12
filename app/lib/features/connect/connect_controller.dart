@@ -12,11 +12,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../shared/logging.dart';
 import '../nodes/node_table_debug_hook.dart';
+import 'status_parser.dart';
 
 const String kNavigaServiceUuid = '6e4f0001-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaDeviceInfoUuid = '6e4f0002-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaNodeTableSnapshotUuid =
     '6e4f0003-1b9a-4c3a-9a3b-000000000001';
+const String kNavigaStatusUuid = '6e4f0007-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaNamePrefix = 'Naviga';
 const int? kNavigaManufacturerId =
     null; // TODO: set when manufacturer id is known
@@ -41,6 +43,7 @@ class ConnectController extends StateNotifier<ConnectState> {
   BluetoothDevice? _activeDevice;
   BluetoothCharacteristic? _deviceInfoCharacteristic;
   BluetoothCharacteristic? _nodeTableSnapshotCharacteristic;
+  BluetoothCharacteristic? _statusCharacteristic;
   int? _lastNodeTableSnapshotId;
 
   static const _prefsLastDeviceKey = 'naviga.last_device_id';
@@ -233,6 +236,11 @@ class ConnectController extends StateNotifier<ConnectState> {
       telemetryError: null,
       deviceInfo: null,
       deviceInfoWarning: null,
+      statusData: null,
+      statusWarning: null,
+      statusError: null,
+      clearStatusWarning: true,
+      clearStatusError: true,
     );
 
     try {
@@ -261,6 +269,10 @@ class ConnectController extends StateNotifier<ConnectState> {
         navigaService,
         Guid(kNavigaNodeTableSnapshotUuid),
       );
+      _statusCharacteristic = _findCharacteristic(
+        navigaService,
+        Guid(kNavigaStatusUuid),
+      );
 
       if (_deviceInfoCharacteristic == null) {
         state = state.copyWith(
@@ -274,6 +286,7 @@ class ConnectController extends StateNotifier<ConnectState> {
       }
 
       await _readDeviceInfo();
+      await _readStatus();
       logInfo(
         'DBG nodeTableDebugRefreshOnConnect=${nodeTableDebugRefreshOnConnect != null}',
       );
@@ -325,6 +338,52 @@ class ConnectController extends StateNotifier<ConnectState> {
       return;
     }
     await _readDeviceInfo();
+  }
+
+  /// Re-reads Status/Health (0007) from the connected device.
+  /// Missing characteristic is reported as a graceful status error.
+  Future<void> refreshStatus() async {
+    await _readStatus();
+  }
+
+  Future<void> _readStatus() async {
+    if (_statusCharacteristic == null) {
+      state = state.copyWith(
+        statusData: null,
+        statusWarning: null,
+        statusError: 'Status not available (firmware too old?)',
+        clearStatusWarning: true,
+      );
+      return;
+    }
+    if (!_statusCharacteristic!.properties.read) {
+      state = state.copyWith(
+        statusData: null,
+        statusWarning: null,
+        statusError: 'Status characteristic is not readable',
+        clearStatusWarning: true,
+      );
+      return;
+    }
+
+    try {
+      final payload = await _statusCharacteristic!.read();
+      final result = BleStatusParser.parse(payload);
+      state = state.copyWith(
+        statusData: result.data,
+        statusWarning: result.warning,
+        statusError: null,
+        clearStatusError: true,
+        clearStatusWarning: result.warning == null,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        statusData: null,
+        statusWarning: null,
+        statusError: 'Status read failed: $error',
+        clearStatusWarning: true,
+      );
+    }
   }
 
   Future<void> _writeNodeTableRequest(int snapshotId, int pageIndex) async {
@@ -405,11 +464,17 @@ class ConnectController extends StateNotifier<ConnectState> {
   Future<void> _teardownGatt({required bool clearState}) async {
     _deviceInfoCharacteristic = null;
     _nodeTableSnapshotCharacteristic = null;
+    _statusCharacteristic = null;
     _lastNodeTableSnapshotId = null;
     if (clearState) {
       state = state.copyWith(
         deviceInfo: null,
         deviceInfoWarning: null,
+        statusData: null,
+        statusWarning: null,
+        statusError: null,
+        clearStatusWarning: true,
+        clearStatusError: true,
         telemetryError: null,
         isDiscoveringServices: false,
       );
@@ -533,6 +598,9 @@ class ConnectState {
     required this.isDiscoveringServices,
     required this.deviceInfo,
     required this.deviceInfoWarning,
+    required this.statusData,
+    required this.statusWarning,
+    required this.statusError,
     this.lastError,
     this.telemetryError,
   });
@@ -549,6 +617,9 @@ class ConnectState {
   final bool isDiscoveringServices;
   final DeviceInfoData? deviceInfo;
   final String? deviceInfoWarning;
+  final StatusData? statusData;
+  final String? statusWarning;
+  final String? statusError;
   final String? lastError;
   final String? telemetryError;
 
@@ -565,6 +636,9 @@ class ConnectState {
     isDiscoveringServices: false,
     deviceInfo: null,
     deviceInfoWarning: null,
+    statusData: null,
+    statusWarning: null,
+    statusError: null,
   );
 
   ConnectState copyWith({
@@ -581,6 +655,11 @@ class ConnectState {
     bool? isDiscoveringServices,
     DeviceInfoData? deviceInfo,
     String? deviceInfoWarning,
+    StatusData? statusData,
+    String? statusWarning,
+    String? statusError,
+    bool clearStatusWarning = false,
+    bool clearStatusError = false,
     String? telemetryError,
   }) {
     return ConnectState(
@@ -600,6 +679,11 @@ class ConnectState {
           isDiscoveringServices ?? this.isDiscoveringServices,
       deviceInfo: deviceInfo ?? this.deviceInfo,
       deviceInfoWarning: deviceInfoWarning ?? this.deviceInfoWarning,
+      statusData: statusData ?? this.statusData,
+      statusWarning: clearStatusWarning
+          ? null
+          : (statusWarning ?? this.statusWarning),
+      statusError: clearStatusError ? null : (statusError ?? this.statusError),
       telemetryError: telemetryError ?? this.telemetryError,
     );
   }
