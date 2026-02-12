@@ -115,7 +115,7 @@ Approximate mapping of current codebase and PR impact by path (no automated per-
 | M1Runtime wiring | 77 | `firmware/src/app/m1_runtime.*`, `firmware/src/app/app_services.cpp`, `firmware/src/protocol/` wrappers. |
 | Beacon send policy + IChannelSense | 78 | `firmware/src/domain/beacon_send_policy.*`, `firmware/lib/NavigaCore` (IChannelSense, MockChannelSense), `firmware/test/test_beacon_send_policy/`. |
 | Unit + integration tests | 57, 63, 69, 71–73, 75, 78 | All `firmware/test/test_*`; `pio test -e test_native`. |
-| Bench & inventory docs | 56, 58, 64, 68, 70, 75, 78, etc. | `docs/project/ootb_progress_inventory.md`, `docs/firmware/stand_tests/issue_27_stand_report.md`, `issue_76_radio_channel_access.md`. |
+| Bench & inventory docs | 56, 58, 64, 68, 70, 75, 78, etc. | `_archive/ootb_v1/project/ootb_progress_inventory.md`, `docs/firmware/stand_tests/issue_27_stand_report.md`, `issue_76_radio_channel_access.md`. |
 | Logging v0 | 65, 67 | `firmware/src/domain/logger.*`, `log_events.h`, `firmware/src/platform/log_export_uart.*`. |
 | HAL interfaces + mocks | 57 | `firmware/lib/NavigaCore/include/naviga/hal/interfaces.h`, `hal/mocks/*`. |
 
@@ -152,6 +152,6 @@ Ranges are **LOW / MID / HIGH** for a normal professional team (one or two devel
 
 ## 7. References
 
-- **Inventory:** [docs/project/ootb_progress_inventory.md](ootb_progress_inventory.md)  
-- **Workmap:** [docs/project/ootb_workmap.md](ootb_workmap.md)  
+- **Inventory:** [ootb_progress_inventory.md](../../_archive/ootb_v1/project/ootb_progress_inventory.md)  
+- **Workmap:** [ootb_workmap.md](../../_archive/ootb_v1/project/ootb_workmap.md)  
 - **E220 implementation status:** [docs/firmware/e220_radio_implementation_status.md](../firmware/e220_radio_implementation_status.md)

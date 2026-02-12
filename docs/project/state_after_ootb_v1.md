@@ -3,10 +3,10 @@
 **Completion date:** 2026-02-12.  
 **Meaning of “OOTB v1 done”:** All planned OOTB v0 / Mobile v1 issues (#2–#35, #74, #76, #80–#90) are delivered and closed. Firmware sends/receives GEO_BEACON, maintains NodeTable, exposes data over BLE; mobile app connects, shows nodes and map. Field test 2–5 nodes done.
 
-Evidence and trail:
+Evidence and trail (archived):
 
-- [OOTB progress inventory](ootb_progress_inventory.md) — per-issue PR links and Mobile v1 table.
-- [OOTB workmap](ootb_workmap.md) — plan, status table, phase rules.
+- [OOTB progress inventory](../../_archive/ootb_v1/project/ootb_progress_inventory.md) — per-issue PR links and Mobile v1 table.
+- [OOTB workmap](../../_archive/ootb_v1/project/ootb_workmap.md) — plan, status table, phase rules.
 
 ## Key constraints / invariants (do not violate)
 
@@ -26,5 +26,5 @@ Evidence and trail:
 
 ## Next known follow-ups
 
-- **Issue #135:** Docs archive/cleanup (working docs → `_archive/ootb_v1/`). **PR3** of [#119](https://github.com/AlexanderTsarkov/naviga-app/issues/119) will perform the archive; this PR (PR2) does not move or delete files.
+- **Issue #119 PR3:** Working docs archived to `_archive/ootb_v1/`; canon remains START_HERE, state snapshot, docs_map.
 - JOIN/Mesh: future; see product specs when needed.

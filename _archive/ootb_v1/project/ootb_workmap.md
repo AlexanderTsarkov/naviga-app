@@ -1,7 +1,7 @@
 # Naviga / OOTB v0 — карта работ (Workmap)
 
 Один документ: план, прогресс, границы scope. Issues [#2](https://github.com/AlexanderTsarkov/naviga-app/issues/2)–[#36](https://github.com/AlexanderTsarkov/naviga-app/issues/36).
-Start here — Architecture Index: [docs/architecture/index.md](../architecture/index.md).
+Start here — Architecture Index: [docs/architecture/index.md](../../../docs/architecture/index.md).
 
 ---
 
@@ -12,7 +12,7 @@ All issues #2–#35 are closed and reflected in this workmap and the OOTB progre
 See:
 - Epic [#2](https://github.com/AlexanderTsarkov/naviga-app/issues/2) (OOTB End-to-End v0)
 - Epic [#80](https://github.com/AlexanderTsarkov/naviga-app/issues/80) (Mobile v1)
-- `docs/project/ootb_progress_inventory.md` for per-issue PR evidence.
+- [ootb_progress_inventory.md](ootb_progress_inventory.md) in this archive for per-issue PR evidence.
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Purpose:** Границы OOTB v0, разбивка по спринтам и явный список того, что не входит в Sprint 1. Issue [#17](https://github.com/AlexanderTsarkov/naviga-app/issues/17).
 
-**Related:** [OOTB plan](OOTB_v0_analysis_and_plan.md), [Workmap](../project/ootb_workmap.md), [Gap analysis](ootb_gap_analysis_v0.md).
+**Related:** [OOTB plan](OOTB_v0_analysis_and_plan.md), [Workmap](../../_archive/ootb_v1/project/ootb_workmap.md), [Gap analysis](ootb_gap_analysis_v0.md).
 
 ---
 
