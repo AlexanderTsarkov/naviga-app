@@ -5,6 +5,17 @@ Start here — Architecture Index: [docs/architecture/index.md](../architecture/
 
 ---
 
+## OOTB v1 Completion Note
+
+OOTB v1 iteration completed on 2026-02-12.  
+All issues #2–#35 are closed and reflected in this workmap and the OOTB progress inventory.  
+See:
+- Epic [#2](https://github.com/AlexanderTsarkov/naviga-app/issues/2) (OOTB End-to-End v0)
+- Epic [#80](https://github.com/AlexanderTsarkov/naviga-app/issues/80) (Mobile v1)
+- `docs/project/ootb_progress_inventory.md` for per-issue PR evidence.
+
+---
+
 ## 1. OOTB v0: цель и не-цели
 
 **Цель:** Работающий фундамент «из коробки»: донгл шлёт/принимает GEO_BEACON, ведёт NodeTable, отдаёт данные в приложение по BLE; приложение показывает список нод, карту, «я», минимальный лог. Полевой тест 2–5 нод.
@@ -42,41 +53,41 @@ Start here — Architecture Index: [docs/architecture/index.md](../architecture/
 
 | # | Issue | Заголовок | Phase | Component | Status | Output artifact | Dependencies / Blockers |
 |---|-------|-----------|-------|-----------|--------|-----------------|-------------------------|
-| 2 | [#2](https://github.com/AlexanderTsarkov/naviga-app/issues/2) | Epic: OOTB End-to-End v0 | — | docs | Todo | — | — |
+| 2 | [#2](https://github.com/AlexanderTsarkov/naviga-app/issues/2) | Epic: OOTB End-to-End v0 | — | docs | Open | — | — |
 | 3 | [#3](https://github.com/AlexanderTsarkov/naviga-app/issues/3) | 0.1 Настроить GitHub Project под OOTB v0 | 0 | infra | Done | Project board | — |
 | 4 | [#4](https://github.com/AlexanderTsarkov/naviga-app/issues/4) | 0.2 Завести Epic «OOTB End-to-End v0» | 0 | docs | Done | Epic #2 | — |
 | 5 | [#5](https://github.com/AlexanderTsarkov/naviga-app/issues/5) | 0.3 Минимальный CI (гейты) | 0 | infra | Done | .github/workflows/ | — |
 | 6 | [#6](https://github.com/AlexanderTsarkov/naviga-app/issues/6) | 0.4 Решение по Map SDK (offline-friendly) | 0 | docs | Done | docs/mobile/map_sdk_decision.md | Блокирует 3.5 (карта) |
 | 7 | [#7](https://github.com/AlexanderTsarkov/naviga-app/issues/7) | 0.5.1 Документ POC Evidence | 0.5 | docs | Done | docs/firmware/poc_e220_evidence.md | — |
-| 8 | [#8](https://github.com/AlexanderTsarkov/naviga-app/issues/8) | 0.5.2 Список пробелов/рисков POC | 0.5 | docs | Todo | doc в docs/firmware или product | — |
-| 9 | [#9](https://github.com/AlexanderTsarkov/naviga-app/issues/9) | 0.5.3 Навести порядок в архиве | 0.5 | infra | Todo | archive/ + README | — |
-| 10 | [#10](https://github.com/AlexanderTsarkov/naviga-app/issues/10) | 1.1 Architecture Index | 1 | docs | Todo | docs/architecture/ | — |
-| 11 | [#11](https://github.com/AlexanderTsarkov/naviga-app/issues/11) | 1.2 Архитектура firmware: слои и границы | 1 | docs | Todo | docs/firmware/ootb_firmware_arch_v0.md | — |
-| 12 | [#12](https://github.com/AlexanderTsarkov/naviga-app/issues/12) | 1.3 Спецификация NodeTable | 1 | docs | Todo | docs/firmware/ootb_node_table_v0.md | — |
-| 13 | [#13](https://github.com/AlexanderTsarkov/naviga-app/issues/13) | 1.4 Абстракции железа (HAL) | 1 | docs | Todo | docs/firmware/hal_contracts_v0.md | — |
-| 14 | [#14](https://github.com/AlexanderTsarkov/naviga-app/issues/14) | 1.5 OOTB Radio v0 — спецификация | 1 | docs | Todo | docs/protocols/ootb_radio_v0.md | — |
-| 15 | [#15](https://github.com/AlexanderTsarkov/naviga-app/issues/15) | 1.6 OOTB BLE v0 — спецификация | 1 | docs | Todo | docs/protocols/ootb_ble_v0.md | — |
-| 16 | [#16](https://github.com/AlexanderTsarkov/naviga-app/issues/16) | 1.7 Test Plan v0 | 1 | docs | Todo | docs/product/ootb_test_plan_v0.md | — |
-| 17 | [#17](https://github.com/AlexanderTsarkov/naviga-app/issues/17) | 1.8 ADR: границы OOTB v0 | 1 | docs | Todo | docs/adr/ootb_scope_v0.md | — |
-| 18 | [#18](https://github.com/AlexanderTsarkov/naviga-app/issues/18) | 2.0 HAL interfaces + mock implementations | 2 | firmware | Todo | firmware/lib/NavigaCore (interfaces + mocks) | 1.4 (HAL contracts) |
-| 19 | [#19](https://github.com/AlexanderTsarkov/naviga-app/issues/19) | 2.1 Дерево модулей firmware по слоям | 2 | firmware | Todo | firmware/ README, domain/, protocol/, hal/ | 1.2 |
-| 20 | [#20](https://github.com/AlexanderTsarkov/naviga-app/issues/20) | 2.2 Logging v0 (ring-buffer + export) | 2 | firmware | Todo | firmware/ | 2.0 |
-| 21 | [#21](https://github.com/AlexanderTsarkov/naviga-app/issues/21) | 2.3 HAL радио (реальный драйвер) | 2 | firmware | Todo | firmware/src/platform/ | 2.0, 1.4, POC evidence |
-| 22 | [#22](https://github.com/AlexanderTsarkov/naviga-app/issues/22) | 2.4 HAL BLE (реальный транспорт) | 2 | firmware | Todo | firmware/src/platform/ | 2.0, 1.4 |
-| 23 | [#23](https://github.com/AlexanderTsarkov/naviga-app/issues/23) | 2.5 Протокол GEO_BEACON (кодер/декодер) | 2 | firmware | Todo | firmware/protocol/ | 1.5 (Radio v0 spec) |
-| 24 | [#24](https://github.com/AlexanderTsarkov/naviga-app/issues/24) | 2.6 NodeTable (domain) | 2 | firmware | Todo | firmware/domain/ | 1.3 (NodeTable spec) |
-| 25 | [#25](https://github.com/AlexanderTsarkov/naviga-app/issues/25) | 2.7 Логика beacon (domain) | 2 | firmware | Todo | firmware/domain/ | 2.5, 2.6, 2.3, 2.4 |
-| 26 | [#26](https://github.com/AlexanderTsarkov/naviga-app/issues/26) | 2.8 BLE-мост NodeTable (protocol + hal) | 2 | firmware | Todo | firmware/ | 1.6 (BLE v0 spec), 2.4, 2.6 |
-| 27 | [#27](https://github.com/AlexanderTsarkov/naviga-app/issues/27) | 2.9 Интеграция и тест firmware на стенде | 2 | firmware | Todo | — | 2.1–2.8 |
-| 28 | [#28](https://github.com/AlexanderTsarkov/naviga-app/issues/28) | 3.1 Структура модулей app | 3 | app | Todo | app/ README, слои | 1.1 (Arch Index) |
-| 29 | [#29](https://github.com/AlexanderTsarkov/naviga-app/issues/29) | 3.2 BLE-клиент и контракт с firmware | 3 | app | Todo | app/ | 1.6 (BLE v0 spec) |
-| 30 | [#30](https://github.com/AlexanderTsarkov/naviga-app/issues/30) | 3.3 Доменная модель (Node, NodeTable) | 3 | app | Todo | app/ | — |
-| 31 | [#31](https://github.com/AlexanderTsarkov/naviga-app/issues/31) | 3.4 Экран списка нод | 3 | app | Todo | app/ | 3.2, 3.3 |
-| 32 | [#32](https://github.com/AlexanderTsarkov/naviga-app/issues/32) | 3.5 Карта и «я» | 3 | app | Todo | app/ | #6 (Map SDK ADR) |
-| 33 | [#33](https://github.com/AlexanderTsarkov/naviga-app/issues/33) | 3.6 Базовый локальный лог | 3 | app | Todo | app/ | 3.2 |
-| 34 | [#34](https://github.com/AlexanderTsarkov/naviga-app/issues/34) | 3.7 Интеграция и E2E тест mobile app | 3 | app | Todo | — | 3.1–3.6, 2.9 |
-| 35 | [#35](https://github.com/AlexanderTsarkov/naviga-app/issues/35) | 4.1 Полевой тест 2–5 нод | 4 | — | Todo | — | 1.7 (Test Plan), 2.9, 3.7 |
-| 36 | [#36](https://github.com/AlexanderTsarkov/naviga-app/issues/36) | 4.2 Фиксация результатов и обновление доков | 4 | docs | Todo | Test Plan, при необходимости spec/ADR | 4.1 |
+| 8 | [#8](https://github.com/AlexanderTsarkov/naviga-app/issues/8) | 0.5.2 Список пробелов/рисков POC | 0.5 | docs | Done | doc в docs/firmware или product | — |
+| 9 | [#9](https://github.com/AlexanderTsarkov/naviga-app/issues/9) | 0.5.3 Навести порядок в архиве | 0.5 | infra | Done | archive/ + README | — |
+| 10 | [#10](https://github.com/AlexanderTsarkov/naviga-app/issues/10) | 1.1 Architecture Index | 1 | docs | Done | docs/architecture/ | — |
+| 11 | [#11](https://github.com/AlexanderTsarkov/naviga-app/issues/11) | 1.2 Архитектура firmware: слои и границы | 1 | docs | Done | docs/firmware/ootb_firmware_arch_v0.md | — |
+| 12 | [#12](https://github.com/AlexanderTsarkov/naviga-app/issues/12) | 1.3 Спецификация NodeTable | 1 | docs | Done | docs/firmware/ootb_node_table_v0.md | — |
+| 13 | [#13](https://github.com/AlexanderTsarkov/naviga-app/issues/13) | 1.4 Абстракции железа (HAL) | 1 | docs | Done | docs/firmware/hal_contracts_v0.md | — |
+| 14 | [#14](https://github.com/AlexanderTsarkov/naviga-app/issues/14) | 1.5 OOTB Radio v0 — спецификация | 1 | docs | Done | docs/protocols/ootb_radio_v0.md | — |
+| 15 | [#15](https://github.com/AlexanderTsarkov/naviga-app/issues/15) | 1.6 OOTB BLE v0 — спецификация | 1 | docs | Done | docs/protocols/ootb_ble_v0.md | — |
+| 16 | [#16](https://github.com/AlexanderTsarkov/naviga-app/issues/16) | 1.7 Test Plan v0 | 1 | docs | Done | docs/product/ootb_test_plan_v0.md | — |
+| 17 | [#17](https://github.com/AlexanderTsarkov/naviga-app/issues/17) | 1.8 ADR: границы OOTB v0 | 1 | docs | Done | docs/adr/ootb_scope_v0.md | — |
+| 18 | [#18](https://github.com/AlexanderTsarkov/naviga-app/issues/18) | 2.0 HAL interfaces + mock implementations | 2 | firmware | Done | firmware/lib/NavigaCore (interfaces + mocks) | 1.4 (HAL contracts) |
+| 19 | [#19](https://github.com/AlexanderTsarkov/naviga-app/issues/19) | 2.1 Дерево модулей firmware по слоям | 2 | firmware | Done | firmware/ README, domain/, protocol/, hal/ | 1.2 |
+| 20 | [#20](https://github.com/AlexanderTsarkov/naviga-app/issues/20) | 2.2 Logging v0 (ring-buffer + export) | 2 | firmware | Done | firmware/ | 2.0 |
+| 21 | [#21](https://github.com/AlexanderTsarkov/naviga-app/issues/21) | 2.3 HAL радио (реальный драйвер) | 2 | firmware | Done | firmware/src/platform/ (see PR #59 E220 PING/PONG smoke test results) | 2.0, 1.4, POC evidence |
+| 22 | [#22](https://github.com/Alexandertsarkov/naviga-app/issues/22) | 2.4 HAL BLE (реальный транспорт) | 2 | firmware | Done | firmware/src/platform/ | 2.0, 1.4 |
+| 23 | [#23](https://github.com/AlexanderTsarkov/naviga-app/issues/23) | 2.5 Протокол GEO_BEACON (кодер/декодер) | 2 | firmware | Done | firmware/protocol/ | 1.5 (Radio v0 spec) |
+| 24 | [#24](https://github.com/AlexanderTsarkov/naviga-app/issues/24) | 2.6 NodeTable (domain) | 2 | firmware | Done | firmware/domain/ | 1.3 (NodeTable spec) |
+| 25 | [#25](https://github.com/AlexanderTsarkov/naviga-app/issues/25) | 2.7 Логика beacon (domain) | 2 | firmware | Done | firmware/domain/ | 2.5, 2.6, 2.3, 2.4 |
+| 26 | [#26](https://github.com/AlexanderTsarkov/naviga-app/issues/26) | 2.8 BLE-мост NodeTable (protocol + hal) | 2 | firmware | Done | firmware/ | 1.6 (BLE v0 spec), 2.4, 2.6 |
+| 27 | [#27](https://github.com/AlexanderTsarkov/naviga-app/issues/27) | 2.9 Интеграция и тест firmware на стенде | 2 | firmware | Done | — | 2.1–2.8 |
+| 28 | [#28](https://github.com/AlexanderTsarkov/naviga-app/issues/28) | 3.1 Структура модулей app | 3 | app | Done | app/ README, слои (закрыт как superseded Epic #80 / Mobile v1) | 1.1 (Arch Index) |
+| 29 | [#29](https://github.com/AlexanderTsarkov/naviga-app/issues/29) | 3.2 BLE-клиент и контракт с firmware | 3 | app | Done | app/ (закрыт как superseded Epic #80 / Mobile v1) | 1.6 (BLE v0 spec) |
+| 30 | [#30](https://github.com/AlexanderTsarkov/naviga-app/issues/30) | 3.3 Доменная модель (Node, NodeTable) | 3 | app | Done | app/ (закрыт как superseded Epic #80 / Mobile v1) | — |
+| 31 | [#31](https://github.com/AlexanderTsarkov/naviga-app/issues/31) | 3.4 Экран списка нод | 3 | app | Done | app/ (закрыт как superseded Epic #80 / Mobile v1) | 3.2, 3.3 |
+| 32 | [#32](https://github.com/AlexanderTsarkov/naviga-app/issues/32) | 3.5 Карта и «я» | 3 | app | Done | app/ (закрыт как superseded Epic #80 / Mobile v1) | #6 (Map SDK ADR) |
+| 33 | [#33](https://github.com/AlexanderTsarkov/naviga-app/issues/33) | 3.6 Базовый локальный лог | 3 | app | Done | app/ (закрыт как superseded Epic #80 / Mobile v1) | 3.2 |
+| 34 | [#34](https://github.com/AlexanderTsarkov/naviga-app/issues/34) | 3.7 Интеграция и E2E тест mobile app | 3 | app | Done | — (закрыт как superseded Epic #80 / Mobile v1) | 3.1–3.6, 2.9 |
+| 35 | [#35](https://github.com/AlexanderTsarkov/naviga-app/issues/35) | 4.1 Полевой тест 2–5 нод | 4 | — | Done | Field test 2–5 нод проведён и задокументирован по Test Plan v0 | 1.7 (Test Plan), 2.9, 3.7 |
+| 36 | [#36](https://github.com/AlexanderTsarkov/naviga-app/issues/36) | 4.2 Фиксация результатов и обновление доков | 4 | docs | Open | Test Plan, при необходимости spec/ADR | 4.1 |
 
 *Phase: 0 = подготовка, 0.5 = POC evidence/архив, 1 = M0 доки/архитектура, 2 = firmware, 3 = app, 4 = полевой тест и закрытие.*
 
