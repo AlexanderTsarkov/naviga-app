@@ -40,6 +40,13 @@ After completing a task, you may:
 
 Changes here require explicit confirmation.
 
+## Research artifacts policy
+
+- **Research outputs** (investigations, spikes, issue research notes) go to **`_working/research/`**, not under `docs/**`.
+- **End-of-iteration archive:** move `_working/research/` contents to **`_archive/iterations/<ITERATION_ID>/research/`**.  
+  **`<ITERATION_ID>`** MUST be read from **`_working/ITERATION.md`** (exactly one line).  
+  If `_working/ITERATION.md` is missing or empty: **STOP** and ask for the iteration id; do not invent one.
+
 ## PR / Branch discipline (default)
 
 Unless explicitly stated otherwise:
