@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_state.dart';
 import '../../shared/app_tabs.dart';
 import '../connect/connect_controller.dart';
-import '../connect/status_parser.dart';
 import '../nodes/nodes_controller.dart';
 import '../nodes/nodes_state.dart';
 
@@ -28,12 +27,11 @@ class _MyNodeScreenState extends ConsumerState<MyNodeScreen> {
     ref.read(selectedTabProvider.notifier).state = AppTab.connect;
   }
 
-  /// Refresh DeviceInfo, NodeTable, and Status/Health.
+  /// Refresh both DeviceInfo and NodeTable (so self record and DeviceInfo stay in sync).
   Future<void> _refreshBoth() async {
     final connectController = ref.read(connectControllerProvider.notifier);
     final nodesController = ref.read(nodesControllerProvider.notifier);
     await connectController.refreshDeviceInfo();
-    await connectController.refreshStatus();
     await nodesController.refresh();
     if (mounted) {
       setState(() => _lastFetchedAt = DateTime.now());
@@ -70,9 +68,6 @@ class _MyNodeScreenState extends ConsumerState<MyNodeScreen> {
     final nodesState = ref.watch(nodesControllerProvider);
     final selfRecord = _findSelf(nodesState);
     final info = connectState.deviceInfo;
-    final status = connectState.statusData;
-    final statusWarning = connectState.statusWarning;
-    final statusError = connectState.statusError;
     final warning = connectState.deviceInfoWarning;
     final error = connectState.telemetryError;
 
@@ -176,26 +171,6 @@ class _MyNodeScreenState extends ConsumerState<MyNodeScreen> {
             warning,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.outline,
-            ),
-          ),
-        ),
-      if (statusWarning != null)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Text(
-            statusWarning,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.outline,
-            ),
-          ),
-        ),
-      if (statusError != null && statusError.isNotEmpty)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Text(
-            statusError,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.error,
             ),
           ),
         ),
@@ -391,64 +366,11 @@ class _MyNodeScreenState extends ConsumerState<MyNodeScreen> {
           ),
         ],
       ),
-      // Status/Health section
-      ExpansionTile(
-        title: const Text('Status / Health'),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: () async {
-                      await ref
-                          .read(connectControllerProvider.notifier)
-                          .refreshStatus();
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Refresh'),
-                  ),
-                ),
-                if (status == null)
-                  const Text('No status yet. Tap Refresh.')
-                else
-                  _StatusHealthView(status: status),
-              ],
-            ),
-          ),
-        ],
-      ),
     ];
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: listChildren,
-    );
-  }
-}
-
-class _StatusHealthView extends StatelessWidget {
-  const _StatusHealthView({required this.status});
-
-  final StatusData status;
-
-  @override
-  Widget build(BuildContext context) {
-    final gnss = status.gnss;
-    if (gnss == null) {
-      return const Text('GNSS TLV is not present in status payload.');
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _RowLabel(label: 'GNSS', value: gnss.stateLabel),
-        _RowLabel(label: 'Position valid', value: gnss.posValid ? 'yes' : 'no'),
-        _RowLabel(label: 'Position age', value: '${gnss.posAgeS} s'),
-      ],
     );
   }
 }

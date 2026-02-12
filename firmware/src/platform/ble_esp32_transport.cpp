@@ -13,7 +13,6 @@ namespace {
 constexpr char kServiceUuid[] = "6e4f0001-1b9a-4c3a-9a3b-000000000001";
 constexpr char kDeviceInfoUuid[] = "6e4f0002-1b9a-4c3a-9a3b-000000000001";
 constexpr char kNodeTableSnapshotUuid[] = "6e4f0003-1b9a-4c3a-9a3b-000000000001";
-constexpr char kStatusUuid[] = "6e4f0007-1b9a-4c3a-9a3b-000000000001";
 
 class NavigaServerCallbacks : public BLEServerCallbacks {
  public:
@@ -88,23 +87,6 @@ class NodeTableSnapshotCallbacks : public BLECharacteristicCallbacks {
   BleTransportCore* core_ = nullptr;
 };
 
-class StatusCallbacks : public BLECharacteristicCallbacks {
- public:
-  explicit StatusCallbacks(BleTransportCore* core) : core_(core) {}
-
-  void onRead(BLECharacteristic* characteristic) override {
-    if (!characteristic || !core_) {
-      return;
-    }
-    const uint8_t* data = core_->status_data();
-    const size_t len = core_->status_len();
-    characteristic->setValue(const_cast<uint8_t*>(data), len);
-  }
-
- private:
-  BleTransportCore* core_ = nullptr;
-};
-
 } // namespace
 
 BleEsp32Transport::BleEsp32Transport() = default;
@@ -126,9 +108,6 @@ void BleEsp32Transport::init() {
       BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
   node_table_char_->setCallbacks(new NodeTableSnapshotCallbacks(&core_));
 
-  status_char_ = service_->createCharacteristic(kStatusUuid, BLECharacteristic::PROPERTY_READ);
-  status_char_->setCallbacks(new StatusCallbacks(&core_));
-
   service_->start();
 
   advertising_ = BLEDevice::getAdvertising();
@@ -143,10 +122,6 @@ void BleEsp32Transport::set_device_info(const uint8_t* data, size_t len) {
 
 void BleEsp32Transport::set_node_table_response(const uint8_t* data, size_t len) {
   core_.set_node_table_response(data, len);
-}
-
-void BleEsp32Transport::set_status(const uint8_t* data, size_t len) {
-  core_.set_status(data, len);
 }
 
 bool BleEsp32Transport::get_node_table_request(uint16_t* snapshot_id, uint16_t* page_index) const {
@@ -177,10 +152,6 @@ void BleEsp32Transport::set_device_info(const uint8_t* data, size_t len) {
 
 void BleEsp32Transport::set_node_table_response(const uint8_t* data, size_t len) {
   core_.set_node_table_response(data, len);
-}
-
-void BleEsp32Transport::set_status(const uint8_t* data, size_t len) {
-  core_.set_status(data, len);
 }
 
 bool BleEsp32Transport::get_node_table_request(uint16_t* snapshot_id, uint16_t* page_index) const {

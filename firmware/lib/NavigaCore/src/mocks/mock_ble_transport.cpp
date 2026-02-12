@@ -21,14 +21,6 @@ void MockBleTransport::set_node_table_response(const uint8_t* data, size_t len) 
   node_table_len_ = copy_len;
 }
 
-void MockBleTransport::set_status(const uint8_t* data, size_t len) {
-  const size_t copy_len = std::min(len, sizeof(status_buf_));
-  if (data && copy_len > 0) {
-    std::memcpy(status_buf_, data, copy_len);
-  }
-  status_len_ = copy_len;
-}
-
 bool MockBleTransport::get_node_table_request(uint16_t* snapshot_id, uint16_t* page_index) const {
   if (!has_request_ || !snapshot_id || !page_index) {
     return false;
