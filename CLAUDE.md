@@ -44,8 +44,46 @@ Changes here require explicit confirmation.
 
 - **Research outputs** (investigations, spikes, issue research notes) go to **`_working/research/`**, not under `docs/**`.
 - **End-of-iteration archive:** move `_working/research/` contents to **`_archive/iterations/<ITERATION_ID>/research/`**.  
-  **`<ITERATION_ID>`** MUST be read from **`_working/ITERATION.md`** (exactly one line).  
+  **`<ITERATION_ID>`** MUST be the **first line** of **`_working/ITERATION.md`** (canonical; no other line).  
   If `_working/ITERATION.md` is missing or empty: **STOP** and ask for the iteration id; do not invent one.
+
+## Work Area vs Tech Area
+
+**Classifier for where work lives is Work Area, not issue existence.**
+
+- **Work Area** = type of work: **Product Specs WIP** / **Implementation** / **Docs** / **Test** / **Org**
+- **Tech Area** (component) = Firmware / Mobile App / Backend / Hardware / Protocol / Architecture
+
+### ITERATION.md (canonical iteration ID)
+
+- **`_working/ITERATION.md`** is the single source of truth for the current **implementation** iteration. **First line only** = iteration ID (used for archive folder names and attribution).
+- **Before doing Implementation or Test work:** ensure `_working/ITERATION.md` exists and has the correct first-line ID; do not invent or change it without explicit approval.
+- All **`_working/**`** artifacts must be attributable to the current iteration ID (first line).
+- When **archiving** to **`_archive/iterations/<ITERATION_ID>/...`**, use the **first line** of `_working/ITERATION.md` as `<ITERATION_ID>`.
+- **Product Specs WIP** has no iteration concept; it lives in **`docs/product/wip/**`** and can progress independently.
+
+### Routing rules
+
+- **A) Work Area = Implementation**  
+  Working notes, spike results, logs, investigations for the current iteration → **`_working/**`**. After merge → archive to **`_archive/iterations/<ITERATION_ID>/**`** (ITERATION_ID = first line of `_working/ITERATION.md`).
+
+- **B) Work Area = Test**  
+  Test results/logs/measurements supporting the current iteration → **`_working/**`**. Long-lived test methodology/standards → `docs/product` (canon or WIP depending on maturity).
+
+- **C) Work Area = Product Specs WIP**  
+  Product decisions, models, options, competitor/analog research → **`docs/product/wip/**`** (by area). Promotion → **`docs/product/areas/**`**. WIP is never implementation requirements until promoted. **No iteration concept;** do not use `_working` or ITERATION.md for this work.
+
+- **D) Work Area = Docs**  
+  Product docs live under **`docs/product`** (or existing doc location; add links). Do not put docs-only work into `_working` unless strictly in-service of current-iteration verification.
+
+- **E) Work Area = Org**  
+  Repo/process/admin notes; keep out of `_working` and out of `docs/product` unless explicitly part of product documentation.
+
+### Start-of-task checklist
+
+1. Identify **Work Area** + **Tech Area**.
+2. Choose the correct file location from the routing rules above.
+3. Keep PR small and CI green.
 
 ## PR / Branch discipline (default)
 
