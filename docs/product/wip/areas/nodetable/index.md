@@ -52,31 +52,34 @@ NodeTable is the **single source of truth / knowledge about all nodes (including
 
 - **activityState** is **derived**, not stored.
 - Four states: **Online** / **Uncertain** / **Stale** / **Archived**.
-- Derivation uses **per-node** expected interval + grace (not a single global threshold). Policy fields: expectedInterval, maxSilenceTime (and optionally min-move/min-time).
+- Derivation: activityState is derived from **lastSeenAge** relative to **(expectedIntervalNow, maxSilence, activitySlack)** per node (not a single global threshold). Exact thresholds TBD.
 - NodeTable provides **lastSeenAge** for UI (e.g. “last seen 30s ago”).
 - **“Grey”** is a UI convention (e.g. dimming stale nodes), not a domain field; domain exposes lastSeenAge and policy so UI can compute grey.
 
 ### Tracking Profile / Expected update policy
 
-Activity expectations are derived from **roles + distance granularity + speed hints + channel utilization**. A **Tracking Profile** (or role-driven profile) encodes this.
+Activity expectations are derived from **roles + distance granularity + speed hints + channel utilization**. A **Tracking Profile** (or role-driven profile) encodes this. Terminology: **beacon scheduler timings** (when to send) vs **activity interpretation timings** (how to interpret silence).
 
-**1) Tracking Profile (concept)**  
+**1) Tracking Profile (concept)**
 - **trackingProfileId** (or role-driven profile) defines:
   - **minDistMeters** — spatial granularity (how often we expect position to “move” meaningfully).
   - **speedHintMps** — assumed typical speed for the subject/role (m/s); part of the profile.
-  - **roleMultiplier** — applied to base time to get max silence (e.g. grace).
+  - **roleMultiplier** — produces **maxSilenceSeconds** (upper bound of acceptable beacon silence; used by scheduler and activity interpretation).
   - **priority** — how strongly this node resists airtime throttling when channel is busy.
 
-**2) Derived timings**  
+**2) Derived timings (beacon scheduler)**
 - **baseMinTimeSeconds** ≈ minDistMeters / speedHintMps (rounded to sensible steps). Example: 100 m at ~5 km/h ≈ 1.4 m/s → ~72 s; round to e.g. 60 s or 90 s.
-- **maxSilenceSeconds** = baseMinTimeSeconds × roleMultiplier.
-- **expectedIntervalNowSeconds** is **adaptive**: if **channelUtilization** > threshold, increase baseMinTime stepwise up to maxSilence; decrease back when utilization drops.
+- **maxSilenceSeconds** = baseMinTimeSeconds × roleMultiplier (upper bound of beacon silence).
+- **expectedIntervalNowSeconds** is **adaptive** and **clamped** between baseMinTimeSeconds and maxSilenceSeconds: if **channelUtilization** > threshold, increase stepwise toward maxSilenceSeconds; decrease back when utilization drops.
 
-**3) NodeTable usage**  
-- NodeTable must know (or derive) **expectedIntervalNow** and **maxSilence** per node to interpret silence and derive activityState (Online / Uncertain / Stale / Archived).
+**3) Activity interpretation: activitySlack**
+- **activitySlackSeconds** (or activityWindowSeconds): extra window beyond maxSilence before treating silence as “stale”. Define: **activitySlackSeconds = kSlack × maxSilenceSeconds**, where **kSlack ≥ 1**. Slack is never less than maxSilence.
+
+**4) NodeTable usage**
+- NodeTable must know (or derive) **expectedIntervalNow**, **maxSilence**, and **activitySlack** per node to interpret silence and derive activityState (Online / Uncertain / Stale / Archived).
 - Silence is only “unexpected” relative to that **per-node** expectation.
 
-**Example profiles (illustrative / TBD)**  
+**Example profiles (illustrative / TBD)**
 - **Hiking OOTB:** minDist 50–100 m, speedHint ~5 km/h.
 - **Dog tracking:** dog minDist ~25 m, higher speedHint; handler minDist ~250 m.
 - **Hunting:** dog 5–10 m; beater 15–20 m; shooter 25–50 m (each with role multipliers / priorities).
@@ -119,7 +122,7 @@ Activity expectations are derived from **roles + distance granularity + speed hi
 - NodeTable = single source of truth for node-level facts; others emit observations.
 - Identity: DeviceId (primary), ShortId = CRC16(DeviceId), display precedence networkName > localAlias > ShortId.
 - Roles/Subject type: human/dog/repeater/infra; source broadcast or local.
-- Activity: derived (Online/Uncertain/Stale/Archived); per-node expectedInterval + grace; lastSeenAge for UI; “grey” is UI, not domain. Tracking Profile (minDist, speedHint, roleMultiplier, priority) drives derived timings; expectedIntervalNow adaptive to channel utilization.
+- Activity: derived (Online/Uncertain/Stale/Archived) from lastSeenAge vs (expectedIntervalNow, maxSilence, activitySlack); lastSeenAge for UI; “grey” is UI, not domain. Tracking Profile drives timings; expectedIntervalNow adaptive and clamped; activitySlack = kSlack × maxSilence (kSlack ≥ 1).
 - Mesh/link: RSSI, SNR, hops/via, lastOriginSeqSeen; no per-packet state in NodeTable.
 - Telemetry/health: uptime + battery (future); optional device metrics.
 - Relationship: Self / Owned / Trusted / Seen / Ignored for OOTB and UI filtering.
@@ -144,6 +147,21 @@ Activity expectations are derived from **roles + distance granularity + speed hi
 ## Promotion criteria (WIP → canon)
 
 When decisions above are stable and reflected in implementation, promote to `docs/product/areas/nodetable.md`.
+
+---
+
+## Glossary (v0)
+
+| Term | Meaning |
+|------|--------|
+| **DeviceId** | Primary key for a node (e.g. ESP32-S3 MCU ID; uint64). |
+| **ShortId** | Display id derived from DeviceId (e.g. CRC16); may collide. |
+| **expectedIntervalNow** | Current expected time between beacons for this node (adaptive; clamped between baseMinTime and maxSilence). |
+| **maxSilence** | Upper bound of acceptable beacon silence for this node (from tracking profile). |
+| **activitySlack** | Extra window beyond maxSilence for activity interpretation; activitySlackSeconds = kSlack × maxSilenceSeconds, kSlack ≥ 1. |
+| **lastSeenAge** | Time since last RX from this node (seconds); used for activity derivation and UI. |
+| **role** | Subject/device type (e.g. human, dog, repeater, infra); may drive tracking profile. |
+| **trackingProfileId** | Id of the tracking profile (minDist, speedHint, roleMultiplier, priority) for this node. |
 
 ---
 
