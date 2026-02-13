@@ -10,15 +10,25 @@ NodeTable is the **single source of truth / knowledge about all nodes (including
 
 ---
 
-## 2) What product needs from NodeTable (the 7 questions)
+## 2) What product needs from NodeTable (expanded)
 
-1. **Identity** — Who is this node? (primary key, display id)
-2. **Activity** — Is this node currently active / stale / gone?
-3. **Position** — Where is this node (and how good is the fix)?
-4. **Capabilities / HW** — What can this node do? What hardware/firmware?
-5. **Radio context** — How was it last seen (profile, power, etc.)?
-6. **Trust / freshness** — How fresh and reliable is each fact?
-7. **Debuggability** — Enough stable identifiers and metadata for logs and support.
+**Core questions:** Identity; Activity; Position; Capabilities/HW; Radio context; Trust/freshness; Debuggability.
+
+**Expanded categories:**
+
+1. **Identity** — Primary key (DeviceId), display id (ShortId), human naming (networkName, localAlias).
+2. **Roles / Subject type** — Human / dog / repeater / infra, independent of hwType. Source may be broadcast or local.
+3. **Activity** — Derived state (Online / Uncertain / Stale / Archived); requires **expected beacon/update policy** per node (see below).
+4. **Expected beacon/update policy per node** — **expectedInterval** + **maxSilenceTime** (and possibly min-move/min-time) required to derive activity correctly. May be global default or per-node when known.
+5. **Position** — Where (2D required; altitude optional); PositionQuality (age, optional satCount/hdop/accuracy/fixType, source-tagged).
+6. **Mesh / Link metrics** — Receiver-side **RSSI + SNR**, **hops/via**, and origin-stream metadata **lastOriginSeqSeen** (last seq seen from that origin; not per-packet cache).
+7. **Telemetry / Health** — Minimum: **battery level** (future) + **uptime** (already exists); optional device metrics.
+8. **Capabilities / HW** — hwType (if known) + optional fwVersion; capabilities derivable from lookup tables.
+9. **Radio context** — lastSeenRadioProfile (profile + txPower when available); RadioProfileId + RadioProfileKind.
+10. **Relationship / Affinity** — **Self** / **Owned** / **Trusted** / **Seen** / **Ignored** to handle public OOTB channels and UI filtering.
+11. **Retention & Persistence** — Snapshot/restore so reboot or battery loss doesn’t require rebuilding the map; define **map relevancy** vs **remembered nodes**.
+12. **Trust / freshness** — How fresh and reliable each fact is.
+13. **Debuggability** — Stable identifiers and metadata for logs and support.
 
 ---
 
@@ -42,8 +52,9 @@ NodeTable is the **single source of truth / knowledge about all nodes (including
 
 - **activityState** is **derived**, not stored.
 - Four states: **Online** / **Uncertain** / **Stale** / **Archived**.
-- Derived from **lastHeard** (RX-based) and policy thresholds.
+- Derivation uses **per-node** expected interval + grace (not a single global threshold). Policy fields: expectedInterval, maxSilenceTime (and optionally min-move/min-time).
 - NodeTable provides **lastSeenAge** for UI (e.g. “last seen 30s ago”).
+- **“Grey”** is a UI convention (e.g. dimming stale nodes), not a domain field; domain exposes lastSeenAge and policy so UI can compute grey.
 
 ---
 
@@ -70,11 +81,36 @@ NodeTable is the **single source of truth / knowledge about all nodes (including
 
 ---
 
-## 9) Open questions (short list)
+## 9) Boundaries
 
+- **NodeTable** stores **node-level** knowledge only.
+- **Per-packet mesh cache** — e.g. PacketState(origin_id, seq) for dedup / ordering — belongs to **Mesh protocol state**, not NodeTable.
+- **Seq in NodeTable** is only **stream-level metadata**: e.g. **lastOriginSeqSeen** (last sequence number seen from that origin). Not per-packet state.
+
+---
+
+## 10) Decisions log (v0)
+
+- NodeTable = single source of truth for node-level facts; others emit observations.
+- Identity: DeviceId (primary), ShortId = CRC16(DeviceId), display precedence networkName > localAlias > ShortId.
+- Roles/Subject type: human/dog/repeater/infra; source broadcast or local.
+- Activity: derived (Online/Uncertain/Stale/Archived); per-node expectedInterval + grace; lastSeenAge for UI; “grey” is UI, not domain.
+- Mesh/link: RSSI, SNR, hops/via, lastOriginSeqSeen; no per-packet state in NodeTable.
+- Telemetry/health: uptime + battery (future); optional device metrics.
+- Relationship: Self / Owned / Trusted / Seen / Ignored for OOTB and UI filtering.
+- Retention: snapshot/restore; map relevancy vs remembered nodes.
+- Boundary: PacketState(origin_id, seq) in Mesh; NodeTable holds only node-level and lastOriginSeqSeen.
+
+---
+
+## 11) Open questions / Follow-ups
+
+- **RadioProfileRegistry** — Mapping ownership and table format (firmware vs mobile vs backend).
+- **HardwareRegistry** — hwType catalog and format.
+- **Role / policy source & precedence** — Broadcast vs local; how to merge.
+- **Persistence mechanism and snapshot cadence** — When to snapshot, restore semantics, map relevancy vs remembered nodes.
 - networkName propagation cadence and payload.
-- Exact activity thresholds (Online / Uncertain / Stale / Archived).
-- Radio profile mapping ownership: firmware vs mobile vs backend.
+- Exact activity thresholds (bounds for Online / Uncertain / Stale / Archived).
 
 ---
 
