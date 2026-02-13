@@ -56,6 +56,31 @@ NodeTable is the **single source of truth / knowledge about all nodes (including
 - NodeTable provides **lastSeenAge** for UI (e.g. “last seen 30s ago”).
 - **“Grey”** is a UI convention (e.g. dimming stale nodes), not a domain field; domain exposes lastSeenAge and policy so UI can compute grey.
 
+### Tracking Profile / Expected update policy
+
+Activity expectations are derived from **roles + distance granularity + speed hints + channel utilization**. A **Tracking Profile** (or role-driven profile) encodes this.
+
+**1) Tracking Profile (concept)**  
+- **trackingProfileId** (or role-driven profile) defines:
+  - **minDistMeters** — spatial granularity (how often we expect position to “move” meaningfully).
+  - **speedHintMps** — assumed typical speed for the subject/role (m/s); part of the profile.
+  - **roleMultiplier** — applied to base time to get max silence (e.g. grace).
+  - **priority** — how strongly this node resists airtime throttling when channel is busy.
+
+**2) Derived timings**  
+- **baseMinTimeSeconds** ≈ minDistMeters / speedHintMps (rounded to sensible steps). Example: 100 m at ~5 km/h ≈ 1.4 m/s → ~72 s; round to e.g. 60 s or 90 s.
+- **maxSilenceSeconds** = baseMinTimeSeconds × roleMultiplier.
+- **expectedIntervalNowSeconds** is **adaptive**: if **channelUtilization** > threshold, increase baseMinTime stepwise up to maxSilence; decrease back when utilization drops.
+
+**3) NodeTable usage**  
+- NodeTable must know (or derive) **expectedIntervalNow** and **maxSilence** per node to interpret silence and derive activityState (Online / Uncertain / Stale / Archived).
+- Silence is only “unexpected” relative to that **per-node** expectation.
+
+**Example profiles (illustrative / TBD)**  
+- **Hiking OOTB:** minDist 50–100 m, speedHint ~5 km/h.
+- **Dog tracking:** dog minDist ~25 m, higher speedHint; handler minDist ~250 m.
+- **Hunting:** dog 5–10 m; beater 15–20 m; shooter 25–50 m (each with role multipliers / priorities).
+
 ---
 
 ## 6) Position (v0)
@@ -94,7 +119,7 @@ NodeTable is the **single source of truth / knowledge about all nodes (including
 - NodeTable = single source of truth for node-level facts; others emit observations.
 - Identity: DeviceId (primary), ShortId = CRC16(DeviceId), display precedence networkName > localAlias > ShortId.
 - Roles/Subject type: human/dog/repeater/infra; source broadcast or local.
-- Activity: derived (Online/Uncertain/Stale/Archived); per-node expectedInterval + grace; lastSeenAge for UI; “grey” is UI, not domain.
+- Activity: derived (Online/Uncertain/Stale/Archived); per-node expectedInterval + grace; lastSeenAge for UI; “grey” is UI, not domain. Tracking Profile (minDist, speedHint, roleMultiplier, priority) drives derived timings; expectedIntervalNow adaptive to channel utilization.
 - Mesh/link: RSSI, SNR, hops/via, lastOriginSeqSeen; no per-packet state in NodeTable.
 - Telemetry/health: uptime + battery (future); optional device metrics.
 - Relationship: Self / Owned / Trusted / Seen / Ignored for OOTB and UI filtering.
@@ -108,6 +133,8 @@ NodeTable is the **single source of truth / knowledge about all nodes (including
 - **RadioProfileRegistry** — Mapping ownership and table format (firmware vs mobile vs backend).
 - **HardwareRegistry** — hwType catalog and format.
 - **Role / policy source & precedence** — Broadcast vs local; how to merge.
+- **Tracking profile** — Where it is set (broadcast vs local assignment) and precedence; which defaults ship OOTB.
+- **Channel utilization** — How it is computed and exposed (firmware-only vs shared with mobile/UI).
 - **Persistence mechanism and snapshot cadence** — When to snapshot, restore semantics, map relevancy vs remembered nodes.
 - networkName propagation cadence and payload.
 - Exact activity thresholds (bounds for Online / Uncertain / Stale / Archived).
