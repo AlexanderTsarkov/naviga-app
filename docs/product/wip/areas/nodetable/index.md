@@ -169,4 +169,5 @@ When decisions above are stable and reflected in implementation, promote to `doc
 
 - Research: [research/](research/)
 - Policy: [policy/source-precedence-v0.md](policy/source-precedence-v0.md) (source precedence v0).
+- Policy: [policy/ootb-profiles-v0.md](policy/ootb-profiles-v0.md) (OOTB tracking profiles & activity/adaptation policy v0).
 - Issue: [#147 NodeTable — Define & Research (Product WIP)](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
