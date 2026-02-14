@@ -17,7 +17,7 @@ Step 1: Draft the OOTB profiles table and derivation rules. Distance granularity
 - **maxSilenceSeconds** = `round(baseMinTimeSeconds × roleMultiplier)`  
   Integer seconds. Upper bound of acceptable beacon silence for this profile; used by scheduler and activity interpretation.
 
-*(activitySlack and exact activity thresholds are out of scope for this step; see Open questions.)*
+*(Activity interpretation thresholds are defined in §4 below.)*
 
 **v0 rule (movement gating):** Movement gating is evaluated **once per baseMinTime cycle**. If minDist has not been reached by the end of the cycle, do not send; wait for the next cycle. This keeps GNSS sampling periodic and avoids “immediate send” behavior (energy-aware).
 
@@ -54,9 +54,51 @@ Step 1: Draft the OOTB profiles table and derivation rules. Distance granularity
 
 ---
 
-## 4) Open questions for Step 2 / 3
+## 4) Activity interpretation (v0)
 
-- **kSlack / activity thresholds** — activitySlackSeconds = kSlack × maxSilenceSeconds; bounds for Online / Uncertain / Stale / Archived.
+Step 2: Define activity status thresholds from **maxSilenceSeconds** plus two slacks (delivery vs activity), and an archive boundary.
+
+### Definitions
+
+- **deliverySlackSeconds** = `kDelivery × maxSilenceSeconds`, **kDelivery ≥ 1**  
+  Accounts for airtime, mesh delays, and a small buffer beyond one nominal cycle.
+
+- **activitySlackSeconds** = `kSlack × maxSilenceSeconds`, **kSlack > kDelivery**  
+  Window where the last known position is still considered “roughly valid” (subject may have moved but is likely within a bounded uncertainty).
+
+- **archiveAfterSeconds**  
+  Policy threshold; may depend on affinity or product rules. **Initial guidance:** on the order of 12–24 h (exact value TBD).
+
+### Status boundaries (lastSeenAgeSeconds)
+
+All boundaries use **lastSeenAgeSeconds** (time since last beacon was received for this node):
+
+| Status    | Condition (age = lastSeenAgeSeconds) |
+|-----------|--------------------------------------|
+| **Online**   | age ≤ deliverySlackSeconds |
+| **Uncertain**| deliverySlackSeconds < age ≤ activitySlackSeconds |
+| **Stale**    | activitySlackSeconds < age ≤ archiveAfterSeconds |
+| **Archived** | age > archiveAfterSeconds |
+
+### Recommended initial coefficient ranges (not hard)
+
+- **kDelivery** ~ 1.1–1.3 — allows for ~1 missed cycle plus delivery variance.
+- **kSlack** ~ 2–3 — allows for a few missed cycles while still treating the last position as useful; e.g. 3 cycles at 100 m granularity ≈ 300 m distance uncertainty.
+
+These are policy-level defaults; implementations may tune per deployment.
+
+### Optional derived metric (future)
+
+- **uncertaintyRadiusMeters** ≈ `speedHintMps × age` (or equivalently `minDist × (age / baseMinTime)`).  
+  Nice-to-have for UI/debug later; not required for v0 status logic.
+
+*(Channel utilization adaptation — e.g. when to step expectedIntervalNow between baseMinTime and maxSilence under load — is Step 3; not part of this policy.)*
+
+---
+
+## 5) Open questions for Step 2 / 3
+
+- **Refinement of kDelivery / kSlack** — tuning per profile or environment.
 - **Channel utilization adaptation policy** — how expectedIntervalNow steps between baseMinTime and maxSilence when utilization is high.
 - **stepSeconds choice** — 5 s vs 10 s vs other; impact on scheduler and activity derivation.
 - **baseMinTimeFloorSeconds (floorSeconds) choice** — minimum base interval (e.g. 2 s).
