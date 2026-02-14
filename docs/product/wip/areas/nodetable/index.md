@@ -168,4 +168,5 @@ When decisions above are stable and reflected in implementation, promote to `doc
 ## Links / References
 
 - Research: [research/](research/)
+- Policy: [policy/source-precedence-v0.md](policy/source-precedence-v0.md) (source precedence v0).
 - Issue: [#147 NodeTable — Define & Research (Product WIP)](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
