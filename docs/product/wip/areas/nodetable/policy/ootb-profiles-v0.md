@@ -8,13 +8,18 @@ Step 1: Draft the OOTB profiles table and derivation rules. Distance granularity
 
 ## 1) Derivation formulas (v0)
 
-- **baseMinTimeSeconds** = `round_to_step(minDistMeters / speedHintMps)`  
-  Spatial granularity (minDistMeters) and assumed speed (speedHintMps in m/s) yield a base interval. Rounding policy: TBD; e.g. round to nearest 5 s or 10 s step.
+- **baseMinTimeSeconds** = `ceil_to_step(minDistMeters / speedHintMps, stepSeconds)`  
+  Spatial granularity (minDistMeters) and assumed speed (speedHintMps in m/s) yield a raw interval; round up to the next step (stepSeconds TBD, e.g. 5 s or 10 s).
 
-- **maxSilenceSeconds** = `baseMinTimeSeconds × roleMultiplier`  
-  Upper bound of acceptable beacon silence for this profile; used by scheduler and activity interpretation.
+- **baseMinTimeSeconds** ≥ **baseMinTimeFloorSeconds**  
+  Minimum interval floor (TBD, e.g. 2 s) to avoid overly aggressive send cadence.
+
+- **maxSilenceSeconds** = `round(baseMinTimeSeconds × roleMultiplier)`  
+  Integer seconds. Upper bound of acceptable beacon silence for this profile; used by scheduler and activity interpretation.
 
 *(activitySlack and exact activity thresholds are out of scope for this step; see Open questions.)*
+
+**v0 rule (movement gating):** Movement gating is evaluated **once per baseMinTime cycle**. If minDist has not been reached by the end of the cycle, do not send; wait for the next cycle. This keeps GNSS sampling periodic and avoids “immediate send” behavior (energy-aware).
 
 ---
 
@@ -39,7 +44,7 @@ Step 1: Draft the OOTB profiles table and derivation rules. Distance granularity
 | hunting-beater  | human:beater   | 18            | 1.2          | 1.5            | 1        | 15 → 15 s                 | 23 s                     |
 | hunting-shooter | human:shooter  | 40            | 0.8          | 1.5            | 1        | 50 → 50 s                 | 75 s                     |
 
-*derivedExampleBaseMinTime / derivedExampleMaxSilence are **illustrative** (minDist/speedHint → raw value, then rounded; maxSilence = base × roleMultiplier). Not final.*
+*derivedExampleBaseMinTime / derivedExampleMaxSilence are **illustrative** (raw = minDist/speedHint; base = ceil_to_step; maxSilence = round(base × roleMultiplier) integer seconds). Not final.*
 
 - **Hiking default:** single `human` profile (e.g. 50–100 m granularity, ~5 km/h).
 - **Dog tracking:** `dog` (tighter granularity, higher speed) + `human` handler (coarser, same speed hint as hiking).
@@ -53,4 +58,6 @@ Step 1: Draft the OOTB profiles table and derivation rules. Distance granularity
 
 - **kSlack / activity thresholds** — activitySlackSeconds = kSlack × maxSilenceSeconds; bounds for Online / Uncertain / Stale / Archived.
 - **Channel utilization adaptation policy** — how expectedIntervalNow steps between baseMinTime and maxSilence when utilization is high.
-- **Final rounding step policy** — 5 s vs 10 s vs other; impact on scheduler and activity derivation.
+- **stepSeconds choice** — 5 s vs 10 s vs other; impact on scheduler and activity derivation.
+- **baseMinTimeFloorSeconds (floorSeconds) choice** — minimum base interval (e.g. 2 s).
+- **maxSilence rounding** — whether maxSilence should also be stepped (e.g. to same step as base) or only integer-rounded from (base × roleMultiplier).
