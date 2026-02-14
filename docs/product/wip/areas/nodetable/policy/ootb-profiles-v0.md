@@ -92,14 +92,76 @@ These are policy-level defaults; implementations may tune per deployment.
 - **uncertaintyRadiusMeters** ≈ `speedHintMps × age` (or equivalently `minDist × (age / baseMinTime)`).  
   Nice-to-have for UI/debug later; not required for v0 status logic.
 
-*(Channel utilization adaptation — e.g. when to step expectedIntervalNow between baseMinTime and maxSilence under load — is Step 3; not part of this policy.)*
+*(Channel utilization adaptation is defined in §5 below.)*
 
 ---
 
-## 5) Open questions for Step 2 / 3
+## 5) Channel utilization adaptation (v0)
+
+Step 3: Adapt **expectedIntervalNow** between baseMinTime and maxSilence based on channel utilization. Yielding is implicit from profile parameters; stabilization and severity bands avoid cascading and flapping.
+
+### Definitions
+
+- **channelUtilization** — Self-estimated airtime load (0..1 or %). Algorithm/source TBD; treat as provided by radio/runtime.
+
+- **expectedIntervalNowSeconds** — Adaptive expected beacon interval. It **MUST** satisfy:
+  **baseMinTimeSeconds** ≤ **expectedIntervalNowSeconds** ≤ **maxSilenceSeconds**.
+
+### Adaptation direction (policy)
+
+- When utilization is **high**, increase expectedIntervalNow in discrete steps toward maxSilence.
+- When utilization is **low**, decrease expectedIntervalNow in discrete steps toward baseMinTime.
+- **Hysteresis (policy):** Avoid flapping around thresholds; “high” and “low” bands may be separated or require persistence over time.
+
+### No explicit priority in v0 (implicit yielding)
+
+There is **no separate priority parameter** in v0. Yielding is implicit via baseMinTime and maxSilence:
+
+- Roles with **smaller** baseMinTime and **smaller** maxSilence (more important tracking) remain faster.
+- Roles with **larger** baseMinTime/maxSilence slow down more under congestion.
+
+*Future hook:* An explicit priority override MAY be introduced later only if needed; not defined in v0.
+
+### Step model (discrete adaptation)
+
+expectedIntervalNow changes in **discrete step increments** (step size policy TBD). It is always **clamped** to [baseMinTimeSeconds, maxSilenceSeconds].
+
+*Illustrative example (non-binding):* baseMinTime = 15 s, maxSilence = 45 s, step = 10 s. Under rising load: 15 → 25 → 35 → 45 s. Under falling load: 45 → 35 → 25 → 15 s.
+
+### Severity-based step selection (“bands”) (v0)
+
+Utilization bands **U1 < U2 < U3** (thresholds TBD). StepDelta at the moment of adaptation (then hold-off starts):
+
+| Band (u = channelUtilization) | stepDelta (illustrative, tunable) |
+|-------------------------------|-----------------------------------|
+| u ≤ U1 (low)                  | −1 step (or symmetric decrease)   |
+| U1 < u ≤ U2                   | +1 step                           |
+| U2 < u ≤ U3                   | +2 steps                          |
+| u > U3                        | +3 steps                          |
+
+Band evaluation determines stepDelta once; then stabilization (hold-off) applies. Decreases may be made more conservative (e.g. −1 only) to reduce oscillation; policy TBD.
+
+### Stabilization / hold-off (v0)
+
+After changing expectedIntervalNow, **do not change it again** before **adaptationHoldSeconds**.
+
+**Intent:** Allow the network time to respond before further adaptation. **Initial policy (TBD):** adaptationHoldSeconds ≈ one “network round” time, e.g. maxSilenceMaxAcrossActiveNodes or a bounded variant. Exact bounds TBD.
+
+### Safety guarantees / invariants
+
+- Even under congestion, a node **MUST** send “I am alive” at least every ~maxSilence. (deliverySlack is handled in activity interpretation §4.)
+- Adaptation modifies **expectedIntervalNow** only; it does **not** change maxSilence (upper bound) or activity interpretation rules.
+- This policy is compatible with movement gating: checks happen on cycles; no “immediate send” between cycles.
+
+---
+
+## 6) Open questions for Step 2 / 3
 
 - **Refinement of kDelivery / kSlack** — tuning per profile or environment.
-- **Channel utilization adaptation policy** — how expectedIntervalNow steps between baseMinTime and maxSilence when utilization is high.
+- **Ownership/source of channelUtilization** — radio firmware vs domain; algorithm TBD.
+- **Initial default thresholds (U1/U2/U3) and step size** — definition and tuning.
+- **Bounds for adaptationHoldSeconds** — avoid too long (slow reaction) or too short (flapping).
+- **Decreases vs increases** — whether decreases should be symmetric or slower than increases.
 - **stepSeconds choice** — 5 s vs 10 s vs other; impact on scheduler and activity derivation.
 - **baseMinTimeFloorSeconds (floorSeconds) choice** — minimum base interval (e.g. 2 s).
 - **maxSilence rounding** — whether maxSilence should also be stepped (e.g. to same step as base) or only integer-rounded from (base × roleMultiplier).
