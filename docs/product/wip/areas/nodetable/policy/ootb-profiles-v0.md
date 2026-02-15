@@ -4,6 +4,8 @@
 
 Step 1: Draft the OOTB profiles table and derivation rules. Distance granularity comes first; time between beacons is derived via **speedHint** (typical speed for the subject/role).
 
+**Scope / Non-normative note.** This document describes **one OOTB consumer policy** for activity interpretation and staleness-boundary examples. It is **not** normative product truth for domain semantics. Domain, policy, and spec consume a **policy-supplied boundary** and do not depend on this doc as the only source.
+
 ---
 
 ## 1) Derivation formulas (v0)
