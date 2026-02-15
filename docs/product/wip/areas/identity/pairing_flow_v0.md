@@ -20,7 +20,7 @@ This doc defines **Identity & pairing flow v0**: node identity (MCU-anchored), f
 | **node_id_long** | MCU-anchored identity (e.g. ESP32 MAC-derived uint64). **Who** the node is; immutable; source of truth for pairing and NodeTable. In NodeTable contract this is **DeviceId**. |
 | **node_id_short** | Human-friendly display id derived from node_id_long (e.g. CRC16, 4 hex digits). **Who** in the UI when long id is not shown. May collide; disambiguation via suffix (see §6). In NodeTable contract this is **ShortId**. |
 | **hw_profile_id** | **What** hardware the node is (board + radio/sensors, etc.). From [HW registry](../hardware/registry_hw_capabilities_v0.md) ([#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)). Used for capability lookup and UX (e.g. “Collar”, “Dongle”); not identity for pairing. |
-| **Human label** | Optional display name: **networkName** (broadcast by node) or **localAlias** (user-set on phone). Shown when available; precedence per NodeTable: networkName > localAlias > node_id_short. |
+| **Human label** | Optional display name: **human_label_public** (optional, shared) and **human_label_local** (optional, phone-only). Shown when available; precedence: human_label_public > human_label_local > node_id_short. Current implementation names may be `networkName` / `localAlias` (example only). |
 
 **Boundary:** **Who** = node_id_long / node_id_short (identity for connection and NodeTable). **What** = hw_profile_id (capabilities, device type). **Label** = human-facing name when present; does not replace identity.
 
@@ -35,7 +35,7 @@ To **match** a BLE advertiser to a known node or to a sticker/NFC target, the ap
   - Resolve “connect to node_id_long L” (e.g. from NFC) to the correct BLE device when several are in range.
 - **node_id_short** alone is **not** sufficient for matching when collisions exist; if only short is in the payload, matching is best-effort and the app should disambiguate (e.g. show long id or ask user to choose) when multiple devices share the same short id.
 
-No commitment in this doc to specific BLE advertising structure or NFC payload; only that **matching** requires at least node_id_long (or equivalent) for reliable “connect to this node.”
+No commitment in this doc to specific BLE advertising structure or NFC payload; only that **matching** requires at least node_id_long (or equivalent) for reliable “connect to this node.” This requirement may be satisfied via advertising and/or a post-discovery handshake; this doc does not mandate the transport mechanism.
 
 ---
 
@@ -77,7 +77,7 @@ No commitment in this doc to specific BLE advertising structure or NFC payload; 
 ## 6) Collision handling (short id)
 
 - **node_id_short** can collide across nodes (same CRC16 or equivalent).
-- **Rule:** In BLE list and connection UX, when two or more devices share the same node_id_short, the app must **disambiguate**: e.g. show “6DA2:1”, “6DA2:2”, or expand to show **node_id_long** (full or truncated) so the user can choose the correct node. DeviceId / node_id_long remains the source of truth; short id is for convenience only.
+- **Rule:** In BLE list and connection UX, when two or more devices share the same node_id_short, the app must **disambiguate**: e.g. show “6DA2:1”, “6DA2:2”, or expand to show **node_id_long** (full or truncated) so the user can choose the correct node. DeviceId / node_id_long remains the source of truth; short id is for convenience only. Any suffix like ":1/:2" is UI-only and ephemeral per scan session; identity remains node_id_long.
 
 ---
 
