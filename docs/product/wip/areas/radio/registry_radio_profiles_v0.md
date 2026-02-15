@@ -48,8 +48,8 @@ This doc defines the **RadioProfiles** and **ChannelPlan** registry v0: user-fac
 
 ## 6) Open questions / follow-ups
 
-- **SelectionPolicy:** Choice rules (defaults, throttling, user advice) are in [selection_policy_v0.md](selection_policy_v0.md). Autopower algorithm remains a separate follow-up.
-- **Autopower algorithm:** How tx power or profile is adapted from environment/capabilities; out of scope here.
+- **SelectionPolicy:** Choice rules (defaults, throttling, user advice) are in [selection_policy_v0.md](selection_policy_v0.md).
+- **AutoPower policy:** Node-side tx power adjustment within user bounds; see [autopower_policy_v0.md](autopower_policy_v0.md) ([#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180)).
 - **Channel discovery:** See [policy/channel-discovery-selection-v0.md](policy/channel-discovery-selection-v0.md) ([#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175)) for local scan and future backend heatmap; registry defines compatibility, not discovery flow.
 - **Beacon minset & encoding:** Payload and airtime (e.g. [#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173)) are separate; this registry does not define packet format.
 
@@ -58,5 +58,7 @@ This doc defines the **RadioProfiles** and **ChannelPlan** registry v0: user-fac
 ## 7) Related
 
 - **HW Capabilities registry:** [../hardware/registry_hw_capabilities_v0.md](../hardware/registry_hw_capabilities_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159).
+- **SelectionPolicy:** [selection_policy_v0.md](selection_policy_v0.md).
+- **AutoPower policy:** [autopower_policy_v0.md](autopower_policy_v0.md) — [#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180).
 - **NodeTable contract:** [../nodetable/index.md](../nodetable/index.md) — [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
 - **Channel discovery & selection (stub):** [policy/channel-discovery-selection-v0.md](policy/channel-discovery-selection-v0.md) — [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175).
