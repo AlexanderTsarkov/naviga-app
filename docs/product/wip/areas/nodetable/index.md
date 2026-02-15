@@ -145,7 +145,7 @@ Activity expectations are derived from **roles + distance granularity + speed hi
 ## Status (registries #159)
 
 - **Decisions captured (v0):** HW Capabilities registry (hw_profile_id, adapter_type, capability, confidence; local vs remote disclosure; schema rev, unknown hw id → prompt for update) and RadioProfiles + ChannelPlan registry (user abstraction Default/LongDist/Fast; profile–channel compatibility; registries = facts, SelectionPolicy = choice rules; non-goals: no raw LoRa UI, no real CAD/LBT here, sense OFF + jitter default for UART).
-- **Follow-up issues / docs needed:** Registry ownership and format (firmware vs mobile vs backend). SelectionPolicy v0: [../radio/selection_policy_v0.md](../radio/selection_policy_v0.md). AutoPower policy v0: [../radio/autopower_policy_v0.md](../radio/autopower_policy_v0.md) ([#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180)). Identity & pairing flow v0: [../identity/pairing_flow_v0.md](../identity/pairing_flow_v0.md) ([#182](https://github.com/AlexanderTsarkov/naviga-app/issues/182)).
+- **Follow-up issues / docs needed:** SelectionPolicy v0: [../radio/selection_policy_v0.md](../radio/selection_policy_v0.md). AutoPower policy v0: [../radio/autopower_policy_v0.md](../radio/autopower_policy_v0.md) ([#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180)). Identity & pairing flow v0: [../identity/pairing_flow_v0.md](../identity/pairing_flow_v0.md) ([#182](https://github.com/AlexanderTsarkov/naviga-app/issues/182)). Registry distribution & ownership v0: [../registry/distribution_ownership_v0.md](../registry/distribution_ownership_v0.md) ([#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184)).
 
 ---
 
@@ -185,4 +185,5 @@ When decisions above are stable and reflected in implementation, promote to `doc
 - Policy: [../radio/selection_policy_v0.md](../radio/selection_policy_v0.md) (Radio profile/channel selection & throttling v0; consumes [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159), [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158)).
 - Policy: [../radio/autopower_policy_v0.md](../radio/autopower_policy_v0.md) (AutoPower v0 — node-side tx power bounds, hysteresis, fallback; [#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180)).
 - Policy: [../identity/pairing_flow_v0.md](../identity/pairing_flow_v0.md) (Identity & pairing flow v0 — node_id, first-time/NFC connect, many-nodes, switch-confirm; [#182](https://github.com/AlexanderTsarkov/naviga-app/issues/182)).
+- Registry: [../registry/distribution_ownership_v0.md](../registry/distribution_ownership_v0.md) (Registry distribution & ownership v0 — source of truth, bundling, schema rev, unknown profile; [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184)).
 - Issue: [#147 NodeTable — Define & Research (Product WIP)](https://github.com/AlexanderTsarkov/naviga-app/issues/147)

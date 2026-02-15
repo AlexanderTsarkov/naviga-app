@@ -78,7 +78,7 @@ Registry entries are grouped conceptually as follows. Schema format (JSON, proto
 - **Selection policy:** Separate doc/issue for how profile/channel choices are made (autopower, throttling, defaults).
 - **Autopower algorithm:** How to adapt tx power or profile from capabilities and environment; out of scope here.
 - **Identity / pairing flow:** How local vs remote disclosure is used in pairing or “owned vs seen” flows; out of scope here.
-- **Registry ownership and format:** Where the table lives (bundle in app, backend, firmware) and exact schema (e.g. JSON table) for implementation.
+- **Registry distribution & ownership:** Where truth lives, who owns it, bundling, schema rev: [../registry/distribution_ownership_v0.md](../registry/distribution_ownership_v0.md) ([#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184)). Exact schema (e.g. JSON) remains implementation.
 
 ---
 
@@ -87,3 +87,4 @@ Registry entries are grouped conceptually as follows. Schema format (JSON, proto
 - **NodeTable contract:** [nodetable/index.md](../nodetable/index.md) — [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 - **Link/Telemetry minset:** [nodetable/contract/link-telemetry-minset-v0.md](../nodetable/contract/link-telemetry-minset-v0.md) — [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158) (hwProfile field).
 - **Radio profiles registry:** [../radio/registry_radio_profiles_v0.md](../radio/registry_radio_profiles_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159).
+- **Registry distribution & ownership:** [../registry/distribution_ownership_v0.md](../registry/distribution_ownership_v0.md) — [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184).

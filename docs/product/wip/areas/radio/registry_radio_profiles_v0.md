@@ -60,5 +60,6 @@ This doc defines the **RadioProfiles** and **ChannelPlan** registry v0: user-fac
 - **HW Capabilities registry:** [../hardware/registry_hw_capabilities_v0.md](../hardware/registry_hw_capabilities_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159).
 - **SelectionPolicy:** [selection_policy_v0.md](selection_policy_v0.md).
 - **AutoPower policy:** [autopower_policy_v0.md](autopower_policy_v0.md) — [#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180).
+- **Registry distribution & ownership:** [../registry/distribution_ownership_v0.md](../registry/distribution_ownership_v0.md) — [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184).
 - **NodeTable contract:** [../nodetable/index.md](../nodetable/index.md) — [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
 - **Channel discovery & selection (stub):** [policy/channel-discovery-selection-v0.md](policy/channel-discovery-selection-v0.md) — [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175).
