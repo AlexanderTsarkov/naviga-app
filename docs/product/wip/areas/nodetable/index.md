@@ -174,4 +174,5 @@ When decisions above are stable and reflected in implementation, promote to `doc
 - Policy: [policy/snapshot-semantics-v0.md](policy/snapshot-semantics-v0.md) (snapshot/restore semantics v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157) Step 2).
 - Policy: [policy/restore-merge-rules-v0.md](policy/restore-merge-rules-v0.md) (restore/merge rules v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157) Step 3).
 - Policy: [policy/persistence-cadence-limits-v0.md](policy/persistence-cadence-limits-v0.md) (persistence cadence & limits v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157) Step 4).
+- Contract: [contract/link-telemetry-minset-v0.md](contract/link-telemetry-minset-v0.md) (Link/Metrics & Telemetry/Health minset v0, [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158)).
 - Issue: [#147 NodeTable — Define & Research (Product WIP)](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
