@@ -170,4 +170,6 @@ When decisions above are stable and reflected in implementation, promote to `doc
 - Research: [research/](research/)
 - Policy: [policy/source-precedence-v0.md](policy/source-precedence-v0.md) (source precedence v0).
 - Policy: [policy/ootb-profiles-v0.md](policy/ootb-profiles-v0.md) (OOTB tracking profiles & activity/adaptation policy v0; non-normative example policy).
+- Policy: [policy/persistence-v0.md](policy/persistence-v0.md) (retention tiers & eviction v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157)).
+- Policy: [policy/snapshot-semantics-v0.md](policy/snapshot-semantics-v0.md) (snapshot/restore semantics v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157) Step 2).
 - Issue: [#147 NodeTable — Define & Research (Product WIP)](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
