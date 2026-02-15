@@ -107,3 +107,5 @@ Rule of thumb:
 - Real CAD/LBT is out of scope unless explicitly planned.
 - Domain (NodeTable/BeaconLogic) must stay radio-agnostic.
 - Legacy BLE service must remain disabled unless explicitly reintroduced by plan.
+
+**See also:** [AI model policy](ai_model_policy.md) (invariants and review blockers).
