@@ -29,8 +29,8 @@ This contract defines the **minimal field set** for Link/Metrics and Telemetry/H
 
 | Field | Type/shape | Optional/Required | Owner/source | Persisted/Derived | Notes |
 |-------|------------|-------------------|--------------|-------------------|--------|
-| **lastRxAt** | Timestamp (e.g. monotonic ms or UTC s) | Required | ObservedRx | Persisted | Time of last RX from this node; drives lastSeenAge. Cadence: updated on every RX. |
-| **rxRate** | Scalar (e.g. RX count per fixed window, or rate) | Optional | ObservedRx | Persisted | One simple measure of RX frequency in a window; window length is implementation-defined. Cadence: can be infrequent (periodic rollup). |
+| **lastRxAt** | Timestamp (receiver-side) | Required | ObservedRx | Persisted | Receiver-side time of last RX from this node; used for ordering and lastSeenAge. Time base is implementation-defined (monotonic or wall-clock) but must be consistent for ordering comparisons. Cadence: updated on every RX. |
+| **rxRate** | Integer (RX count per window) | Optional | ObservedRx | Persisted | RX count per window; window length is implementation-defined. Cadence: can be infrequent (periodic rollup). |
 | **rssiLast** | Integer (e.g. dBm) | Optional | ObservedRx | Persisted | Last received signal strength from this node. Cadence: typically every RX. |
 | **snrLast** | Numeric (e.g. dB) | Optional | ObservedRx | Persisted | Last SNR from this node. Cadence: typically every RX. |
 | **rssiAvg** | Numeric (EWMA) | Optional | Derived | Derived | Exponential moving average of RSSI; recomputed after restore. |
@@ -47,6 +47,7 @@ This contract defines the **minimal field set** for Link/Metrics and Telemetry/H
 | **fwVersion** | Opaque string or version id | Optional | BroadcastClaim / ObservedRx | Persisted | Firmware version; mapping/display deferred. Cadence: infrequent. |
 | **hwProfile** | Opaque id | Optional | BroadcastClaim / ObservedRx | Persisted | Hardware model/profile id; mapping to human-readable form deferred to [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159). Cadence: infrequent. |
 | **temperature** | Numeric (°C) or null | Optional | ObservedRx / BroadcastClaim | Persisted | Extended/rare telemetry; not required for v0. Include only if product needs it. |
+| **telemetryAt** | Timestamp (receiver-side) | Optional | ObservedRx | Persisted | Receiver-side time when telemetry was last updated/observed; helps UI/debug freshness. Missing does not erase prior telemetry values. |
 
 ---
 
@@ -59,7 +60,7 @@ This contract defines the **minimal field set** for Link/Metrics and Telemetry/H
 
 ## 5) Persisted vs derived (align with #157)
 
-- **Persist:** lastRxAt, rxRate (if present), rssiLast, snrLast; batteryPercent, batteryVoltage (if present), uptimeSec, fwVersion, hwProfile, temperature (if present). Persist last-known raw values plus timestamps so lastSeenAge and derived metrics can be recomputed after restore.
+- **Persist:** lastRxAt, rxRate (if present), rssiLast, snrLast; batteryPercent, batteryVoltage (if present), uptimeSec, fwVersion, hwProfile, temperature (if present); telemetryAt (if present). Persist last-known raw values plus timestamps (lastRxAt, telemetryAt when applicable) so lastSeenAge and derived metrics can be recomputed after restore.
 - **Derived (do not persist as source of truth):** rssiAvg, snrAvg, linkQuality. Recomputed after restore from persisted raw values (and from first ObservedRx after restore for link metrics per snapshot-semantics).
 
 ---
@@ -82,7 +83,7 @@ This contract defines the **minimal field set** for Link/Metrics and Telemetry/H
 - **Beacon minset & encoding:** Future policy/spec for which fields appear in the frequent beacon, payload layout, and byte budget.
 - **Registries mapping (#159):** hwProfile / fwVersion mapping to human-readable labels and capability flags.
 - **Mesh routing:** Future definition of hops/via, forwarding, and multi-hop metrics if needed.
-- **Window for rxRate:** Implementation-defined window length and rollover; document when stable.
+- **Window for rxRate (count-per-window):** Implementation-defined window length and rollover; document when stable.
 
 ---
 
