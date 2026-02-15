@@ -161,7 +161,7 @@ User                App                     Node A    Node B
 
 ## 9) Open questions / follow-ups
 
-- **Secure claim / provisioning:** Future protocol so that only the “owner” can bind a node to an account or enforce ownership; out of scope for v0.
+- **Secure claim / provisioning:** Future protocol so that only the "owner" can bind a node to an account or enforce ownership; out of scope for v0. Stub: [secure_claim_concept_v0.md](secure_claim_concept_v0.md) ([#187](https://github.com/AlexanderTsarkov/naviga-app/issues/187)).
 - **Privacy hardening:** What identity (long/short) is exposed in BLE/NFC in which contexts; reduce leakage in public settings.
 - **Spoofing:** Risk that a nearby device advertises the same node_id_long; v0 does not define mitigation; follow-up for secure binding or attestation.
 
