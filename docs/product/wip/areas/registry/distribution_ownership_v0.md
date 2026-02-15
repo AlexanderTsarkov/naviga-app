@@ -18,10 +18,10 @@ This doc defines **registry distribution & ownership v0**: where registry “tru
 | # | Decision point | v0 choice | Open / follow-up |
 |---|----------------|-----------|-------------------|
 | 1 | Source of truth format | **Human-editable first:** canonical content lives in **Markdown** under `docs/product/wip/areas/` (e.g. [HW](../hardware/registry_hw_capabilities_v0.md), [Radio](../radio/registry_radio_profiles_v0.md)). Machine-consumable artifacts (JSON/YAML) may be generated later from the same source or maintained in parallel; v0 does not mandate a single canonical machine format. | Exact pipeline (MD→JSON, or hand-maintained JSON) is implementation; document when stable. |
-| 2 | Ownership map | **Product/docs** own HW capabilities registry, RadioProfiles registry, and ChannelPlan (including profile–channel tags). Single ownership for v0; no split by platform. Changes follow PR review and umbrella [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) discipline. | Backend or firmware may later hold a *copy* or *cache*; ownership of the canonical content stays in repo/docs. |
+| 2 | Ownership map | **Canonical spec in repo:** owned by Product/Architecture (single merge owner). **Input owners:** Firmware/HW confirm hardware facts and hw_profile_id→capabilities mapping; Mobile is a consumer and provides UX constraints/format needs. **v1 note:** Later (v1), registry sources should be tool-generated (not hand-edited), with a human-readable render committed alongside. | Backend or firmware may later hold a *copy* or *cache*; ownership of the canonical content stays in repo/docs. |
 | 3 | Schema rev rules | **Append-only** capability/field keys; do not rename; deprecations keep old keys until a **schema rev window** (e.g. one major app version). **Who bumps rev:** owner (product/docs) when adding or deprecating in a way that requires client awareness. **“Update app” trigger:** when app or device sees **unknown hw_profile_id** or **registry_schema_rev** &gt; app’s supported rev. | Exact rev numbering (v1, v2 vs semver) and window length are implementation. |
 | 4 | Mobile bundling | **Bundled with app:** registry assets (e.g. HW capabilities table, RadioProfiles + ChannelPlan) live in the **app repo** (e.g. under an assets or config path). They are **versioned with the app release**; no separate registry version in v0 beyond schema_rev inside the payload. App ships with a known schema_rev; store/play store update delivers new registries. | Exact path and format (single JSON vs per-registry files) are implementation. |
-| 5 | Firmware vs mobile precedence | **BT full capabilities = local truth** for the connected device. App **does not override** device-reported capabilities. App may **cache** registry lookups and BT-reported capabilities for offline/display; cache is invalidated or refreshed when connecting or when app is updated. No “app overrides firmware” for capability truth. | Caching TTL and refresh rules are implementation. |
+| 5 | Firmware vs mobile precedence | **v0 merge/fallback:** (a) If BT provides explicit capability values → trust BT as local truth. (b) If BT does not provide capability details → resolve via bundled registry by hw_profile_id. (c) If BT conflicts with bundled registry → prefer BT; optionally surface "inconsistent with registry" for diagnostics (no behavior change). App may **cache** for offline/display; cache is not source of truth. | Caching TTL and refresh rules are implementation. |
 | 6 | Unknown profile handling UX | **Messaging:** prompt user to “update the app” (or equivalent) when **hw_profile_id** is missing from app’s registry or when **registry_schema_rev** from device/remote is higher than the app supports. **Fallback:** do not assume capabilities; do not show wrong feature flags or profile options. Optional: show raw hw_profile_id for support. | Copy and minimum app version checks are product/UX. |
 | 7 | Future backend mode | **Concept only:** a future phase may deliver registry updates via a **backend** (e.g. signed packs, CDN). App would **cache** them; **minimum app version** may be required to interpret new schema. Not implemented or specified in v0. | Full design (signing, caching, min version) is a follow-up. |
 
@@ -33,7 +33,7 @@ This doc defines **registry distribution & ownership v0**: where registry “tru
   - HW Capabilities: [hardware/registry_hw_capabilities_v0.md](../hardware/registry_hw_capabilities_v0.md)
   - RadioProfiles & ChannelPlan: [radio/registry_radio_profiles_v0.md](../radio/registry_radio_profiles_v0.md)
 - Content is **human-editable** (Markdown tables and lists). Machine-consumable exports (e.g. JSON) may be generated or maintained alongside; v0 does not require a single canonical machine format.
-- **Ownership:** Product/docs (same as other WIP area docs); changes via PR, aligned with [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
+- **Ownership:** Canonical spec in repo is owned by Product/Architecture (single merge owner). **Input owners:** Firmware/HW confirm hardware facts and hw_profile_id→capabilities mapping; Mobile is a consumer and provides UX constraints/format needs. Later (v1), registry sources should be tool-generated (not hand-edited), with a human-readable render committed alongside. Changes via PR, aligned with [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
 
 ---
 
@@ -64,8 +64,11 @@ This doc defines **registry distribution & ownership v0**: where registry “tru
 
 ## 7) Firmware vs mobile precedence (BT full capabilities)
 
-- For the **locally connected** device, **full capabilities over BT** are the **source of truth** (e.g. adapter_type, capabilities, optional registry_schema_rev). The app does **not** override these with app-only data.
-- The app may **cache** BT-reported capabilities and registry lookups for performance or offline display; cache is **not** the source of truth. Refresh or invalidate on connect or on app update.
+- **v0 merge/fallback rules:**
+  - **(a)** If BT provides explicit capability values → trust BT as local truth.
+  - **(b)** If BT does not provide capability details → resolve via bundled registry by hw_profile_id.
+  - **(c)** If BT conflicts with bundled registry → prefer BT; optionally surface "inconsistent with registry" for diagnostics (no behavior change).
+- The app does **not** override device-reported capabilities with app-only data. The app may **cache** BT-reported capabilities and registry lookups for performance or offline display; cache is **not** the source of truth. Refresh or invalidate on connect or on app update.
 
 ---
 
