@@ -17,7 +17,7 @@ This doc defines how to merge **persisted snapshot** (loaded on startup) with **
 
 - **Snapshot record:** A node record loaded from a persisted snapshot (RestoredSnapshot). Contains last-known values at snapshot time; may be stale.
 - **Incoming update:** Data from a newly received RX (ObservedRx) or from BroadcastClaim in that RX — i.e. node-origin data. Does **not** include LocalUser actions (those are applied separately by the user/phone).
-- **Field ownership/source (per [#156](source-precedence-v0.md)):** **Node-owned** fields (role, trackingProfileId, networkName, position, telemetry, mesh/link metrics) come from the node (BroadcastClaim or ObservedRx). **LocalUser** fields (localAlias, Relationship/Affinity, tier/pin, session markers as user-set) are phone/user annotations and are **never** overwritten by incoming node data.
+- **Field ownership/source (per [#156](source-precedence-v0.md)):** **Node-owned** fields (role, trackingProfileId, networkName, position, telemetry, mesh/link metrics) come from the node (BroadcastClaim or ObservedRx). **LocalUser** fields (localAlias, Relationship/Affinity, tier/pin) are phone/user annotations and are **never** overwritten by incoming node data. Session membership markers: ownership/source policy-defined; not asserted as LocalUser here.
 - **Conflict:** The same logical field has a value from the snapshot and a value from an incoming update; merge must decide which wins or how to combine.
 
 ---
@@ -34,7 +34,7 @@ This doc defines how to merge **persisted snapshot** (loaded on startup) with **
 ### 3.2 Timestamp / recency
 
 - For **node-owned** fields (position, telemetry, lastSeen, link metrics): prefer **newer** when timestamps are comparable (reception time of packet or payload timestamp). **Incoming** RX is assumed newer than snapshot unless known otherwise.
-- **When timestamps are missing:** Incoming wins if it is plausibly fresher (e.g. we just received the packet). Otherwise keep snapshot. Simple rule: **incoming wins** for node-owned fields when the update is from a live RX; snapshot wins only when there is no incoming value for that field (see null/unknown below).
+- **When timestamps are missing:** For node-owned fields: if the field is **present** in the live RX update, incoming wins; if **missing or unknown** in the payload, keep snapshot (unless there is an explicit delete/reset signal). See §3.3 for null/unknown.
 
 ### 3.3 Null / unknown
 
