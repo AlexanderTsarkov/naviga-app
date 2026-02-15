@@ -18,8 +18,8 @@ NodeTable is the **single source of truth / knowledge about all nodes (including
 
 1. **Identity** — Primary key (DeviceId), display id (ShortId), human naming (networkName, localAlias).
 2. **Roles / Subject type** — Human / dog / repeater / infra, independent of hwType. Source may be broadcast or local.
-3. **Activity** — Derived state (Online / Uncertain / Stale / Archived); requires **expected beacon/update policy** per node (see below).
-4. **Expected beacon/update policy per node** — **expectedInterval** + **maxSilenceTime** (and possibly min-move/min-time) required to derive activity correctly. May be global default or per-node when known.
+3. **Activity** — Derived state (Online / Uncertain / Stale / Archived); requires a **policy-supplied staleness boundary** (see below).
+4. **Expected beacon/update policy per node** — A policy may supply **expectedInterval**, **maxSilence**, or a **staleness boundary** (and possibly min-move/min-time) to derive activity; may be global default or per-node when known.
 5. **Position** — Where (2D required; altitude optional); PositionQuality (age, optional satCount/hdop/accuracy/fixType, source-tagged).
 6. **Mesh / Link metrics** — Receiver-side **RSSI + SNR**, **hops/via**, and origin-stream metadata **lastOriginSeqSeen** (last seq seen from that origin; not per-packet cache).
 7. **Telemetry / Health** — Minimum: **battery level** (future) + **uptime** (already exists); optional device metrics.
@@ -52,7 +52,7 @@ NodeTable is the **single source of truth / knowledge about all nodes (including
 
 - **activityState** is **derived**, not stored.
 - Four states: **Online** / **Uncertain** / **Stale** / **Archived**.
-- Derivation: activityState is derived from **lastSeenAge** relative to **(expectedIntervalNow, maxSilence, activitySlack)** per node (not a single global threshold). Exact thresholds TBD.
+- Derivation: **activityState** is derived from **lastSeenAge** relative to a **staleness boundary** supplied by policy (e.g. tracking profile, OOTB policy, or another consumer policy). Exact boundary values are policy-defined.
 - NodeTable provides **lastSeenAge** for UI (e.g. “last seen 30s ago”).
 - **“Grey”** is a UI convention (e.g. dimming stale nodes), not a domain field; domain exposes lastSeenAge and policy so UI can compute grey.
 
@@ -72,12 +72,12 @@ Activity expectations are derived from **roles + distance granularity + speed hi
 - **maxSilenceSeconds** = baseMinTimeSeconds × roleMultiplier (upper bound of beacon silence).
 - **expectedIntervalNowSeconds** is **adaptive** and **clamped** between baseMinTimeSeconds and maxSilenceSeconds: if **channelUtilization** > threshold, increase stepwise toward maxSilenceSeconds; decrease back when utilization drops.
 
-**3) Activity interpretation: activitySlack**
-- **activitySlackSeconds** (or activityWindowSeconds): extra window beyond maxSilence before treating silence as “stale”. Define: **activitySlackSeconds = kSlack × maxSilenceSeconds**, where **kSlack ≥ 1**. Slack is never less than maxSilence.
+**3) Activity interpretation (one policy mechanism)**
+- A policy may define the staleness boundary using an **activitySlack**-style extension: e.g. **activitySlackSeconds = kSlack × maxSilenceSeconds**, **kSlack ≥ 1**, as an extra window beyond maxSilence before treating silence as “stale”. This is one possible way to compute the boundary, not a required domain field.
 
 **4) NodeTable usage**
-- NodeTable must know (or derive) **expectedIntervalNow**, **maxSilence**, and **activitySlack** per node to interpret silence and derive activityState (Online / Uncertain / Stale / Archived).
-- Silence is only “unexpected” relative to that **per-node** expectation.
+- NodeTable derives **activityState** (Online / Uncertain / Stale / Archived) from **lastSeenAge** and the **staleness boundary** supplied by the selected policy. A policy may use **expectedIntervalNow**, **maxSilence**, **activitySlack**, or other inputs to compute that boundary; NodeTable does not require any specific set of fields unless the chosen policy does.
+- Silence is only “unexpected” relative to the **policy-supplied** expectation/boundary.
 
 **Example profiles (illustrative / TBD)**
 - **Hiking OOTB:** minDist 50–100 m, speedHint ~5 km/h.
@@ -122,7 +122,7 @@ Activity expectations are derived from **roles + distance granularity + speed hi
 - NodeTable = single source of truth for node-level facts; others emit observations.
 - Identity: DeviceId (primary), ShortId = CRC16(DeviceId), display precedence networkName > localAlias > ShortId.
 - Roles/Subject type: human/dog/repeater/infra; source broadcast or local.
-- Activity: derived (Online/Uncertain/Stale/Archived) from lastSeenAge vs (expectedIntervalNow, maxSilence, activitySlack); lastSeenAge for UI; “grey” is UI, not domain. Tracking Profile drives timings; expectedIntervalNow adaptive and clamped; activitySlack = kSlack × maxSilence (kSlack ≥ 1).
+- Activity: derived (Online/Uncertain/Stale/Archived) from lastSeenAge vs a **policy-supplied staleness boundary**; lastSeenAge for UI; “grey” is UI, not domain. A policy may use tracking profile (expectedIntervalNow, maxSilence, activitySlack) or other means to define the boundary.
 - Mesh/link: RSSI, SNR, hops/via, lastOriginSeqSeen; no per-packet state in NodeTable.
 - Telemetry/health: uptime + battery (future); optional device metrics.
 - Relationship: Self / Owned / Trusted / Seen / Ignored for OOTB and UI filtering.
@@ -158,7 +158,7 @@ When decisions above are stable and reflected in implementation, promote to `doc
 | **ShortId** | Display id derived from DeviceId (e.g. CRC16); may collide. |
 | **expectedIntervalNow** | Current expected time between beacons for this node (adaptive; clamped between baseMinTime and maxSilence). |
 | **maxSilence** | Upper bound of acceptable beacon silence for this node (from tracking profile). |
-| **activitySlack** | Extra window beyond maxSilence for activity interpretation; activitySlackSeconds = kSlack × maxSilenceSeconds, kSlack ≥ 1. |
+| **activitySlack** | One policy mechanism to extend a boundary beyond maxSilence; not a required domain field unless a selected policy uses it. Example: activitySlackSeconds = kSlack × maxSilenceSeconds, kSlack ≥ 1. |
 | **lastSeenAge** | Time since last RX from this node (seconds); used for activity derivation and UI. |
 | **role** | Subject/device type (e.g. human, dog, repeater, infra); may drive tracking profile. |
 | **trackingProfileId** | Id of the tracking profile (minDist, speedHint, roleMultiplier, priority) for this node. |
@@ -169,5 +169,5 @@ When decisions above are stable and reflected in implementation, promote to `doc
 
 - Research: [research/](research/)
 - Policy: [policy/source-precedence-v0.md](policy/source-precedence-v0.md) (source precedence v0).
-- Policy: [policy/ootb-profiles-v0.md](policy/ootb-profiles-v0.md) (OOTB tracking profiles & activity/adaptation policy v0).
+- Policy: [policy/ootb-profiles-v0.md](policy/ootb-profiles-v0.md) (OOTB tracking profiles & activity/adaptation policy v0; non-normative example policy).
 - Issue: [#147 NodeTable — Define & Research (Product WIP)](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
