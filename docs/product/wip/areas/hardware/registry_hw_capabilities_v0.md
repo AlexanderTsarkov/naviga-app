@@ -17,10 +17,13 @@ This doc defines the **HW Capabilities registry** v0: facts and possibilities (a
 
 | Term | Meaning |
 |------|--------|
-| **hw_profile_id / hw_type** | Opaque identifier for a hardware model/variant (e.g. board + radio adapter combo). Used in telemetry/claim and looked up in this registry. |
+| **hw_type** | Human-facing class/family name (e.g. Collar, Dongle, Devkit) used for UX grouping. Looked up or derived from registry when available. |
+| **hw_profile_id** | Opaque identifier for a concrete hardware configuration/build profile (radio module type, sensors, power features, debug OLED, etc.). Used in telemetry/claim and looked up in this registry. |
 | **adapter_type** | How the radio is connected: e.g. `UART_MODEM`, `SPI_CHIP`. Drives which drivers and which capabilities (e.g. sense/CAD) apply. |
 | **capability** | A boolean or enumerated fact about the hardware (e.g. “supports RSSI”, “supports baro”, “powerbank reserve”). |
 | **confidence** | How reliable the capability claim is: `low` \| `med` \| `high`. Enables UI to show “best effort” or “supported” appropriately. |
+
+- **Where each is used:** The remote radio minset may carry **hw_profile_id** only (or a compact code that maps to it). Local BT disclosure includes **hw_profile_id** and may also include **hw_type** for UX. In NodeTable/link-telemetry minset docs, the field name `hwProfile` refers to `hw_profile_id` as defined in this registry.
 
 ---
 
@@ -50,6 +53,15 @@ Registry entries are grouped conceptually as follows. Schema format (JSON, proto
 - **Schema revision:** Registry has a **schema rev** (e.g. v1). New capabilities or new adapter types may require a rev bump.
 - **Forward / backward compat:** New fields in an entry are optional; old clients ignore unknown fields. Old entries remain valid unless explicitly deprecated.
 - **Unknown hw id behavior:** If the app or device encounters an **hw_profile_id** not present in its local registry (e.g. newer device, or registry not yet updated), behavior is **“prompt for update”** (or equivalent): do not assume capabilities; prompt user to update app/registry so the new id can be resolved. No silent failure or wrong feature visibility.
+
+**v0 distribution assumptions:**
+
+- The mobile app bundles a registry table mapping **hw_profile_id** → capabilities. Unknown **hw_profile_id** or a higher **registry_schema_rev** than the app supports triggers the “update app” prompt.
+- Full capabilities over BT are the source of truth for the local device; remote disclosure uses a short id only (hw_profile_id or compact code). **registry_schema_rev** may be included in the BT capabilities payload and, in a later phase, in the remote minset.
+
+**Extensibility:**
+
+- Capability keys are append-only: do not rename; unknown keys must be ignored; deprecations keep old keys until a schema rev window.
 
 ---
 
