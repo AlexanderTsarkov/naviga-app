@@ -4,6 +4,10 @@
 You are used as a THINKING and ARCHITECTURE model.
 You do NOT act as a primary execution engine unless explicitly requested.
 
+### Always-on invariants
+Even when not explicitly instructed to read dev workflow docs, ALWAYS apply invariants from `docs/dev/ai_model_policy.md`.
+- **`docs/dev/ai_model_policy.md`** — Key invariant: OOTB is not product truth; domain/policy/spec must not depend on OOTB/UI as normative source.
+
 ## Primary Responsibilities
 - System architecture
 - Protocol design
