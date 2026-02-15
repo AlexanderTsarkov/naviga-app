@@ -173,4 +173,5 @@ When decisions above are stable and reflected in implementation, promote to `doc
 - Policy: [policy/persistence-v0.md](policy/persistence-v0.md) (retention tiers & eviction v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157)).
 - Policy: [policy/snapshot-semantics-v0.md](policy/snapshot-semantics-v0.md) (snapshot/restore semantics v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157) Step 2).
 - Policy: [policy/restore-merge-rules-v0.md](policy/restore-merge-rules-v0.md) (restore/merge rules v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157) Step 3).
+- Policy: [policy/persistence-cadence-limits-v0.md](policy/persistence-cadence-limits-v0.md) (persistence cadence & limits v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157) Step 4).
 - Issue: [#147 NodeTable — Define & Research (Product WIP)](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
