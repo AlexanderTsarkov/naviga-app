@@ -133,14 +133,19 @@ Activity expectations are derived from **roles + distance granularity + speed hi
 
 ## 11) Open questions / Follow-ups
 
-- **RadioProfileRegistry** — Mapping ownership and table format (firmware vs mobile vs backend).
-- **HardwareRegistry** — hwType catalog and format.
 - **Role / policy source & precedence** — Broadcast vs local; how to merge.
 - **Tracking profile** — Where it is set (broadcast vs local assignment) and precedence; which defaults ship OOTB.
 - **Channel utilization** — How it is computed and exposed (firmware-only vs shared with mobile/UI).
 - **Persistence mechanism and snapshot cadence** — When to snapshot, restore semantics, map relevancy vs remembered nodes.
 - networkName propagation cadence and payload.
 - Exact activity thresholds (bounds for Online / Uncertain / Stale / Archived).
+
+---
+
+## Status (registries #159)
+
+- **Decisions captured (v0):** HW Capabilities registry (hw_profile_id, adapter_type, capability, confidence; local vs remote disclosure; schema rev, unknown hw id → prompt for update) and RadioProfiles + ChannelPlan registry (user abstraction Default/LongDist/Fast; profile–channel compatibility; registries = facts, SelectionPolicy = choice rules; non-goals: no raw LoRa UI, no real CAD/LBT here, sense OFF + jitter default for UART).
+- **Follow-up issues / docs needed:** SelectionPolicy (choice rules, autopower, throttling, defaults); autopower algorithm; identity/pairing flow and use of local vs remote disclosure; registry ownership and format (firmware vs mobile vs backend).
 
 ---
 
@@ -175,4 +180,6 @@ When decisions above are stable and reflected in implementation, promote to `doc
 - Policy: [policy/restore-merge-rules-v0.md](policy/restore-merge-rules-v0.md) (restore/merge rules v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157) Step 3).
 - Policy: [policy/persistence-cadence-limits-v0.md](policy/persistence-cadence-limits-v0.md) (persistence cadence & limits v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157) Step 4).
 - Contract: [contract/link-telemetry-minset-v0.md](contract/link-telemetry-minset-v0.md) (Link/Metrics & Telemetry/Health minset v0, [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158)).
+- Registry: [../hardware/registry_hw_capabilities_v0.md](../hardware/registry_hw_capabilities_v0.md) (HW Capabilities registry v0, [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)).
+- Registry: [../radio/registry_radio_profiles_v0.md](../radio/registry_radio_profiles_v0.md) (RadioProfiles & ChannelPlan registry v0, [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)).
 - Issue: [#147 NodeTable — Define & Research (Product WIP)](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
