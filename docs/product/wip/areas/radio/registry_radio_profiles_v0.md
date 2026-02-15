@@ -24,6 +24,7 @@ This doc defines the **RadioProfiles** and **ChannelPlan** registry v0: user-fac
 ## 3) Relation to ChannelPlan: compatibility
 
 - **ChannelPlan** defines channels (e.g. frequency, regulatory region). Each channel (or channel range) can be **tagged** with **compatible RadioProfile(s)**.
+- **What “compatible” means:** A **compatible channel** for a profile is one where nodes on that channel are expected to use mutually decodable air-parameter families for that profile. Different RadioProfiles may use different air-parameter families; therefore they must not share the same channel range by default, to avoid mutual interference and non-visibility.
 - **Switching profile implies channel compatibility:** When the user switches to a given RadioProfile, the valid channel set is **those channels tagged as compatible with that profile**. If the current channel is not compatible with the new profile, the device/app should switch to a compatible channel (or prompt); exact UX is out of scope here.
 - **Registries contain facts:** The RadioProfile registry lists profiles and their semantics (e.g. “LongDist = better range, lower rate”); the ChannelPlan registry (or combined table) lists channels and which profile(s) they support. **SelectionPolicy** (future doc/issue) defines **which** profile/channel to choose under which conditions (autopower, throttling, defaults).
 
@@ -32,7 +33,8 @@ This doc defines the **RadioProfiles** and **ChannelPlan** registry v0: user-fac
 ## 4) Policy boundary
 
 - **Registries:** Contain **facts** — which profiles exist, which channels exist, which profile–channel pairs are valid. No “when to switch” or “default for first boot” here.
-- **SelectionPolicy (future):** Contains **choice rules** — autopower algorithm, throttling under load, default profile/channel for OOTB or after factory reset. Referenced as a follow-up; not defined in this doc.
+- **SelectionPolicy:** Contains **choice rules** — default profile/channel, throttling under load, user-facing effects/advice. See [selection_policy_v0.md](selection_policy_v0.md). Autopower algorithm remains a separate follow-up.
+- **v0 baseline policy:** UART track baseline: channel sense is OFF; collision mitigation via jitter-only. Any “utilization” is an estimate with low confidence.
 
 ---
 
@@ -46,7 +48,7 @@ This doc defines the **RadioProfiles** and **ChannelPlan** registry v0: user-fac
 
 ## 6) Open questions / follow-ups
 
-- **SelectionPolicy:** Separate doc/issue for choice rules (autopower, throttling, default profile/channel).
+- **SelectionPolicy:** Choice rules (defaults, throttling, user advice) are in [selection_policy_v0.md](selection_policy_v0.md).
 - **AutoPower policy:** Node-side tx power adjustment within user bounds; see [autopower_policy_v0.md](autopower_policy_v0.md) ([#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180)).
 - **Channel discovery:** See [policy/channel-discovery-selection-v0.md](policy/channel-discovery-selection-v0.md) ([#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175)) for local scan and future backend heatmap; registry defines compatibility, not discovery flow.
 - **Beacon minset & encoding:** Payload and airtime (e.g. [#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173)) are separate; this registry does not define packet format.
@@ -56,6 +58,7 @@ This doc defines the **RadioProfiles** and **ChannelPlan** registry v0: user-fac
 ## 7) Related
 
 - **HW Capabilities registry:** [../hardware/registry_hw_capabilities_v0.md](../hardware/registry_hw_capabilities_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159).
+- **SelectionPolicy:** [selection_policy_v0.md](selection_policy_v0.md).
 - **AutoPower policy:** [autopower_policy_v0.md](autopower_policy_v0.md) — [#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180).
 - **NodeTable contract:** [../nodetable/index.md](../nodetable/index.md) — [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
 - **Channel discovery & selection (stub):** [policy/channel-discovery-selection-v0.md](policy/channel-discovery-selection-v0.md) — [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175).

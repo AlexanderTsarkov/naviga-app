@@ -145,7 +145,7 @@ Activity expectations are derived from **roles + distance granularity + speed hi
 ## Status (registries #159)
 
 - **Decisions captured (v0):** HW Capabilities registry (hw_profile_id, adapter_type, capability, confidence; local vs remote disclosure; schema rev, unknown hw id → prompt for update) and RadioProfiles + ChannelPlan registry (user abstraction Default/LongDist/Fast; profile–channel compatibility; registries = facts, SelectionPolicy = choice rules; non-goals: no raw LoRa UI, no real CAD/LBT here, sense OFF + jitter default for UART).
-- **Follow-up issues / docs needed:** SelectionPolicy (choice rules, throttling, defaults); identity/pairing flow and use of local vs remote disclosure; registry ownership and format (firmware vs mobile vs backend). AutoPower policy v0: [../radio/autopower_policy_v0.md](../radio/autopower_policy_v0.md) ([#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180)).
+- **Follow-up issues / docs needed:** Identity/pairing flow and use of local vs remote disclosure; registry ownership and format (firmware vs mobile vs backend). SelectionPolicy v0: [../radio/selection_policy_v0.md](../radio/selection_policy_v0.md). AutoPower policy v0: [../radio/autopower_policy_v0.md](../radio/autopower_policy_v0.md) ([#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180)).
 
 ---
 
@@ -182,5 +182,6 @@ When decisions above are stable and reflected in implementation, promote to `doc
 - Contract: [contract/link-telemetry-minset-v0.md](contract/link-telemetry-minset-v0.md) (Link/Metrics & Telemetry/Health minset v0, [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158)).
 - Registry: [../hardware/registry_hw_capabilities_v0.md](../hardware/registry_hw_capabilities_v0.md) (HW Capabilities registry v0, [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)).
 - Registry: [../radio/registry_radio_profiles_v0.md](../radio/registry_radio_profiles_v0.md) (RadioProfiles & ChannelPlan registry v0, [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)).
+- Policy: [../radio/selection_policy_v0.md](../radio/selection_policy_v0.md) (Radio profile/channel selection & throttling v0; consumes [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159), [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158)).
 - Policy: [../radio/autopower_policy_v0.md](../radio/autopower_policy_v0.md) (AutoPower v0 — node-side tx power bounds, hysteresis, fallback; [#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180)).
 - Issue: [#147 NodeTable — Define & Research (Product WIP)](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
