@@ -46,7 +46,7 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](pol
 |------|---------|-------------|-----------------|--------|
 | **BeaconCore** | Minimal sample: WHO + WHERE + freshness. Strict cadence; MUST deliver. | version(1), nodeId(8), seq16(2), positionLat(4), positionLon(4) | — | Smallest possible; **19 B fixed**. Position may use sentinel 0x7FFFFFFF for "not present". |
 | **BeaconTail-1** | Attached-to-Core extension; qualifies one Core sample. | version(1), nodeId(8), core_seq16(2) | posFlags(1), sats(1); then attached fields (hwProfileId, fwVersionId, uptimeSec, etc.) | Receiver applies only if **core_seq16 == lastCoreSeq**; else ignore. See [field_cadence_v0](policy/field_cadence_v0.md) §2. |
-| **BeaconTail-2** | Uncoupled slow state; no CoreRef. | version(1), nodeId(8), maxSilence10s(1) | batteryPercent, hwProfileId, fwVersionId, uptimeSec (optional tail) | Minutes cadence; best-effort. maxSilence10s: uint8, 10s step, clamp ≤ 90 (15 min). Scheduling: **on change + at forced Core** (field_cadence §2). |
+| **BeaconTail-2** | Uncoupled slow state; no CoreRef. | version(1), nodeId(8); operational send may omit maxSilence10s | maxSilence10s(1), batteryPercent, hwProfileId, fwVersionId, uptimeSec (optional tail) | Two scheduling classes: Operational (on change + at forced Core) and Informative (on change + default 10 min). See field_cadence §2.1. |
 
 - **Byte order:** Little-endian for all multi-byte integers.
 - **Version tag:** First byte = payload format version. v0 = `0x00`. Unknown version → discard (per §7).
@@ -86,19 +86,21 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](pol
 
 ### 4.3 BeaconTail-2
 
-**MUST (minimal):** payloadVersion(1) | nodeId(8) | maxSilence10s(1). **Optional (in defined order):** batteryPercent(1), hwProfileId(2), fwVersionId(2), uptimeSec(4); sentinel values 0xFF, 0xFFFF, 0xFFFFFFFF = not present. Fields may be omitted from the end.
+**MUST (minimal):** payloadVersion(1) | nodeId(8). **Optional (in defined order):** maxSilence10s(1), batteryPercent(1), hwProfileId(2), fwVersionId(2), uptimeSec(4); sentinel values 0xFF, 0xFFFF, 0xFFFFFFFF = not present. Fields may be omitted from the end.
+
+**Normative:** **maxSilence10s** is **Tail-2 Informative**. It **MUST NOT** be included on every operational Tail-2 send unless its value changed. Operational Tail-2 sends (on change + at forced Core) may carry only version + nodeId + operational fields; informative fields are sent at informative cadence or on change (see [field_cadence_v0.md](policy/field_cadence_v0.md) §2.1).
 
 | Field | Type | Bytes | Encoding |
 |-------|------|-------|----------|
 | payloadVersion | uint8 | 1 | 0x00 = v0 |
 | nodeId | uint64 | 8 | DeviceId |
-| maxSilence10s | uint8 | 1 | Max silence in 10s steps; clamp ≤ 90 (15 min). 0 = not specified. |
+| maxSilence10s | uint8 | 1 | Informative. Max silence in 10s steps; clamp ≤ 90 (15 min). 0 = not specified. Omit unless changed or at informative cadence. |
 | batteryPercent | uint8 | 1 | 0–100; 0xFF = not present |
 | hwProfileId | uint16 | 2 | 0xFFFF = not present |
 | fwVersionId | uint16 | 2 | 0xFFFF = not present |
 | uptimeSec | uint32 | 4 | 0xFFFFFFFF = not present |
 
-**Minimum size:** **10 bytes.** Maximum (all optional present): 1+8+1+1+2+2+4 = **19 bytes.**
+**Minimum size:** **9 bytes** (version + nodeId only). With maxSilence10s: **10 bytes.** Maximum (all optional present): 1+8+1+1+2+2+4 = **19 bytes.**
 
 ---
 
