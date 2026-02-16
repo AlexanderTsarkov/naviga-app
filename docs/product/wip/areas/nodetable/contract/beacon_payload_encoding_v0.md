@@ -34,77 +34,138 @@ The following **MUST NOT** appear inside the v0 beacon payload:
 - **Rich objects** (nested structures, maps, repeated variable-length fields).
 - **Per-packet mesh/routing state** (hops, via, forwarding tables); that belongs to a different packet type.
 
-**Allowed in v0 beacon:** Fixed-width fields only: version, node_id, uptimeSec, batteryPercent, hwProfileId, fwVersionId, position (fixed encoding). Optionality is expressed by sentinel values (see byte layout).
+**Allowed in v0 beacon:** Fixed-width fields only; split by packet type (Core / Tail-1 / Tail-2) per §3. Optionality within a type is expressed by sentinel values (see byte layouts below).
 
 ---
 
-## 3) Byte layout (v0)
+## 3) Packet types (v0)
 
-- **Byte order:** Little-endian for multi-byte integers.
-- **Version tag:** First byte of payload = **payload format version**. v0 = `0x00`. Receivers **MUST** interpret unknown version per § Versioning/compat.
+Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](policy/field_cadence_v0.md) §2. This section defines the **v0 byte layouts** only.
 
-### 3.1 Field table
+| Type | Purpose | MUST fields | Optional fields | Notes |
+|------|---------|-------------|-----------------|--------|
+| **BeaconCore** | Minimal sample: WHO + WHERE + freshness. Strict cadence; MUST deliver. | version(1), nodeId(8), seq16(2), positionLat(4), positionLon(4) | — | Smallest possible; **19 B fixed**. Position may use sentinel 0x7FFFFFFF for "not present". |
+| **BeaconTail-1** | Attached-to-Core extension; qualifies one Core sample. | version(1), nodeId(8), core_seq16(2) | posFlags(1), sats(1); then attached fields (hwProfileId, fwVersionId, uptimeSec, etc.) | Receiver applies only if **core_seq16 == lastCoreSeq**; else ignore. See [field_cadence_v0](policy/field_cadence_v0.md) §2. |
+| **BeaconTail-2** | Uncoupled slow state; no CoreRef. | version(1), nodeId(8); operational send may omit maxSilence10s | maxSilence10s(1), batteryPercent, hwProfileId, fwVersionId, uptimeSec (optional tail) | Two scheduling classes: Operational (on change + at forced Core) and Informative (on change + default 10 min). See field_cadence §2.1. |
 
-| Field | Type | Bytes | Encoding / scaling | Optionality |
-|-------|------|-------|--------------------|-------------|
-| **payloadVersion** | uint8 | 1 | 0x00 = v0 | MUST |
-| **nodeId** | uint64 | 8 | DeviceId (e.g. ESP32-S3 MCU ID) | MUST |
-| **uptimeSec** | uint32 | 4 | Seconds since boot; 0xFFFFFFFF = not present | Optional |
-| **batteryPercent** | uint8 | 1 | 0–100; 0xFF = not present | Optional |
-| **hwProfileId** | uint16 | 2 | Opaque id from HW registry ([#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)); 0xFFFF = not present | Optional |
-| **fwVersionId** | uint16 | 2 | Opaque id; mapping to display string out of scope; 0xFFFF = not present | Optional |
-| **positionLat** | int32 | 4 | Latitude × 1e7 (WGS84); 0x7FFFFFFF = not present | Optional |
-| **positionLon** | int32 | 4 | Longitude × 1e7 (WGS84); 0x7FFFFFFF = not present | Optional |
-
-**Field order:** Strict. Fields appear in the table order. Optional fields **MAY** be omitted from the end of the payload to save bytes (no trailing 0xFF/0xFFFF/0x7FFFFFFF required if field is omitted). If a field is present, all preceding optional fields are either present or encoded with their sentinel value.
-
-**Omission rule:** Implementations **MAY** truncate the payload after the last field they need. Receiver: absent bytes = field not present; do not overwrite stored value (per minset “missing values do not erase”).
-
-### 3.2 Minimum and maximum encoded size
-
-- **Minimum (v0):** 9 bytes (payloadVersion + nodeId only).
-- **Maximum (v0, all fields present):** 1+8+4+1+2+2+4+4 = **26 bytes**. Fits within all profile-class budgets below.
+- **Byte order:** Little-endian for all multi-byte integers.
+- **Version tag:** First byte = payload format version. v0 = `0x00`. Unknown version → discard (per §7).
 
 ---
 
-## 4) Examples
+## 4) Byte layouts by packet type
 
-### 4.1 Minimal (9 bytes): version + node_id only
+### 4.1 BeaconCore
+
+**Strict order:** payloadVersion(1) | nodeId(8) | seq16(2) | positionLat(4) | positionLon(4).
+
+| Field | Type | Bytes | Encoding |
+|-------|------|-------|----------|
+| payloadVersion | uint8 | 1 | 0x00 = v0 |
+| nodeId | uint64 | 8 | DeviceId (e.g. ESP32-S3 MCU ID) |
+| seq16 | uint16 | 2 | Freshness; monotonic per node. Little-endian. |
+| positionLat | int32 | 4 | Latitude × 1e7 (WGS84); 0x7FFFFFFF = not present |
+| positionLon | int32 | 4 | Longitude × 1e7 (WGS84); 0x7FFFFFFF = not present |
+
+**Size:** **19 bytes** (fixed). Fits within LongDist (24), Default (32), Fast (40).
+
+### 4.2 BeaconTail-1
+
+**MUST (minimum):** payloadVersion(1) | nodeId(8) | core_seq16(2). **Optional (in order):** posFlags(1), sats(1); then other attached fields (order TBD; same sentinel conventions). Receiver **MUST** apply payload only if **core_seq16** equals the last Core seq16 received from that node; otherwise **MUST** ignore. See [field_cadence_v0.md](policy/field_cadence_v0.md) §2.
+
+| Field | Type | Bytes | Encoding |
+|-------|------|-------|----------|
+| payloadVersion | uint8 | 1 | 0x00 = v0 |
+| nodeId | uint64 | 8 | DeviceId |
+| core_seq16 | uint16 | 2 | seq16 of the Core sample this Tail-1 qualifies. Little-endian. |
+| posFlags | uint8 | 1 | Position-valid / quality flags; 0 = not present or no fix. Optional. |
+| sats | uint8 | 1 | Satellite count when position valid; 0 = not present. Optional. |
+| (optional attached fields) | — | TBD | hwProfileId, fwVersionId, uptimeSec, etc.; sentinel conventions as elsewhere. |
+
+**Minimum size:** **11 bytes.** With posFlags+sats: 13 bytes.
+
+### 4.3 BeaconTail-2
+
+**MUST (minimal):** payloadVersion(1) | nodeId(8). **Optional (in defined order):** maxSilence10s(1), batteryPercent(1), hwProfileId(2), fwVersionId(2), uptimeSec(4); sentinel values 0xFF, 0xFFFF, 0xFFFFFFFF = not present. Fields may be omitted from the end.
+
+**Normative:** **maxSilence10s** is **Tail-2 Informative**. It **MUST NOT** be included on every operational Tail-2 send unless its value changed. Operational Tail-2 sends (on change + at forced Core) may carry only version + nodeId + operational fields; informative fields are sent at informative cadence or on change (see [field_cadence_v0.md](policy/field_cadence_v0.md) §2.1).
+
+| Field | Type | Bytes | Encoding |
+|-------|------|-------|----------|
+| payloadVersion | uint8 | 1 | 0x00 = v0 |
+| nodeId | uint64 | 8 | DeviceId |
+| maxSilence10s | uint8 | 1 | Informative. Max silence in 10s steps; clamp ≤ 90 (15 min). 0 = not specified. Omit unless changed or at informative cadence. |
+| batteryPercent | uint8 | 1 | 0–100; 0xFF = not present |
+| hwProfileId | uint16 | 2 | 0xFFFF = not present |
+| fwVersionId | uint16 | 2 | 0xFFFF = not present |
+| uptimeSec | uint32 | 4 | 0xFFFFFFFF = not present |
+
+**Minimum size:** **9 bytes** (version + nodeId only). With maxSilence10s: **10 bytes.** Maximum (all optional present): 1+8+1+1+2+2+4 = **19 bytes.**
+
+---
+
+## 5) Examples
+
+### 5.1 BeaconCore (19 B): with position
 
 | Field | Value | Bytes (hex) |
 |-------|--------|-------------|
 | payloadVersion | 0 | 00 |
 | nodeId | 0x0123_4567_89AB_CDEF | EF CD AB 89 67 45 23 01 |
+| seq16 | 1 | 01 00 |
+| positionLat | 55.7558° × 1e7 = 557558000 | F0 A8 3B 21 |
+| positionLon | 37.6173° × 1e7 = 376173000 | C8 F1 6B 16 |
 
-**Full hex:** `00 EF CD AB 89 67 45 23 01`
+**Full hex:** `00 EF CD AB 89 67 45 23 01 01 00 F0 A8 3B 21 C8 F1 6B 16`
 
-### 4.2 With uptime and battery (14 bytes)
+### 5.2 BeaconCore (19 B): position not present
 
 | Field | Value | Bytes (hex) |
 |-------|--------|-------------|
 | payloadVersion | 0 | 00 |
 | nodeId | 0x0123_4567_89AB_CDEF | EF CD AB 89 67 45 23 01 |
-| uptimeSec | 300 | E4 01 00 00 |
+| seq16 | 42 | 2A 00 |
+| positionLat | not present (0x7FFFFFFF) | FF FF FF 7F |
+| positionLon | not present (0x7FFFFFFF) | FF FF FF 7F |
+
+**Full hex:** `00 EF CD AB 89 67 45 23 01 2A 00 FF FF FF 7F FF FF FF 7F`
+
+### 5.3 BeaconTail-1 (13 B): core_seq16 + posFlags + sats
+
+| Field | Value | Bytes (hex) |
+|-------|--------|-------------|
+| payloadVersion | 0 | 00 |
+| nodeId | 0x0123_4567_89AB_CDEF | EF CD AB 89 67 45 23 01 |
+| core_seq16 | 1 (matches last Core) | 01 00 |
+| posFlags | 0x01 (position valid) | 01 |
+| sats | 8 | 08 |
+
+**Full hex:** `00 EF CD AB 89 67 45 23 01 01 00 01 08`
+
+### 5.4 BeaconTail-2 (10 B): minimal
+
+| Field | Value | Bytes (hex) |
+|-------|--------|-------------|
+| payloadVersion | 0 | 00 |
+| nodeId | 0x0123_4567_89AB_CDEF | EF CD AB 89 67 45 23 01 |
+| maxSilence10s | 9 (90 s) | 09 |
+
+**Full hex:** `00 EF CD AB 89 67 45 23 01 09`
+
+### 5.5 BeaconTail-2 (14 B): with battery
+
+| Field | Value | Bytes (hex) |
+|-------|--------|-------------|
+| payloadVersion | 0 | 00 |
+| nodeId | 0x0123_4567_89AB_CDEF | EF CD AB 89 67 45 23 01 |
+| maxSilence10s | 6 (60 s) | 06 |
 | batteryPercent | 85 | 55 |
 
-**Full hex:** `00 EF CD AB 89 67 45 23 01 E4 01 00 00 55`
-
-### 4.3 With hwProfileId and fwVersionId (18 bytes)
-
-| Field | Value | Bytes (hex) |
-|-------|--------|-------------|
-| payloadVersion | 0 | 00 |
-| nodeId | 0x0123_4567_89AB_CDEF | EF CD AB 89 67 45 23 01 |
-| uptimeSec | 300 | E4 01 00 00 |
-| batteryPercent | 85 | 55 |
-| hwProfileId | 1 | 01 00 |
-| fwVersionId | 2 | 02 00 |
-
-**Full hex:** `00 EF CD AB 89 67 45 23 01 E4 01 00 00 55 01 00 02 00`
+**Full hex:** `00 EF CD AB 89 67 45 23 01 06 55`
 
 ---
 
-## 5) Payload budgets per RadioProfile class
+## 6) Payload budgets per RadioProfile class
 
 Payload size (in bytes) **MUST NOT** exceed the budget for the **RadioProfile class** in use for that beacon. Profile classes are defined in [registry_radio_profiles_v0.md](../../radio/registry_radio_profiles_v0.md) (Default / LongDist / Fast).
 
@@ -120,15 +181,16 @@ Payload size (in bytes) **MUST NOT** exceed the budget for the **RadioProfile cl
 
 ---
 
-## 6) Versioning / compat (v0 → v0.x)
+## 7) Versioning / compat (v0 → v0.x)
 
 - **Unknown version byte:** If the first byte is not a known payload version (e.g. not 0x00 for v0), the receiver **MUST** discard the payload for NodeTable update purposes (do not overwrite node-owned fields from that packet). Optionally log or pass to debug; no normative interpretation.
 - **v0.x:** Reserved for backward-compatible extensions (e.g. new optional fields at end, or new version byte with same semantics for existing fields). Future doc will define v0.x if needed; until then, only 0x00 is valid.
 
 ---
 
-## 7) Related
+## 8) Related
 
+- **Field cadence (Core/Tail semantics):** [policy/field_cadence_v0.md](policy/field_cadence_v0.md) — §2 Beacon split definitions; receiver rule for Tail-1.
 - **Minset (field semantics):** [link-telemetry-minset-v0.md](link-telemetry-minset-v0.md) — [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158)
 - **RadioProfiles & ChannelPlan:** [../../radio/registry_radio_profiles_v0.md](../../radio/registry_radio_profiles_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)
 - **NodeTable hub:** [../index.md](../index.md) — [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)

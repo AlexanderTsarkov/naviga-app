@@ -22,7 +22,14 @@ This policy defines the **v0 mapping** of NodeTable-related fields into delivery
 | **B** | Tail-1 | Operational data; delay-tolerant (seconds–minutes). Capability/version and timing hints. | Degraded diagnostics; core tracking still works. |
 | **C** | Tail-2 | Slow/diagnostic (minutes) or event-driven. Health, power hints. | Only diagnostics/UX suffer. |
 
-**Freshness marker (Tier A):** Tier A **MUST** include a **freshness marker** (e.g. sequence number or monotonic tick) so receivers can order updates and detect staleness. The **exact encoding** (e.g. seq8 vs seq16, placement in payload) is an **explicit decision point** and is **TBD** in a follow-up; this policy only states that Core contains it. See § Open decisions.
+**Freshness marker (Tier A):** Tier A **MUST** include a **freshness marker** (e.g. sequence number or monotonic tick) so receivers can order updates and detect staleness. **seq16** is canonical; byte layout in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §4.1. Tail-1 **MUST** carry **core_seq16** when sent separately; receiver applies only if core_seq16 == lastCoreSeq (CoreRef-lite). See encoding §4.2.
+
+### 2.1 Tail-2 scheduling classes (v0)
+
+Tail-2 (BeaconTail-2) is split into two scheduling classes:
+
+- **Tail-2 Operational:** Send **on change** (when any operational Tail-2 field value changes) **and at forced Core** (at least every N Core beacons as fallback; N and bootstrap/backoff are implementation-defined within product constraints). Keeps operational Tail-2 state eventually consistent without a fixed slow interval.
+- **Tail-2 Informative:** Bootstrap/backoff → fixed cadence (default **10 min**), **and on change**. Informative fields (e.g. maxSilence10s) are sent at the informative cadence or when the value changes; they **MUST NOT** be required on every operational Tail-2 send.
 
 ---
 
@@ -38,7 +45,7 @@ Source: fields from [link-telemetry-minset](../contract/link-telemetry-minset-v0
 | **hwProfileId** | B | Every N Core beacons OR every 60–120 s | Encoding, minset | Operational; capability lookup. |
 | **fwVersionId** | B/C | Every 60–120 s (B) or 10 min (C) | Encoding, minset | Operational/diagnostic. |
 | **uptimeSec** | B | Every 60–120 s | Encoding, minset | Timing; operational. |
-| **maxSilence indicator** (or equivalent) | A/B | Every beacon tick (A) or every N Core (B) | Policy/NodeTable | Helps activity/staleness; exact placement TBD. |
+| **maxSilence10s** | C | Tail-2 Informative: on change + every 10 min (bootstrap allowed) | Encoding §4.3, Policy | Helps activity/staleness; uint8, 10s steps, clamp ≤ 90. Not sent on every operational Tail-2. |
 | **batteryPercent** | C | Every 10 min OR event-driven | Encoding, minset | Diagnostic; slow. |
 | **txPowerStep hint** | B/C | Stub; 60–120 s or 10 min if used | Policy stub | Optional; diagnostic. |
 
@@ -90,7 +97,7 @@ Source: fields from [link-telemetry-minset](../contract/link-telemetry-minset-v0
 ## 8) Open decisions (explicit)
 
 - **Freshness marker encoding:** Tier A MUST include a freshness marker; **exact encoding (e.g. seq8 vs seq16, field order)** is **TBD** and will be decided in a follow-up (encoding doc or separate decision). Discoverable here so implementers do not invent ad hoc.
-- **Align beacon encoding with Core/Tail:** Once freshness and maxSilence are decided, [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) may be updated to reflect Core vs Tail split (no layout change in this step).
+- **Beacon encoding:** Core/Tail split and byte layouts are in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §3–5 (Core 19 B, Tail-1 core_seq16 + optional posFlags/sats, Tail-2 maxSilence10s; Tail-2 scheduling per §2.1 above).
 
 ---
 
