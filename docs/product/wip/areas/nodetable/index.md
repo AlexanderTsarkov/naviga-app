@@ -45,6 +45,7 @@ NodeTable is the **single source of truth / knowledge about all nodes (including
 - **networkName** — Broadcast by the node; optional; has priority when present.
 - **localAlias** — User-defined on the phone for a DeviceId.
 - **Effective display name precedence:** `networkName` > `localAlias` > `ShortId` (+ suffix if collision).
+- **v0 constraint:** No human-readable names over radio in v0. **networkName** is not broadcast in v0 (excluded from Beacon Core/Tail-1/Tail-2 and from OOTB public); precedence applies only where networkName exists (e.g. future session-join or local cache). **localAlias** and **ShortId** are local-only; not sent.
 
 ---
 
