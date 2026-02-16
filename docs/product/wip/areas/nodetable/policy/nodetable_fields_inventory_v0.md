@@ -47,9 +47,9 @@ All rows cite at least one source doc. **Proposed Tier**, **Default cadence**, a
 | **snrAvg** | EWMA of SNR; recomputed after restore. | [link-telemetry-minset-v0.md](../contract/link-telemetry-minset-v0.md) Table A | Radio/Link | Derived | Uncoupled | No | (owner) | (owner) | — | — | Derived; not persisted as source. |
 | **linkQuality** | Derived score from RSSI/SNR/rate; recomputed after restore. | [link-telemetry-minset-v0.md](../contract/link-telemetry-minset-v0.md) Table A | Radio/Link | Derived | Uncoupled | No | (owner) | (owner) | — | — | Derived; not persisted as source. |
 | **lastOriginSeqSeen** | Last sequence number seen from that origin; stream-level. | [index.md](../index.md) §9, §10 | Freshness | Derived | Uncoupled | No | (owner) | (owner) | — | — | NodeTable stream metadata; not per-packet. |
-| **ShortId** | Display id derived from DeviceId (e.g. CRC16); may collide. | [index.md](../index.md) §3, Glossary | Identity | Derived | Uncoupled | No | (owner) | (owner) | — | — | Not sent; derived from nodeId. |
-| **networkName** | Broadcast by node; optional; display precedence. | [index.md](../index.md) §4 | Identity | Sent | Uncoupled | No | (owner) | (owner) | Other/TBD | — | Banned from v0 beacon (encoding doc). |
-| **localAlias** | User-defined on phone for a DeviceId. | [index.md](../index.md) §4 | Identity | Other | Uncoupled | No | (owner) | (owner) | — | — | Local only; not in beacon. |
+| **ShortId** | Display id derived from DeviceId (e.g. CRC16); may collide. | [index.md](../index.md) §3, Glossary | Identity | Derived | Uncoupled | No | — | — | — | — | Derived local display only; not sent in v0. |
+| **networkName** | Concept: broadcast name; optional; display precedence when present. | [index.md](../index.md) §4 | Identity | Sent (concept) | Uncoupled | No | — | — | — | — | NOT sent in v0 beacon; MUST NOT be used on OOTB public; future session-join exchange. |
+| **localAlias** | User-defined on phone for a DeviceId. | [index.md](../index.md) §4 | Identity | Other | Uncoupled | No | — | — | — | — | Local-only; not sent over radio. |
 | **activityState** | Derived: Online / Uncertain / Stale / Archived. | [index.md](../index.md) §5 | Quality | Derived | Uncoupled | No | (owner) | (owner) | — | — | Derived from lastSeenAge vs policy boundary. |
 | **lastSeenAge** | Time since last RX; used for activity derivation. | [index.md](../index.md) §5, Glossary | Quality | Derived | Uncoupled | No | (owner) | (owner) | — | — | Derived from lastRxAt. |
 | **PositionQuality** (age, satCount, hdop, etc.) | Position quality; age required; source-tagged. | [index.md](../index.md) §6 | Position | Sent or Derived | Attached-to-Core | Yes | (owner) | (owner) | (owner) | — | Not in current encoding layout. |
@@ -66,3 +66,4 @@ All rows cite at least one source doc. **Proposed Tier**, **Default cadence**, a
 - [ ] **Mesh-lite beacon-only forwarding v0;** extras direct-link only (no relays).
 - [ ] **Proposed Tier / cadence / packet placement** filled for all fields that are sent in beacon; receiver-only fields need no packet placement.
 - [ ] **Encoding alignment:** Once owner decisions are stable, [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) and [field_cadence_v0.md](field_cadence_v0.md) updated as needed (no layout change in this worksheet step).
+- [ ] **v0 role:** Role (human dongle vs dog collar vs infra) is derived from **hwProfileId** in v0; hunting subroles are session-only future.
