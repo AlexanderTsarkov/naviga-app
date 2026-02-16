@@ -1,40 +1,114 @@
 # Product Spec Map v0
 
-**Snapshot:** 2026-02-15  
+**Snapshot:** 2026-02-16  
 **Status:** WIP index only (not implementation requirements).  
 **Canonical specs:** `docs/product/wip/areas/`
 
 ---
 
+## Dashboard
+
+*Read this first: what’s decided, in progress, open, next, and what blocks the first vertical slice.*
+
+| Bucket | What |
+|--------|------|
+| **Decided** | WIP doc captures v0 decisions; rules clear. No open design choices blocking. |
+| **In progress** | Doc or issue exists; follow-up work or dependency in flight. |
+| **Open** | Open questions that block progress (need doc or issue). |
+| **Next** | Next 3–5 docs-only tasks (proposed); see § Next issues. |
+| **Blockers for first vertical slice** | Table below; each has issue link and status. |
+
+### Decided (canonicalized in WIP)
+
+- **Registry** — [distribution_ownership_v0](areas/registry/distribution_ownership_v0.md): source of truth, bundling, schema rev, BT vs registry merge ([#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184)).
+- **Radio policy** — [selection_policy_v0](areas/radio/selection_policy_v0.md), [autopower_policy_v0](areas/radio/autopower_policy_v0.md), [traffic_model_v0](areas/radio/policy/traffic_model_v0.md): choice rules, throttling, AutoPower, traffic model (OOTB vs Session/Group, frame limits) ([#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159), [#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180)).
+- **Identity pairing** — [pairing_flow_v0](areas/identity/pairing_flow_v0.md): node_id, first-time/NFC, many-nodes, switch-confirm ([#182](https://github.com/AlexanderTsarkov/naviga-app/issues/182)).
+- **Hardware registry** — [registry_hw_capabilities_v0](areas/hardware/registry_hw_capabilities_v0.md): hw_profile_id, adapter_type, confidence, local vs remote ([#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)).
+
+### In progress (doc/issue + status)
+
+- **NodeTable hub** — [areas/nodetable/index.md](areas/nodetable/index.md) · Doc · [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
+- **NodeTable contract** — [link-telemetry-minset-v0](areas/nodetable/contract/link-telemetry-minset-v0.md) · Doc · [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159).
+- **Beacon payload encoding** — [beacon_payload_encoding_v0](areas/nodetable/contract/beacon_payload_encoding_v0.md) · Doc · [#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173) (contract done).
+- **Field cadence v0** — [field_cadence_v0](areas/nodetable/policy/field_cadence_v0.md) · Doc · [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) (Core/Tail tiers, cadences, role modifiers).
+- **Radio registry** — [registry_radio_profiles_v0](areas/radio/registry_radio_profiles_v0.md) · Doc · [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) (channel discovery).
+- **Identity secure claim** — [secure_claim_concept_v0](areas/identity/secure_claim_concept_v0.md) · Stub · [#187](https://github.com/AlexanderTsarkov/naviga-app/issues/187).
+- **Firmware lifecycle** — issue-only · [#186](https://github.com/AlexanderTsarkov/naviga-app/issues/186) (spec TBD).
+
+### Open (what blocks progress)
+
+- Channel list source & local discovery flow → [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175).
+- Registry bundle format (path, JSON vs per-registry files) → implementation choice under [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184); doc update TBD.
+- Secure claim protocol & threat model (if required for v1) → [#187](https://github.com/AlexanderTsarkov/naviga-app/issues/187); stub only today.
+- NodeTable implementation order / wiring for first slice → [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
+
+### Next (see § Next issues)
+
+Next 3–5 docs-only tasks are listed in **Next issues (proposed)** below; they reflect current spec_map state, not aspirational backlog.
+
+---
+
 ## 1) Inventory
 
-| Area | Doc | Status | Defines | Depends on | Follow-ups (issues) | Blocker for v1 slice? |
-|------|-----|--------|---------|------------|---------------------|------------------------|
-| WIP context | [README.md](README.md) | — | WIP statuses, promotion rule | — | — | N |
-| NodeTable | [areas/nodetable/index.md](areas/nodetable/index.md) | v0 | Spec hub/index for NodeTable area (links, scope, follow-ups) | Policies, registries, contracts below | #147 | **Likely Y** — central contract; many consumers. |
-| NodeTable contract | [areas/nodetable/contract/link-telemetry-minset-v0.md](areas/nodetable/contract/link-telemetry-minset-v0.md) | v0 | Link/Metrics & Telemetry/Health minset (#158) | Source precedence, snapshot/restore | #173 (beacon encoding), #159 (registries) | **Likely Y** — payload/encoding deferred; needed for first slice. |
-| Hardware | [areas/hardware/registry_hw_capabilities_v0.md](areas/hardware/registry_hw_capabilities_v0.md) | v0 | HW capabilities (hw_profile_id, adapter_type, confidence, local vs remote) | — | #184 (distribution) | N — registry exists; distribution doc covers bundling. |
-| Radio | [areas/radio/registry_radio_profiles_v0.md](areas/radio/registry_radio_profiles_v0.md) | v0 | RadioProfiles & ChannelPlan (Default/LongDist/Fast, profile–channel compatibility) | HW registry | #175 (channel discovery) | **Likely Y** — channel list/source and discovery flow not fully specified. |
-| Registry | [areas/registry/distribution_ownership_v0.md](areas/registry/distribution_ownership_v0.md) | v0 | Distribution & ownership (source of truth, bundling, schema rev, BT vs registry merge) | HW + Radio registries | — | N — rules clear; implementation path open. |
-| Radio policy | [areas/radio/selection_policy_v0.md](areas/radio/selection_policy_v0.md) | v0 | SelectionPolicy (default profile/channel, throttling, user advice) | #159, #158 | #180 (AutoPower) | N — policy defined; AutoPower separate. |
-| Radio policy | [areas/radio/autopower_policy_v0.md](areas/radio/autopower_policy_v0.md) | v0 | AutoPower (node-side tx power, bounds, hysteresis, fallback) | #159, #158 | — | N — concept doc; implementation follows. |
-| Identity | [areas/identity/pairing_flow_v0.md](areas/identity/pairing_flow_v0.md) | v0 | Pairing flow (node_id, first-time/NFC connect, many-nodes, switch-confirm) | NodeTable identity, HW registry | #187 (secure claim) | N — flow defined; secure claim is future. |
-| Identity | [areas/identity/secure_claim_concept_v0.md](areas/identity/secure_claim_concept_v0.md) | stub | Secure claim/provisioning (threat model + concept placeholder) | Pairing flow | — | **Likely Y** — stub only; anti-spoofing/ownership not specified if required for v1. |
-| Firmware lifecycle | [#186](https://github.com/AlexanderTsarkov/naviga-app/issues/186) | issue-only | FW update via app flow (sealed device) — spec TBD | BLE connection/pairing | #186 | N — not required for v1 slice unless explicitly chosen. |
+| Area | Doc | Kind | Status | Defines | Depends on | Follow-up (issue) | Owner | Blocker for v1 slice? | Promotion note |
+|------|-----|------|--------|---------|------------|-------------------|-------|------------------------|----------------|
+| WIP context | [README.md](README.md) | — | — | WIP statuses, promotion rule | — | — | — | N | — |
+| NodeTable | [areas/nodetable/index.md](areas/nodetable/index.md) | Doc | v0 | Spec hub for NodeTable (links, scope, follow-ups) | Policies, registries, contracts below | [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) | — | **Y** — central contract; many consumers | [Promotion criteria](areas/nodetable/index.md#promotion-criteria-wip--canon) in area hub |
+| NodeTable contract | [areas/nodetable/contract/link-telemetry-minset-v0.md](areas/nodetable/contract/link-telemetry-minset-v0.md) | Doc | v0 | Link/Metrics & Telemetry/Health minset (#158) | Source precedence, snapshot/restore | [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159) | — | N — encoding doc exists | — |
+| Beacon payload encoding | [areas/nodetable/contract/beacon_payload_encoding_v0.md](areas/nodetable/contract/beacon_payload_encoding_v0.md) | Doc | v0 | Byte layout, payload budgets, profile coupling (#173) | Minset, RadioProfiles registry | — | — | N — [#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173) doc done | — |
+| NodeTable policy | [areas/nodetable/policy/field_cadence_v0.md](areas/nodetable/policy/field_cadence_v0.md) | Doc | v0 | Field criticality & cadence: Core/Tail-1/Tail-2 tiers, cadences, degrade order, mesh priority, DOG_COLLAR vs HUMAN | Traffic model, minset, encoding | [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) | — | N | Align encoding with Core/Tail when freshness decided |
+| Hardware | [areas/hardware/registry_hw_capabilities_v0.md](areas/hardware/registry_hw_capabilities_v0.md) | Doc | v0 | HW capabilities (hw_profile_id, adapter_type, confidence, local vs remote) | — | [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184) (distribution) | — | N | — |
+| Radio | [areas/radio/registry_radio_profiles_v0.md](areas/radio/registry_radio_profiles_v0.md) | Doc | v0 | RadioProfiles & ChannelPlan (Default/LongDist/Fast, profile–channel compatibility) | HW registry | [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) (channel discovery) | — | **Y** — channel list/source and discovery flow not fully specified | — |
+| Registry | [areas/registry/distribution_ownership_v0.md](areas/registry/distribution_ownership_v0.md) | Doc | v0 | Distribution & ownership (source of truth, bundling, schema rev, BT vs registry merge) | HW + Radio registries | — | — | N | — |
+| Radio policy | [areas/radio/selection_policy_v0.md](areas/radio/selection_policy_v0.md) | Doc | v0 | SelectionPolicy (default profile/channel, throttling, user advice) | #159, #158 | [#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180) (AutoPower) | — | N | — |
+| Radio policy | [areas/radio/autopower_policy_v0.md](areas/radio/autopower_policy_v0.md) | Doc | v0 | AutoPower (node-side tx power, bounds, hysteresis, fallback) | #159, #158 | — | — | N | — |
+| Radio policy | [areas/radio/policy/traffic_model_v0.md](areas/radio/policy/traffic_model_v0.md) | Doc | v0 | Traffic model: OOTB public vs Session/Group packet classes; ProductMaxFrameBytes=96; no fragmentation | Beacon encoding, NodeTable | — | — | N | Reference for cadence/mesh decisions |
+| Identity | [areas/identity/pairing_flow_v0.md](areas/identity/pairing_flow_v0.md) | Doc | v0 | Pairing flow (node_id, first-time/NFC connect, many-nodes, switch-confirm) | NodeTable identity, HW registry | [#187](https://github.com/AlexanderTsarkov/naviga-app/issues/187) (secure claim) | — | N | — |
+| Identity | [areas/identity/secure_claim_concept_v0.md](areas/identity/secure_claim_concept_v0.md) | Stub | stub | Secure claim/provisioning (threat model + concept placeholder) | Pairing flow | — | — | **Y** — stub only; anti-spoofing/ownership not specified if required for v1 | — |
+| Firmware lifecycle | [#186](https://github.com/AlexanderTsarkov/naviga-app/issues/186) | Issue | issue-only | FW update via app flow (sealed device) — spec TBD | BLE connection/pairing | [#186](https://github.com/AlexanderTsarkov/naviga-app/issues/186) | — | N | — |
+
+*Kind: Doc = WIP spec doc; Stub = placeholder/concept only; Issue = issue-only, no doc yet. Owner: set when needed for accountability.*
 
 ---
 
-## 2) Likely blockers for first vertical slice
+## 2) Blockers for first vertical slice
 
-1. **Beacon payload & encoding** — Link/telemetry minset defines fields but not byte layout or airtime; [#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173) is the follow-up. Likely blocker for any slice that sends/receives beacons.
-2. **NodeTable as central consumer** — Many policies and contracts depend on NodeTable; implementation order and wiring may block until NodeTable shape is fixed. Likely blocker for a single “end-to-end” slice.
-3. **Channel discovery & selection** — Radio registry defines profile–channel compatibility; channel list source and local discovery flow are in [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175). Likely blocker if v1 slice requires user-selectable channels.
-4. **Secure claim (stub)** — If v1 slice must enforce ownership or resist spoofing, the secure claim doc is stub-only; no threat model or protocol yet. Likely blocker only if product requires it for first slice.
-5. **Registry bundle format** — Distribution doc states “bundled with app” but exact path/format (JSON, per-registry files) is implementation-defined. Likely blocker for app-side registry consumption until chosen.
+| Blocker | Issue | Status | Blocks |
+|---------|-------|--------|--------|
+| Beacon payload & encoding (byte layout, airtime) | [#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173) | Doc | Encoding contract done; implementation/validation in progress |
+| NodeTable as central consumer (implementation order, wiring) | [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) | In progress | Single end-to-end slice until shape fixed |
+| Channel discovery & selection (channel list source, local discovery flow) | [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) | Open | v1 slice if user-selectable channels required |
+| Secure claim (stub; threat model / protocol TBD) | [#187](https://github.com/AlexanderTsarkov/naviga-app/issues/187) | Stub | Only if product requires ownership/anti-spoofing for first slice |
+| Registry bundle format (path, JSON vs per-registry; implementation-defined today) | [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184) (or follow-up) | Open | App-side registry consumption until chosen |
 
 ---
 
-## 3) Related
+## 3) Next issues (proposed)
+
+List of next docs-only tasks that align with this map. Update when spec_map or priorities change.
+
+1. **[#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173)** — Beacon payload & encoding: contract done ([beacon_payload_encoding_v0.md](areas/nodetable/contract/beacon_payload_encoding_v0.md)); implementation/validation next.
+2. **[#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175)** — Channel discovery & selection (channel list source, local discovery flow).
+3. **[#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184)** — Registry distribution (bundle format/path doc update if needed).
+4. **[#187](https://github.com/AlexanderTsarkov/naviga-app/issues/187)** — Secure claim: expand stub to threat model + protocol outline if required for v1.
+5. **#147 / NodeTable** — Implementation order and wiring for first vertical slice (docs/decisions, not code).
+6. **Field cadence → encoding:** Align [beacon_payload_encoding_v0](areas/nodetable/contract/beacon_payload_encoding_v0.md) with Core/Tail tiers once freshness marker encoding (seq8 vs seq16) is decided ([field_cadence_v0](areas/nodetable/policy/field_cadence_v0.md)).
+
+*Traffic model v0 ([traffic_model_v0.md](areas/radio/policy/traffic_model_v0.md)) is the reference for later cadence/mesh policy decisions.*
+
+---
+
+## 4) Related
 
 - Umbrella: [#147 NodeTable — Define & Research](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 - Canon areas: [areas/](areas/)
+
+---
+
+**Last updated:** 2026-02-16
+
+**Changelog:**
+- 2026-02-16: Field cadence v0 added ([field_cadence_v0.md](areas/nodetable/policy/field_cadence_v0.md)). Core/Tail-1/Tail-2 tiers, cadences, degrade order, mesh priority, DOG_COLLAR vs HUMAN. Freshness marker (seq) TBD. Spec_map: Inventory + In progress + Next; encoding doc: Core/Tail ref.
+- 2026-02-16: Traffic model v0 added ([traffic_model_v0.md](areas/radio/policy/traffic_model_v0.md)). OOTB public vs Session/Group packet classes; ProductMaxFrameBytes=96; no fragmentation. Dashboard Decided + Inventory + Next reference.
+- 2026-02-16: Beacon payload encoding v0 added ([beacon_payload_encoding_v0.md](areas/nodetable/contract/beacon_payload_encoding_v0.md)). #173 blocker status → Doc. Minset updated to reference encoding doc. Inventory: Beacon payload encoding row; NodeTable contract blocker cleared.
+- 2026-02-16: Dashboard added (Decided / In progress / Open / Next). Inventory: Kind + Promotion note column; follow-up issues as links. Blockers moved to table with issue links. Next issues (proposed) added. Last updated + changelog at end.
