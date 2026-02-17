@@ -42,6 +42,8 @@ Source: fields from [link-telemetry-minset](../contract/link-telemetry-minset-v0
 | **nodeId** | A | Every beacon tick | Encoding | WHO; identity is required. |
 | **positionLat** / **positionLon** (and position-valid semantics) | A | Every beacon tick when position valid | Encoding, NodeTable | WHERE; core for map. |
 | **freshness marker** (seq or equivalent) | A | Every beacon tick | TBD (decision point) | Ordering and staleness; required for Core. |
+| **posFlags** | B | Every Tail-1 (when position valid or every Tail-1) | Encoding §4.2, [position_quality_v0](position_quality_v0.md) | Position quality attached to Core sample. |
+| **sats** | B | Every Tail-1 (when position valid or every Tail-1) | Encoding §4.2, [position_quality_v0](position_quality_v0.md) | Position quality attached to Core sample. |
 | **hwProfileId** | B | Every N Core beacons OR every 60–120 s | Encoding, minset | Operational; capability lookup. |
 | **fwVersionId** | B/C | Every 60–120 s (B) or 10 min (C) | Encoding, minset | Operational/diagnostic. |
 | **uptimeSec** | B | Every 60–120 s | Encoding, minset | Timing; operational. |
