@@ -71,7 +71,7 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](pol
 
 ### 4.2 BeaconTail-1
 
-**MUST (minimum):** payloadVersion(1) | nodeId(8) | core_seq16(2). **Optional (in order):** posFlags(1), sats(1); then other attached fields (order TBD; same sentinel conventions). Receiver **MUST** apply payload only if **core_seq16** equals the last Core seq16 received from that node; otherwise **MUST** ignore. See [field_cadence_v0.md](policy/field_cadence_v0.md) §2.
+**MUST (minimum):** payloadVersion(1) | nodeId(8) | core_seq16(2). **Optional (in order):** posFlags(1), sats(1); then other attached fields (order TBD; same sentinel conventions). **posFlags** and **sats** are the canonical position-quality fields for Tail-1 (sample-attached); derivation of PositionQuality state is in [position_quality_v0.md](policy/position_quality_v0.md). Receiver **MUST** apply payload only if **core_seq16** equals the last Core seq16 received from that node; otherwise **MUST** ignore. See [field_cadence_v0.md](policy/field_cadence_v0.md) §2.
 
 | Field | Type | Bytes | Encoding |
 |-------|------|-------|----------|
