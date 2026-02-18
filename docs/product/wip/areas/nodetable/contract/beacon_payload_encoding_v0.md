@@ -34,7 +34,7 @@ The following **MUST NOT** appear inside the v0 beacon payload:
 - **Rich objects** (nested structures, maps, repeated variable-length fields).
 - **Per-packet mesh/routing state** (hops, via, forwarding tables); that belongs to a different packet type.
 
-**Allowed in v0 beacon:** Fixed-width fields only; split by packet type (Core / Tail-1 / Tail-2) per §3. Optionality within a type is expressed by sentinel values (see byte layouts below).
+**Allowed in v0 beacon:** Fixed-width fields only; split by packet type (Core / Tail-1 / Tail-2) per §3. Optionality within a type is expressed by sentinel values where defined (Tail-2, optional Tail-1 fields); BeaconCore position has no sentinel — Core is transmitted only with valid fix (§3.1).
 
 ---
 
@@ -44,7 +44,7 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](pol
 
 | Type | Purpose | MUST fields | Optional fields | Notes |
 |------|---------|-------------|-----------------|--------|
-| **BeaconCore** | Minimal sample: WHO + WHERE + freshness. Strict cadence; MUST deliver. | version(1), nodeId(8), seq16(2), positionLat(4), positionLon(4) | — | Smallest possible; **19 B fixed**. Position may use sentinel 0x7FFFFFFF for "not present". |
+| **BeaconCore** | Minimal sample: WHO + WHERE + freshness. Strict cadence; MUST deliver. | version(1), nodeId(8), seq16(2), positionLat(4), positionLon(4) | — | Smallest possible; **19 B fixed**. lat/lon MUST be valid coordinates; Core MUST NOT be transmitted without valid fix (§3.1). |
 | **BeaconTail-1** | Attached-to-Core extension; qualifies one Core sample. | version(1), nodeId(8), core_seq16(2) | posFlags(1), sats(1); then attached fields (hwProfileId, fwVersionId, uptimeSec, etc.) | Receiver applies only if **core_seq16 == lastCoreSeq**; else ignore. See [field_cadence_v0](policy/field_cadence_v0.md) §2. |
 | **BeaconTail-2** | Uncoupled slow state; no CoreRef. | version(1), nodeId(8); operational send may omit maxSilence10s | maxSilence10s(1), batteryPercent, hwProfileId, fwVersionId, uptimeSec (optional tail) | Two scheduling classes: Operational (on change + at forced Core) and Informative (on change + default 10 min). See field_cadence §2.1. |
 
@@ -69,8 +69,8 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](pol
 | payloadVersion | uint8 | 1 | 0x00 = v0 |
 | nodeId | uint64 | 8 | DeviceId (e.g. ESP32-S3 MCU ID) |
 | seq16 | uint16 | 2 | Freshness; monotonic per node. Little-endian. |
-| positionLat | int32 | 4 | Latitude × 1e7 (WGS84); 0x7FFFFFFF = not present |
-| positionLon | int32 | 4 | Longitude × 1e7 (WGS84); 0x7FFFFFFF = not present |
+| positionLat | int32 | 4 | Latitude × 1e7 (WGS84). Valid coordinates only; Core MUST NOT be sent without valid fix — when no fix, send Alive packet (§3.1). |
+| positionLon | int32 | 4 | Longitude × 1e7 (WGS84). Valid coordinates only; same transmit rule as positionLat. |
 
 **Size:** **19 bytes** (fixed). Fits within LongDist (24), Default (32), Fast (40).
 
@@ -83,7 +83,7 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](pol
 | payloadVersion | uint8 | 1 | 0x00 = v0 |
 | nodeId | uint64 | 8 | DeviceId |
 | core_seq16 | uint16 | 2 | seq16 of the Core sample this Tail-1 qualifies. Little-endian. |
-| posFlags | uint8 | 1 | Position-valid / quality flags; 0 = not present or no fix. Optional. |
+| posFlags | uint8 | 1 | Position-quality flags for this sample; 0 = not present/unknown. Does not indicate no-fix; Tail-1 never revokes Core position. Optional. See [rx_semantics_v0](policy/rx_semantics_v0.md) §4. |
 | sats | uint8 | 1 | Satellite count when position valid; 0 = not present. Optional. |
 | (optional attached fields) | — | TBD | hwProfileId, fwVersionId, uptimeSec, etc.; sentinel conventions as elsewhere. |
 
@@ -123,19 +123,7 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](pol
 
 **Full hex:** `00 EF CD AB 89 67 45 23 01 01 00 F0 A8 3B 21 C8 F1 6B 16`
 
-### 5.2 BeaconCore (19 B): position not present
-
-| Field | Value | Bytes (hex) |
-|-------|--------|-------------|
-| payloadVersion | 0 | 00 |
-| nodeId | 0x0123_4567_89AB_CDEF | EF CD AB 89 67 45 23 01 |
-| seq16 | 42 | 2A 00 |
-| positionLat | not present (0x7FFFFFFF) | FF FF FF 7F |
-| positionLon | not present (0x7FFFFFFF) | FF FF FF 7F |
-
-**Full hex:** `00 EF CD AB 89 67 45 23 01 2A 00 FF FF FF 7F FF FF FF 7F`
-
-### 5.3 BeaconTail-1 (13 B): core_seq16 + posFlags + sats
+### 5.2 BeaconTail-1 (13 B): core_seq16 + posFlags + sats
 
 | Field | Value | Bytes (hex) |
 |-------|--------|-------------|
@@ -147,7 +135,7 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](pol
 
 **Full hex:** `00 EF CD AB 89 67 45 23 01 01 00 01 08`
 
-### 5.4 BeaconTail-2 (10 B): minimal
+### 5.3 BeaconTail-2 (10 B): minimal
 
 | Field | Value | Bytes (hex) |
 |-------|--------|-------------|
@@ -157,7 +145,7 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](pol
 
 **Full hex:** `00 EF CD AB 89 67 45 23 01 09`
 
-### 5.5 BeaconTail-2 (14 B): with battery
+### 5.4 BeaconTail-2 (14 B): with battery
 
 | Field | Value | Bytes (hex) |
 |-------|--------|-------------|
