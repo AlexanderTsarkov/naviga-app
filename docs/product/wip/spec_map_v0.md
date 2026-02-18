@@ -39,7 +39,7 @@
 
 ### Open (what blocks progress)
 
-- Channel list source & local discovery flow → [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175).
+- Channel list source & local discovery flow → [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175). *Clarification: #175 is post V1-A; V0/V1-A uses deterministic OOTB default profile per [#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211).*
 - Registry bundle format → [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184) doc added ([registry_bundle_format_v0](areas/registry/contract/registry_bundle_format_v0.md)); path/pipeline implementation when stable.
 - Secure claim protocol & threat model (if required for v1) → [#187](https://github.com/AlexanderTsarkov/naviga-app/issues/187); stub only today.
 - NodeTable implementation order / wiring for first slice → [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
@@ -69,6 +69,7 @@ Next 3–5 docs-only tasks are listed in **Next issues (proposed)** below; they 
 | Radio | [areas/radio/registry_radio_profiles_v0.md](areas/radio/registry_radio_profiles_v0.md) | Doc | v0 | RadioProfiles & ChannelPlan (Default/LongDist/Fast, profile–channel compatibility) | HW registry | [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) (channel discovery) | — | **Y** — channel list/source and discovery flow not fully specified | — | MAYBE | Candidate |
 | Registry | [areas/registry/distribution_ownership_v0.md](areas/registry/distribution_ownership_v0.md) | Doc | v0 | Distribution & ownership (source of truth, bundling, schema rev, BT vs registry merge) | HW + Radio registries | — | — | N | — | IN | Ready |
 | Registry | [areas/registry/contract/registry_bundle_format_v0.md](areas/registry/contract/registry_bundle_format_v0.md) | Doc | v0 | Bundle format v0: schema (metadata, contents, registries), versioning, integrity, transport-independent, replace/merge semantics | distribution_ownership_v0, HW + Radio registries | [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184) | — | N | #184 bundle format contract | IN | Ready |
+| Radio policy | [areas/radio/policy/radio_profiles_policy_v0.md](areas/radio/policy/radio_profiles_policy_v0.md) | Doc | v0 | RadioProfile model; default (immutable) + user profiles; CurrentProfileId/PreviousProfileId; first boot; factory reset; minimal API (list/select/reset) | selection_policy, registry_radio_profiles | [#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211) | — | N | OOTB defaults + persistence + factory reset | IN | Candidate |
 | Radio policy | [areas/radio/selection_policy_v0.md](areas/radio/selection_policy_v0.md) | Doc | v0 | SelectionPolicy (default profile/channel, throttling, user advice) | #159, #158 | [#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180) (AutoPower) | — | N | — | IN | Ready |
 | Radio policy | [areas/radio/autopower_policy_v0.md](areas/radio/autopower_policy_v0.md) | Doc | v0 | AutoPower (node-side tx power, bounds, hysteresis, fallback) | #159, #158 | — | — | N | — | IN | Ready |
 | Radio policy | [areas/radio/policy/traffic_model_v0.md](areas/radio/policy/traffic_model_v0.md) | Doc | v0 | Traffic model: OOTB vs Session/Group; ProductMaxFrameBytes=96; no fragmentation; **mesh-lite beacon-only forwarding** (extras direct-link only) | Beacon encoding, NodeTable | — | — | N | Reference for cadence/mesh decisions | IN | Ready |
@@ -89,7 +90,7 @@ Next 3–5 docs-only tasks are listed in **Next issues (proposed)** below; they 
 |---------|-------|--------|--------|
 | Beacon payload & encoding (byte layout, airtime) | [#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173) | Doc | Encoding contract done; implementation/validation in progress |
 | NodeTable as central consumer (implementation order, wiring) | [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) | In progress | Single end-to-end slice until shape fixed |
-| Channel discovery & selection (channel list source, local discovery flow) | [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) | Open | v1 slice if user-selectable channels required |
+| Channel discovery & selection (channel list source, local discovery flow) | [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) | Open | Post V1-A; V1-A uses deterministic OOTB default per [#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211) |
 | Secure claim (stub; threat model / protocol TBD) | [#187](https://github.com/AlexanderTsarkov/naviga-app/issues/187) | Stub | Only if product requires ownership/anti-spoofing for first slice |
 | Registry bundle format (path, JSON vs per-registry; implementation when stable) | [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184) | Doc | Bundle format contract done ([registry_bundle_format_v0](areas/registry/contract/registry_bundle_format_v0.md)); app/firmware consumption can proceed |
 
@@ -116,9 +117,10 @@ List of next docs-only tasks that align with this map. Update when spec_map or p
 
 ---
 
-**Last updated:** 2026-02-16
+**Last updated:** 2026-02-19
 
 **Changelog:**
+- 2026-02-19: [#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211) Radio profiles policy v0 — new [radio_profiles_policy_v0](areas/radio/policy/radio_profiles_policy_v0.md) (defaults, persistence, factory reset, first boot, minimal API). Spec_map: Inventory row added (IN, Candidate); #175 clarified as post V1-A, V1-A uses OOTB default per #211 (Open + Blockers).
 - 2026-02-16: [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184) Registry bundle format v0: new contract [registry_bundle_format_v0](areas/registry/contract/registry_bundle_format_v0.md) (schema, versioning, integrity, transport-independent, replace/merge). Spec_map: Inventory + Blocker + Open + Next updated; NodeTable Next 6–7 removed (done); field_cadence note → seq16 canonical (PR #205).
 - 2026-02-16: PR #205 merged — Alive packet + RX semantics; Core only with fix; seq16 scope unified. Inventory: [alive_packet_encoding_v0](areas/nodetable/contract/alive_packet_encoding_v0.md), [rx_semantics_v0](areas/nodetable/policy/rx_semantics_v0.md) added as IN/Ready; beacon_payload_encoding note updated. [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 - 2026-02-16: Spec snapshot & V1-A lens: Inventory table +2 columns (V1-A? IN/OUT/MAYBE, Promote Idea/Candidate/Ready); NodeTable index Links updated (no orphans: beacon_payload_encoding, field_cadence, nodetable_fields_inventory, position_quality, activity_state, link_metrics). Status snapshot for [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) in PR. Docs-only.
