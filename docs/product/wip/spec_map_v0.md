@@ -103,7 +103,7 @@ List of next docs-only tasks that align with this map. Update when spec_map or p
 3. **[#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184)** — Registry distribution (bundle format/path doc update if needed).
 4. **[#187](https://github.com/AlexanderTsarkov/naviga-app/issues/187)** — Secure claim: expand stub to threat model + protocol outline if required for v1.
 5. **#147 / NodeTable** — Implementation order and wiring for first vertical slice (docs/decisions, not code).
-6. **Field cadence → encoding:** Align [beacon_payload_encoding_v0](areas/nodetable/contract/beacon_payload_encoding_v0.md) with Core/Tail tiers once freshness marker encoding (seq8 vs seq16) is decided ([field_cadence_v0](areas/nodetable/policy/field_cadence_v0.md)).
+6. **NodeTable hub / inventory promotion:** Promote [NodeTable index](areas/nodetable/index.md) and [nodetable_fields_inventory_v0](areas/nodetable/policy/nodetable_fields_inventory_v0.md) to Ready when criteria met (hub: links/scope; inventory: owner decisions complete). seq16 is canonical (PR #205). [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 7. **Owner review:** Decide Tier / default cadence / packet placement using [nodetable_fields_inventory_v0](areas/nodetable/policy/nodetable_fields_inventory_v0.md); then update field_cadence and encoding as needed.
 
 *Traffic model v0 ([traffic_model_v0.md](areas/radio/policy/traffic_model_v0.md)) is the reference for later cadence/mesh policy decisions.*
