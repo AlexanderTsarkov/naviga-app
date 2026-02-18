@@ -51,6 +51,11 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](pol
 - **Byte order:** Little-endian for all multi-byte integers.
 - **Version tag:** First byte = payload format version. v0 = `0x00`. Unknown version → discard (per §7).
 
+### 3.1 Position-bearing vs Alive-bearing
+
+- **BeaconCore is position-bearing:** BeaconCore **MUST** only be transmitted when the sender has a valid GNSS fix. If a receiver obtains a BeaconCore, the lat/lon in that packet are valid; they are **not** revoked or invalidated by a later Tail-1 or any other packet.
+- **maxSilence liveness when no fix:** The maxSilence liveness requirement (node MUST transmit at least one alive signal within the maxSilence window) **may** be satisfied by an **Alive packet** when the node has no valid fix and therefore does not send BeaconCore. Alive packet encoding is defined in [alive_packet_encoding_v0.md](alive_packet_encoding_v0.md). Alive is **alive-bearing, non-position-bearing**; it carries identity + seq16 (and optional aliveStatus) only.
+
 ---
 
 ## 4) Byte layouts by packet type
@@ -190,6 +195,7 @@ Payload size (in bytes) **MUST NOT** exceed the budget for the **RadioProfile cl
 
 ## 8) Related
 
+- **Alive packet (no-fix liveness):** [alive_packet_encoding_v0.md](alive_packet_encoding_v0.md) — Alive packet encoding; position-bearing vs alive-bearing in §3.1 above.
 - **Field cadence (Core/Tail semantics):** [policy/field_cadence_v0.md](policy/field_cadence_v0.md) — §2 Beacon split definitions; receiver rule for Tail-1.
 - **Minset (field semantics):** [link-telemetry-minset-v0.md](link-telemetry-minset-v0.md) — [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158)
 - **RadioProfiles & ChannelPlan:** [../../radio/registry_radio_profiles_v0.md](../../radio/registry_radio_profiles_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)

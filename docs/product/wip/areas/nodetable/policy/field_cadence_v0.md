@@ -24,6 +24,8 @@ This policy defines the **v0 mapping** of NodeTable-related fields into delivery
 
 **Freshness marker (Tier A):** Tier A **MUST** include a **freshness marker** (e.g. sequence number or monotonic tick) so receivers can order updates and detect staleness. **seq16** is canonical; byte layout in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §4.1. Tail-1 **MUST** carry **core_seq16** when sent separately; receiver applies only if core_seq16 == lastCoreSeq (CoreRef-lite). See encoding §4.2.
 
+**Core transmit precondition:** BeaconCore is position-bearing and **MUST** only be transmitted when the sender has a valid GNSS fix. When the sender has no valid fix, it **MUST** satisfy the maxSilence liveness requirement via an **Alive packet** (see [alive_packet_encoding_v0.md](../contract/alive_packet_encoding_v0.md)); Alive is alive-bearing, non-position-bearing.
+
 ### 2.1 Tail-2 scheduling classes (v0)
 
 Tail-2 (BeaconTail-2) is split into two scheduling classes:
