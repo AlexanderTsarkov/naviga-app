@@ -8,8 +8,9 @@ reference/
 # Archive of POC state (optional: remove this line if you want to commit archives)
 archive/
 
-# Firmware build artifacts (binaries)
+# Firmware build artifacts (binaries, PlatformIO)
 firmware-release/
+firmware/.pio/
 
 # OS
 .DS_Store
