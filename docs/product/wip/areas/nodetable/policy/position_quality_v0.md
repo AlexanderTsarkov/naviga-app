@@ -32,8 +32,8 @@ No other position-quality metrics (e.g. fixType, hdop, accuracy, age) are encode
   - **Optional:** Age can be inferred receiver-side (e.g. from `lastRxAt` or sequence delta) when needed; it is not sent in v0.
 
 - **Derived state (conceptual):**
-  - **No position:** Core position absent or Tail-1 `posFlags` indicates no fix → show “no position” / “no fix”.
-  - **Position valid:** Core position present and Tail-1 indicates valid fix → show position; optionally show “quality” (e.g. “N sats”) from `sats`.
+  - **No position:** Core position absent (or not yet received) → show “no position” / “no fix”. Tail-1 `posFlags` qualifies the same Core sample and **does not revoke** position already received in Core; see [rx_semantics_v0](rx_semantics_v0.md).
+  - **Position valid:** Core position present (and Tail-1 may indicate valid fix for that sample) → show position; optionally show “quality” (e.g. “N sats”) from `sats`.
   - **Quality band (optional):** UI may map `posFlags` + `sats` into a simple band (e.g. good / degraded) for display; exact mapping is implementation-defined and not specified here.
 
 No code or wire format is defined in this doc; only the rule that PositionQuality is derived from the above inputs and that the only sent position-quality fields in v0 are Tail-1 `posFlags` and `sats`.
