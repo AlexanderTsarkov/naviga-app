@@ -15,6 +15,8 @@ This policy defines how the receiver interprets and applies incoming packets (Be
 | **Out-of-order (ooo)** | A packet whose seq16 (or core_seq16 for Tail-1) is older than the last accepted seq for that node. Receiver MUST NOT use it to overwrite newer position or telemetry (“no time travel”); MAY ignore for payload or accept only for lastRxAt within a small tolerance (implementation-defined). |
 | **seq16 wrap** | seq16 is a 16-bit counter; it wraps. Ordering and “newer vs older” MUST be defined in a way that respects wrap (e.g. modulo arithmetic or signed difference within a window). Exact wrap handling is implementation-defined but MUST be consistent for duplicate vs new vs ooo decisions. |
 
+**seq16 scope:** seq16 is a **single per-node counter** across all transmitted packet types during uptime (BeaconCore, Tail-1/2, Alive). Receivers **MUST** treat seq16 ordering and deduplication across packet types accordingly. The seen seq16 set (or ordering window) is **per-node global**, not per packet type.
+
 ---
 
 ## 2) Which packets update NodeTable
@@ -22,7 +24,7 @@ This policy defines how the receiver interprets and applies incoming packets (Be
 - **BeaconCore:** Accepted if version and nodeId valid. Updates lastRxAt, lastCoreSeq, position (lat/lon when not sentinel), seq16. Link metrics (rssiLast, snrLast, etc.) updated on acceptance.
 - **BeaconTail-1:** Applied **only if** core_seq16 equals the last Core seq16 received from that node (**CoreRef-lite**); otherwise **MUST** ignore for payload. When applied: updates lastRxAt; may update posFlags/sats and other attached fields for that Core sample. Link metrics updated on acceptance. **Tail-1 MUST NOT revoke or invalidate position already received in BeaconCore** for that node (see §4).
 - **BeaconTail-2:** No CoreRef. Accepted if version and nodeId valid. Updates lastRxAt and any carried Tail-2 fields (maxSilence, batteryPercent, etc.). Link metrics updated on acceptance.
-- **Alive:** Accepted if version and nodeId valid. Updates lastRxAt and (if the receiver tracks seq16 per node for Alive) seq16 for ordering. **Does not** carry or update position. Link metrics updated on acceptance. **Alive satisfies the “alive within maxSilence window”** for Activity derivation when the node has no fix and therefore does not send BeaconCore (see [activity_state_v0](activity_state_v0.md), [field_cadence_v0](field_cadence_v0.md)).
+- **Alive:** Accepted if version and nodeId valid. Updates lastRxAt and seq16 for ordering (same per-node counter as Core/Tails; §1). **Does not** carry or update position. Link metrics updated on acceptance. **Alive satisfies the “alive within maxSilence window”** for Activity derivation when the node has no fix and therefore does not send BeaconCore (see [activity_state_v0](activity_state_v0.md), [field_cadence_v0](field_cadence_v0.md)).
 
 ---
 

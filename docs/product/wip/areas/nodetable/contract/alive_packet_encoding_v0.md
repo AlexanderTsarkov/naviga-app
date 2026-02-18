@@ -30,9 +30,10 @@ This contract defines the **v0 Alive packet**: a separate packet type used when 
 |-------|------|-------|----------|
 | payloadVersion | uint8 | 1 | 0x00 = v0 |
 | nodeId | uint64 | 8 | DeviceId (same semantics as BeaconCore) |
-| seq16 | uint16 | 2 | Freshness; monotonic per node. Same semantics as Core seq16 for ordering/duplicate detection. |
+| seq16 | uint16 | 2 | Freshness; monotonic per node. Alive uses the **same per-node seq16 counter** as BeaconCore and Tails (single counter across packet types during uptime). Same semantics for ordering/duplicate detection. |
 
 **Minimum size:** **11 bytes.**
+
 
 ### 3.2 Optional: aliveStatus (v0)
 
