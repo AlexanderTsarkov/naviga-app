@@ -80,7 +80,7 @@ Activity expectations are derived from **roles + distance granularity + speed hi
 - NodeTable derives **activityState** (Online / Uncertain / Stale / Archived) from **lastSeenAge** and the **staleness boundary** supplied by the selected policy. A policy may use **expectedIntervalNow**, **maxSilence**, **activitySlack**, or other inputs to compute that boundary; NodeTable does not require any specific set of fields unless the chosen policy does.
 - Silence is only “unexpected” relative to the **policy-supplied** expectation/boundary.
 
-**Example profiles (illustrative / TBD)**
+**Example profiles (illustrative, non-normative / TBD)**
 - **Hiking OOTB:** minDist 50–100 m, speedHint ~5 km/h.
 - **Dog tracking:** dog minDist ~25 m, higher speedHint; handler minDist ~250 m.
 - **Hunting:** dog 5–10 m; beater 15–20 m; shooter 25–50 m (each with role multipliers / priorities).
@@ -181,7 +181,9 @@ When decisions above are stable and reflected in implementation, promote to `doc
 - Policy: [policy/restore-merge-rules-v0.md](policy/restore-merge-rules-v0.md) (restore/merge rules v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157) Step 3).
 - Policy: [policy/persistence-cadence-limits-v0.md](policy/persistence-cadence-limits-v0.md) (persistence cadence & limits v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157) Step 4).
 - Contract: [contract/link-telemetry-minset-v0.md](contract/link-telemetry-minset-v0.md) (Link/Metrics & Telemetry/Health minset v0, [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158)).
-- Contract: [contract/beacon_payload_encoding_v0.md](contract/beacon_payload_encoding_v0.md) (Beacon payload byte layout, Core/Tail-1/Tail-2, payload budgets; [#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173)).
+- Contract: [contract/beacon_payload_encoding_v0.md](contract/beacon_payload_encoding_v0.md) (Beacon payload byte layout, Core/Tail-1/Tail-2, payload budgets; Core only with valid fix; position-bearing vs Alive-bearing; [#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173)).
+- Contract: [contract/alive_packet_encoding_v0.md](contract/alive_packet_encoding_v0.md) (Alive packet: no-fix liveness; same per-node seq16; alive-bearing, non-position-bearing; [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)).
+- Policy: [policy/rx_semantics_v0.md](policy/rx_semantics_v0.md) (RX semantics: accepted/duplicate/ooo, seq16 single per-node, Tail-1 no revoke, Alive satisfies liveness; [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)).
 - Policy: [policy/field_cadence_v0.md](policy/field_cadence_v0.md) (Field criticality & cadence: Core/Tail-1/Tail-2 tiers, degrade order, mesh priority, DOG_COLLAR vs HUMAN; [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)).
 - Policy: [policy/nodetable_fields_inventory_v0.md](policy/nodetable_fields_inventory_v0.md) (Fields inventory, coupling rules, owner worksheet for Tier/cadence/placement; [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)).
 - Policy: [policy/position_quality_v0.md](policy/position_quality_v0.md) (Position quality: Tail-1 posFlags/sats; PositionQuality derived from Core + Tail-1; [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)).
