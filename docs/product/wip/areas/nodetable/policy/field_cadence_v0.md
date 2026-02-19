@@ -26,7 +26,11 @@ This policy defines the **v0 mapping** of NodeTable-related fields into delivery
 
 **Core transmit precondition:** BeaconCore is position-bearing and **MUST** only be transmitted when the sender has a valid GNSS fix. When the sender has no valid fix, it **MUST** satisfy the maxSilence liveness requirement via an **Alive packet** (see [alive_packet_encoding_v0.md](../contract/alive_packet_encoding_v0.md)); Alive is alive-bearing, non-position-bearing.
 
-### 2.1 Tail-2 scheduling classes (v0)
+### 2.1 Bootstrap: first valid fix (BeaconCore)
+
+While the sender has **no** valid GNSS fix, BeaconCore is **not** sent; liveness is provided by **Alive (no-fix)** per maxSilence. When the sender **first** obtains a valid fix and has **no baseline** (no lastPublishedPosition, i.e. first BeaconCore not yet sent), it **MUST** send the first BeaconCore at the next opportunity, limited only by the applicable rate limit (e.g. minInterval); **min displacement** does **not** apply to this first Core. After the first BeaconCore has been sent, movement gating (min displacement) applies as usual to subsequent Core sends.
+
+### 2.2 Tail-2 scheduling classes (v0)
 
 Tail-2 (BeaconTail-2) is split into two scheduling classes:
 
@@ -101,7 +105,7 @@ Source: fields from [link-telemetry-minset](../contract/link-telemetry-minset-v0
 ## 8) Open decisions (explicit)
 
 - **Freshness marker encoding:** Tier A MUST include a freshness marker; **exact encoding (e.g. seq8 vs seq16, field order)** is **TBD** and will be decided in a follow-up (encoding doc or separate decision). Discoverable here so implementers do not invent ad hoc.
-- **Beacon encoding:** Core/Tail split and byte layouts are in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §3–5 (Core 19 B, Tail-1 core_seq16 + optional posFlags/sats, Tail-2 maxSilence10s; Tail-2 scheduling per §2.1 above).
+- **Beacon encoding:** Core/Tail split and byte layouts are in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §3–5 (Core 19 B, Tail-1 core_seq16 + optional posFlags/sats, Tail-2 maxSilence10s; Tail-2 scheduling per §2.2 above).
 
 ---
 
