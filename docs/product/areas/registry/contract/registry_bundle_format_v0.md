@@ -81,7 +81,7 @@ The bundle is a single document. Example shape (JSON; YAML or other equivalent i
 
 - **metadata:** `schemaVersion` (required), `bundleId` (optional, unique per bundle instance), `createdAt` (optional), `contentHash` (optional, over whole bundle or over `registries` only — define consistently).
 - **contents:** List of registry sections with `id`, `version`, and optional `hash` for per-registry versioning and integrity.
-- **registries:** Keyed by same `id` as in `contents`. Values are arrays of entries (structure per [registry_hw_capabilities_v0](../../hardware/contract/registry_hw_capabilities_v0.md), [registry_radio_profiles_v0](../../../wip/areas/radio/registry_radio_profiles_v0.md), etc.). References (IDs used elsewhere, e.g. in NodeTable or selection policy) are the stable ids inside these arrays.
+- **registries:** Keyed by same `id` as in `contents`. Values are arrays of entries (structure per [registry_hw_capabilities_v0](../../hardware/contract/registry_hw_capabilities_v0.md), [registry_radio_profiles_v0](../../radio/policy/registry_radio_profiles_v0.md), etc.). References (IDs used elsewhere, e.g. in NodeTable or selection policy) are the stable ids inside these arrays.
 
 ---
 
@@ -105,6 +105,6 @@ The bundle is a single document. Example shape (JSON; YAML or other equivalent i
 
 - **Distribution & ownership:** [distribution_ownership_v0](../policy/distribution_ownership_v0.md) — who owns content, how it is shipped (bundled in v0), schema rev rules, unknown profile handling.
 - **HW registry:** [registry_hw_capabilities_v0](../../hardware/contract/registry_hw_capabilities_v0.md) — semantics of hwProfiles entries.
-- **Radio registry:** [registry_radio_profiles_v0](../../../wip/areas/radio/registry_radio_profiles_v0.md) — semantics of radioProfiles / channelPlans.
+- **Radio registry:** [registry_radio_profiles_v0](../../radio/policy/registry_radio_profiles_v0.md) — semantics of radioProfiles / channelPlans.
 - **Selection policy:** [selection_policy_v0](../../../wip/areas/radio/selection_policy_v0.md) — consumes registries; does not define bundle format.
 - **Issue:** [#184 Registry bundle format v0](https://github.com/AlexanderTsarkov/naviga-app/issues/184)
