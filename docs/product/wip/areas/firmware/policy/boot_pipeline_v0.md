@@ -24,7 +24,7 @@ This policy defines the **v0 boot pipeline**: ordered phases from power-on to fi
 ## 3) Phase A: HW bring-up (module boot configs)
 
 - FW brings hardware modules (radio, GNSS, and any others required for comms) to the **required Naviga operating mode**.
-- **Verify-and-repair on boot:** Where policy or product requires it, FW MUST **verify** that module config matches the expected state and **repair** (re-init or re-apply config) if not. Whether each module uses “verify every boot” vs “one-time init + configured flag” is defined per module (e.g. in module_boot_config_v0 when that doc exists, [#215](https://github.com/AlexanderTsarkov/naviga-app/issues/215)); this pipeline only requires that **by end of Phase A** all modules needed for comms are in the correct state.
+- **Verify-and-repair on boot:** Where policy or product requires it, FW MUST **verify** that module config matches the expected state and **repair** (re-init or re-apply config) if not. Whether each module uses “verify every boot” vs “one-time init + configured flag” is defined per module in [module_boot_config_v0](module_boot_config_v0.md) ([#215](https://github.com/AlexanderTsarkov/naviga-app/issues/215)); this pipeline only requires that **by end of Phase A** all modules needed for comms are in the correct state.
 - **Invariant by end of Phase A:** All modules needed for comms are in the correct state for Naviga. No reliance on “one-time init” unless explicitly documented elsewhere; otherwise assume verify-and-repair on boot.
 
 ---
