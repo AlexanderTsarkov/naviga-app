@@ -124,12 +124,14 @@ List of next docs-only tasks that align with this map. Update when spec_map or p
 - Canon areas: [areas/](areas/)
 - Promotion policy (lifecycle, source of truth, spec_map convention): [docs_promotion_policy_v0.md](../../policy/docs_promotion_policy_v0.md)
 - Layout policy (canon structure, promoted path, redirect stubs): [docs_layout_policy_v0.md](../../policy/docs_layout_policy_v0.md)
+- Coexistence policy (legacy/OOTB vs canon, banners, referencing, divergence): [docs_coexistence_policy_v0.md](../../policy/docs_coexistence_policy_v0.md)
 
 ---
 
 **Last updated:** 2026-02-21
 
 **Changelog:**
+- 2026-02-21: Coexistence policy v0: new [docs_coexistence_policy_v0.md](../policy/docs_coexistence_policy_v0.md) (legacy/OOTB vs canon; header banners; referencing rules; divergence annotation; migration guidance; spec_map meta). Spec_map: Related link. [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224), [#227](https://github.com/AlexanderTsarkov/naviga-app/issues/227).
 - 2026-02-21: Layout policy v0: new [docs_layout_policy_v0.md](../policy/docs_layout_policy_v0.md) (four-layer structure: product/wip/legacy/ootb; canon `areas/<area>/{contract,policy}`; naming; redirect stub rule; promoted path). Spec_map: Promoted path convention, Related link. [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224), [#226](https://github.com/AlexanderTsarkov/naviga-app/issues/226).
 - 2026-02-21: Promotion policy v0: new [docs_promotion_policy_v0.md](../policy/docs_promotion_policy_v0.md) (lifecycle, source of truth, coexistence, spec_map convention). Spec_map: Promotion status convention (§7 link), Related link. [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224), [#225](https://github.com/AlexanderTsarkov/naviga-app/issues/225).
 - 2026-02-21: NodeTable hub ([areas/nodetable/index.md](areas/nodetable/index.md)): V1-A entry point restructured; invariants summary (Alive/Core-only-with-fix/seq16/Tail-1 no revoke), canon Contracts/Policies links, post-V1-A (#175) explicit; promotion criteria. [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
