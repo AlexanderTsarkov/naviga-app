@@ -1,198 +1,78 @@
-# WIP: NodeTable — Define & Research
+# WIP: NodeTable — V1-A hub
 
-Product Contract v0 for [Issue #147](https://github.com/AlexanderTsarkov/naviga-app/issues/147). No promotion to canon yet.
-
----
-
-## 1) Definition
-
-NodeTable is the **single source of truth / knowledge about all nodes (including self)**. Other components emit observations or events; NodeTable stores best-known facts and derived state used for product and UX decisions.
+Product hub for NodeTable (V1-A WIP). Umbrella: [Issue #147](https://github.com/AlexanderTsarkov/naviga-app/issues/147). Source of truth for scope and links: this hub + [spec_map_v0](../../spec_map_v0.md). No promotion to canon until criteria below are met.
 
 ---
 
-## 2) What product needs from NodeTable (expanded)
+## 1) What is NodeTable
 
-**Core questions:** Identity; Activity; Position; Capabilities/HW; Radio context; Trust/freshness; Debuggability.
-
-**Expanded categories:**
-
-1. **Identity** — Primary key (DeviceId), display id (ShortId), human naming (networkName, localAlias).
-2. **Roles / Subject type** — Human / dog / repeater / infra, independent of hwType. Source may be broadcast or local.
-3. **Activity** — Derived state (Online / Uncertain / Stale / Archived); requires a **policy-supplied staleness boundary** (see below).
-4. **Expected beacon/update policy per node** — A policy may supply **expectedInterval**, **maxSilence**, or a **staleness boundary** (and possibly min-move/min-time) to derive activity; may be global default or per-node when known.
-5. **Position** — Where (2D required; altitude optional); PositionQuality (age, optional satCount/hdop/accuracy/fixType, source-tagged).
-6. **Mesh / Link metrics** — Receiver-side **RSSI + SNR**, **hops/via**, and origin-stream metadata **lastOriginSeqSeen** (last seq seen from that origin; not per-packet cache).
-7. **Telemetry / Health** — Minimum: **battery level** (future) + **uptime** (already exists); optional device metrics.
-8. **Capabilities / HW** — hwType (if known) + optional fwVersion; capabilities derivable from lookup tables.
-9. **Radio context** — lastSeenRadioProfile (profile + txPower when available); RadioProfileId + RadioProfileKind.
-10. **Relationship / Affinity** — **Self** / **Owned** / **Trusted** / **Seen** / **Ignored** to handle public OOTB channels and UI filtering.
-11. **Retention & Persistence** — Snapshot/restore so reboot or battery loss doesn’t require rebuilding the map; define **map relevancy** vs **remembered nodes**.
-12. **Trust / freshness** — How fresh and reliable each fact is.
-13. **Debuggability** — Stable identifiers and metadata for logs and support.
+NodeTable is the **single source of truth for node-level knowledge** (including self). Other components emit observations or events; NodeTable stores best-known facts and derived state used for product and UX decisions. **Boundary:** NodeTable holds **node-level** state only; per-packet mesh state (e.g. PacketState for dedup/ordering) belongs to Mesh protocol, not NodeTable. Stream-level metadata in NodeTable (e.g. **lastOriginSeqSeen**) is permitted; per-packet cache is not.
 
 ---
 
-## 3) Identity (v0)
+## 2) V1-A invariants (summary)
 
-- **DeviceId** (primary key) = ESP32-S3 MCU ID. In firmware this is the node identity (e.g. `node_id`, uint64).
-- **ShortId** = CRC16(DeviceId). Display-only; may collide across nodes.
-- **ShortId collision handling:** UI disambiguation via suffixes, e.g. `6DA2:1`, `6DA2:2`. DeviceId remains the source of truth.
+Canon semantics are in the linked contract and policy docs; this list is a strict short summary. Do not extend or contradict these in the hub.
 
----
-
-## 4) Human naming (v0)
-
-- **networkName** — Broadcast by the node; optional; has priority when present.
-- **localAlias** — User-defined on the phone for a DeviceId.
-- **Effective display name precedence:** `networkName` > `localAlias` > `ShortId` (+ suffix if collision).
-- **v0 constraint:** No human-readable names over radio in v0. **networkName** is not broadcast in v0 (excluded from Beacon Core/Tail-1/Tail-2 and from OOTB public); precedence applies only where networkName exists (e.g. future session-join or local cache). **localAlias** and **ShortId** are local-only; not sent.
+- **Core only with valid fix.** BeaconCore is transmitted only when the sender has a valid GNSS fix. Core implies a valid lat/lon sample. When the node has no fix, it does not send Core.
+- **No-fix liveness via Alive.** The maxSilence liveness requirement is satisfied by an **Alive** packet when the node has no valid fix. Alive is **alive-bearing, non-position-bearing**; it carries identity + seq16 (same per-node counter as Core/Tails).
+- **seq16 scope.** seq16 is a **single per-node counter** across all packet types (BeaconCore, Tail-1, Tail-2, Alive) during uptime. RX semantics: accepted / duplicate / out-of-order / wrap are defined per-node globally, not per packet type.
+- **Tail-1 never revokes Core.** Tail-1 qualifies the **same** Core sample (core_seq16). Tail-1 **MUST NOT** revoke or invalidate position already received in BeaconCore. CoreRef-lite: Tail-1 payload is applied **only if** core_seq16 matches lastCoreSeq for that node; otherwise payload is ignored (lastRxAt/link metrics may still be updated).
 
 ---
 
-## 5) Activity (v0)
+## 3) Contracts
 
-- **activityState** is **derived**, not stored.
-- Four states: **Online** / **Uncertain** / **Stale** / **Archived**.
-- Derivation: **activityState** is derived from **lastSeenAge** relative to a **staleness boundary** supplied by policy (e.g. tracking profile, OOTB policy, or another consumer policy). Exact boundary values are policy-defined.
-- NodeTable provides **lastSeenAge** for UI (e.g. “last seen 30s ago”).
-- **“Grey”** is a UI convention (e.g. dimming stale nodes), not a domain field; domain exposes lastSeenAge and policy so UI can compute grey.
-
-### Tracking Profile / Expected update policy
-
-Activity expectations are derived from **roles + distance granularity + speed hints + channel utilization**. A **Tracking Profile** (or role-driven profile) encodes this. Terminology: **beacon scheduler timings** (when to send) vs **activity interpretation timings** (how to interpret silence).
-
-**1) Tracking Profile (concept)**
-- **trackingProfileId** (or role-driven profile) defines:
-  - **minDistMeters** — spatial granularity (how often we expect position to “move” meaningfully).
-  - **speedHintMps** — assumed typical speed for the subject/role (m/s); part of the profile.
-  - **roleMultiplier** — produces **maxSilenceSeconds** (upper bound of acceptable beacon silence; used by scheduler and activity interpretation).
-  - **priority** — how strongly this node resists airtime throttling when channel is busy.
-
-**2) Derived timings (beacon scheduler)**
-- **baseMinTimeSeconds** ≈ minDistMeters / speedHintMps (rounded to sensible steps). Example: 100 m at ~5 km/h ≈ 1.4 m/s → ~72 s; round to e.g. 60 s or 90 s.
-- **maxSilenceSeconds** = baseMinTimeSeconds × roleMultiplier (upper bound of beacon silence).
-- **expectedIntervalNowSeconds** is **adaptive** and **clamped** between baseMinTimeSeconds and maxSilenceSeconds: if **channelUtilization** > threshold, increase stepwise toward maxSilenceSeconds; decrease back when utilization drops.
-
-**3) Activity interpretation (one policy mechanism)**
-- A policy may define the staleness boundary using an **activitySlack**-style extension: e.g. **activitySlackSeconds = kSlack × maxSilenceSeconds**, **kSlack ≥ 1**, as an extra window beyond maxSilence before treating silence as “stale”. This is one possible way to compute the boundary, not a required domain field.
-
-**4) NodeTable usage**
-- NodeTable derives **activityState** (Online / Uncertain / Stale / Archived) from **lastSeenAge** and the **staleness boundary** supplied by the selected policy. A policy may use **expectedIntervalNow**, **maxSilence**, **activitySlack**, or other inputs to compute that boundary; NodeTable does not require any specific set of fields unless the chosen policy does.
-- Silence is only “unexpected” relative to the **policy-supplied** expectation/boundary.
-
-**Example profiles (illustrative, non-normative / TBD)**
-- **Hiking OOTB:** minDist 50–100 m, speedHint ~5 km/h.
-- **Dog tracking:** dog minDist ~25 m, higher speedHint; handler minDist ~250 m.
-- **Hunting:** dog 5–10 m; beater 15–20 m; shooter 25–50 m (each with role multipliers / priorities).
+| Doc | Description |
+|-----|-------------|
+| [beacon_payload_encoding_v0](contract/beacon_payload_encoding_v0.md) | Beacon byte layout: Core (19 B) / Tail-1 / Tail-2; payload budgets; Core only with valid fix; position-bearing vs Alive-bearing. |
+| [alive_packet_encoding_v0](contract/alive_packet_encoding_v0.md) | Alive packet: no-fix liveness; same per-node seq16; alive-bearing, non-position-bearing. |
+| [link-telemetry-minset-v0](contract/link-telemetry-minset-v0.md) | Link/Metrics & Telemetry/Health minset (field set and coupling). |
 
 ---
 
-## 6) Position (v0)
+## 4) Policies
 
-- **2D required;** altitude optional.
-- **PositionQuality:** age required; optional satCount, hdop, accuracy, fixType; **source-tagged** (e.g. GNSS vs network).
-
----
-
-## 7) Capabilities / HW (v0)
-
-- **hwType** (if known) + optional **fwVersion**.
-- Capabilities may be derived from hwType/version lookup tables (e.g. “supports X”).
-
----
-
-## 8) Radio context (v0)
-
-- **lastSeenRadioProfile** includes profile and txPower when available.
-- Multiple profile kinds: e.g. UART presets vs full LoRa params.
-- Store normalized **RadioProfileId** + **RadioProfileKind**.
-- UI shows only valid controls; mapping tables exist (WIP).
+| Doc | Description |
+|-----|-------------|
+| [rx_semantics_v0](policy/rx_semantics_v0.md) | RX semantics: accepted/duplicate/ooo/wrap; seq16 single per-node; Tail-1 no revoke; Alive satisfies liveness. |
+| [field_cadence_v0](policy/field_cadence_v0.md) | Field criticality & cadence: Core / Tail-1 / Tail-2 tiers, degrade order, mesh priority, first-fix bootstrap. |
+| [activity_state_v0](policy/activity_state_v0.md) | Activity/presence (derived): Unknown/Active/Stale/Lost; lastRxAt/seq16 rules; parameterized thresholds. |
+| [link_metrics_v0](policy/link_metrics_v0.md) | Receiver-derived link metrics: rssiLast/snrLast, rssiRecent/snrRecent; update rules. |
+| [nodetable_fields_inventory_v0](policy/nodetable_fields_inventory_v0.md) | Fields inventory, coupling rules, Tier/cadence/placement owner worksheet. |
+| [position_quality_v0](policy/position_quality_v0.md) | Position quality: Tail-1 posFlags/sats; PositionQuality derived from Core + Tail-1. |
 
 ---
 
-## 9) Boundaries
+## 5) Open questions / future (post V1-A)
 
-- **NodeTable** stores **node-level** knowledge only.
-- **Per-packet mesh cache** — e.g. PacketState(origin_id, seq) for dedup / ordering — belongs to **Mesh protocol state**, not NodeTable.
-- **Seq in NodeTable** is only **stream-level metadata**: e.g. **lastOriginSeqSeen** (last sequence number seen from that origin). Not per-packet state.
+The following are **out of scope for V1-A**; do not block implementation or promotion on them.
 
----
-
-## 10) Decisions log (v0)
-
-- NodeTable = single source of truth for node-level facts; others emit observations.
-- Identity: DeviceId (primary), ShortId = CRC16(DeviceId), display precedence networkName > localAlias > ShortId.
-- Roles/Subject type: human/dog/repeater/infra; source broadcast or local.
-- Activity: derived (Online/Uncertain/Stale/Archived) from lastSeenAge vs a **policy-supplied staleness boundary**; lastSeenAge for UI; “grey” is UI, not domain. A policy may use tracking profile (expectedIntervalNow, maxSilence, activitySlack) or other means to define the boundary.
-- Mesh/link: RSSI, SNR, hops/via, lastOriginSeqSeen; no per-packet state in NodeTable.
-- Telemetry/health: uptime + battery (future); optional device metrics.
-- Relationship: Self / Owned / Trusted / Seen / Ignored for OOTB and UI filtering.
-- Retention: snapshot/restore; map relevancy vs remembered nodes.
-- Boundary: PacketState(origin_id, seq) in Mesh; NodeTable holds only node-level and lastOriginSeqSeen.
+- **Channel discovery & selection** — [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175). Channel list source and local discovery flow are **post V1-A**. V1-A uses deterministic OOTB default profile per [#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211).
+- Role/policy source & precedence (broadcast vs local).
+- Tracking profile assignment and OOTB defaults (where set, precedence).
+- Persistence mechanism, snapshot cadence, map relevancy vs remembered nodes.
+- networkName propagation (cadence, payload); exact activity threshold tuning.
 
 ---
 
-## 11) Open questions / Follow-ups
+## 6) Promotion criteria (WIP → canon)
 
-- **Role / policy source & precedence** — Broadcast vs local; how to merge.
-- **Tracking profile** — Where it is set (broadcast vs local assignment) and precedence; which defaults ship OOTB.
-- **Channel utilization** — How it is computed and exposed (firmware-only vs shared with mobile/UI).
-- **Persistence mechanism and snapshot cadence** — When to snapshot, restore semantics, map relevancy vs remembered nodes.
-- networkName propagation cadence and payload.
-- Exact activity thresholds (bounds for Online / Uncertain / Stale / Archived).
+A doc is **Ready-to-implement** when:
 
----
+- No open semantics blocking implementation; all links resolved; spec_map row updated.
+- Contract/policy text is stable and aligned with merged PRs (#205, #206, #208, #209, #213).
 
-## Status (registries #159)
-
-- **Decisions captured (v0):** HW Capabilities registry (hw_profile_id, adapter_type, capability, confidence; local vs remote disclosure; schema rev, unknown hw id → prompt for update) and RadioProfiles + ChannelPlan registry (user abstraction Default/LongDist/Fast; profile–channel compatibility; registries = facts, SelectionPolicy = choice rules; non-goals: no raw LoRa UI, no real CAD/LBT here, sense OFF + jitter default for UART).
-- **Follow-up issues / docs needed:** SelectionPolicy v0: [../radio/selection_policy_v0.md](../radio/selection_policy_v0.md). AutoPower policy v0: [../radio/autopower_policy_v0.md](../radio/autopower_policy_v0.md) ([#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180)). Identity & pairing flow v0: [../identity/pairing_flow_v0.md](../identity/pairing_flow_v0.md) ([#182](https://github.com/AlexanderTsarkov/naviga-app/issues/182)). Registry distribution & ownership v0: [../registry/distribution_ownership_v0.md](../registry/distribution_ownership_v0.md) ([#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184)).
+Promotion target: when NodeTable decisions are stable and reflected in implementation, promote this hub and linked canon docs to `docs/product/areas/nodetable/` (or per repo convention).
 
 ---
 
-## Promotion criteria (WIP → canon)
+## 7) Related (other areas)
 
-When decisions above are stable and reflected in implementation, promote to `docs/product/areas/nodetable.md`.
-
----
-
-## Glossary (v0)
-
-| Term | Meaning |
-|------|--------|
-| **DeviceId** | Primary key for a node (e.g. ESP32-S3 MCU ID; uint64). |
-| **ShortId** | Display id derived from DeviceId (e.g. CRC16); may collide. |
-| **expectedIntervalNow** | Current expected time between beacons for this node (adaptive; clamped between baseMinTime and maxSilence). |
-| **maxSilence** | Upper bound of acceptable beacon silence for this node (from tracking profile). |
-| **activitySlack** | One policy mechanism to extend a boundary beyond maxSilence; not a required domain field unless a selected policy uses it. Example: activitySlackSeconds = kSlack × maxSilenceSeconds, kSlack ≥ 1. |
-| **lastSeenAge** | Time since last RX from this node (seconds); used for activity derivation and UI. |
-| **role** | Subject/device type (e.g. human, dog, repeater, infra); may drive tracking profile. |
-| **trackingProfileId** | Id of the tracking profile (minDist, speedHint, roleMultiplier, priority) for this node. |
-
----
-
-## Links / References
-
-- Research: [research/](research/)
-- Policy: [policy/source-precedence-v0.md](policy/source-precedence-v0.md) (source precedence v0).
-- Policy: [policy/ootb-profiles-v0.md](policy/ootb-profiles-v0.md) (OOTB tracking profiles & activity/adaptation policy v0; non-normative example policy).
-- Policy: [policy/persistence-v0.md](policy/persistence-v0.md) (retention tiers & eviction v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157)).
-- Policy: [policy/snapshot-semantics-v0.md](policy/snapshot-semantics-v0.md) (snapshot/restore semantics v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157) Step 2).
-- Policy: [policy/restore-merge-rules-v0.md](policy/restore-merge-rules-v0.md) (restore/merge rules v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157) Step 3).
-- Policy: [policy/persistence-cadence-limits-v0.md](policy/persistence-cadence-limits-v0.md) (persistence cadence & limits v0, [#157](https://github.com/AlexanderTsarkov/naviga-app/issues/157) Step 4).
-- Contract: [contract/link-telemetry-minset-v0.md](contract/link-telemetry-minset-v0.md) (Link/Metrics & Telemetry/Health minset v0, [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158)).
-- Contract: [contract/beacon_payload_encoding_v0.md](contract/beacon_payload_encoding_v0.md) (Beacon payload byte layout, Core/Tail-1/Tail-2, payload budgets; Core only with valid fix; position-bearing vs Alive-bearing; [#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173)).
-- Contract: [contract/alive_packet_encoding_v0.md](contract/alive_packet_encoding_v0.md) (Alive packet: no-fix liveness; same per-node seq16; alive-bearing, non-position-bearing; [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)).
-- Policy: [policy/rx_semantics_v0.md](policy/rx_semantics_v0.md) (RX semantics: accepted/duplicate/ooo, seq16 single per-node, Tail-1 no revoke, Alive satisfies liveness; [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)).
-- Policy: [policy/field_cadence_v0.md](policy/field_cadence_v0.md) (Field criticality & cadence: Core/Tail-1/Tail-2 tiers, degrade order, mesh priority, DOG_COLLAR vs HUMAN; [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)).
-- Policy: [policy/nodetable_fields_inventory_v0.md](policy/nodetable_fields_inventory_v0.md) (Fields inventory, coupling rules, owner worksheet for Tier/cadence/placement; [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)).
-- Policy: [policy/position_quality_v0.md](policy/position_quality_v0.md) (Position quality: Tail-1 posFlags/sats; PositionQuality derived from Core + Tail-1; [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)).
-- Policy: [policy/activity_state_v0.md](policy/activity_state_v0.md) (Activity/presence state (derived): Unknown/Active/Stale/Lost; lastRxAt/seq16 rules; [#197](https://github.com/AlexanderTsarkov/naviga-app/issues/197)).
-- Policy: [policy/link_metrics_v0.md](policy/link_metrics_v0.md) (Receiver-derived link metrics: rssiLast/snrLast, rssiRecent/snrRecent; update rules; [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)).
-- Registry: [../hardware/registry_hw_capabilities_v0.md](../hardware/registry_hw_capabilities_v0.md) (HW Capabilities registry v0, [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)).
-- Registry: [../radio/registry_radio_profiles_v0.md](../radio/registry_radio_profiles_v0.md) (RadioProfiles & ChannelPlan registry v0, [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)).
-- Policy: [../radio/selection_policy_v0.md](../radio/selection_policy_v0.md) (Radio profile/channel selection & throttling v0; consumes [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159), [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158)).
-- Policy: [../radio/autopower_policy_v0.md](../radio/autopower_policy_v0.md) (AutoPower v0 — node-side tx power bounds, hysteresis, fallback; [#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180)).
-- Policy: [../identity/pairing_flow_v0.md](../identity/pairing_flow_v0.md) (Identity & pairing flow v0 — node_id, first-time/NFC connect, many-nodes, switch-confirm; [#182](https://github.com/AlexanderTsarkov/naviga-app/issues/182)).
-- Registry: [../registry/distribution_ownership_v0.md](../registry/distribution_ownership_v0.md) (Registry distribution & ownership v0 — source of truth, bundling, schema rev, unknown profile; [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184)).
-- Issue: [#147 NodeTable — Define & Research (Product WIP)](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
+- [../hardware/registry_hw_capabilities_v0.md](../hardware/registry_hw_capabilities_v0.md) — HW Capabilities registry.
+- [../radio/registry_radio_profiles_v0.md](../radio/registry_radio_profiles_v0.md) — RadioProfiles & ChannelPlan (channel discovery [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) post V1-A).
+- [../radio/selection_policy_v0.md](../radio/selection_policy_v0.md), [../radio/autopower_policy_v0.md](../radio/autopower_policy_v0.md) — Radio selection & AutoPower.
+- [../identity/pairing_flow_v0.md](../identity/pairing_flow_v0.md) — Identity & pairing.
+- [../registry/distribution_ownership_v0.md](../registry/distribution_ownership_v0.md) — Registry distribution.
+- Policy (supporting): [policy/source-precedence-v0.md](policy/source-precedence-v0.md), [policy/ootb-profiles-v0.md](policy/ootb-profiles-v0.md), [policy/persistence-v0.md](policy/persistence-v0.md), [policy/snapshot-semantics-v0.md](policy/snapshot-semantics-v0.md), [policy/restore-merge-rules-v0.md](policy/restore-merge-rules-v0.md), [policy/persistence-cadence-limits-v0.md](policy/persistence-cadence-limits-v0.md).
+- Research: [research/](research/).
