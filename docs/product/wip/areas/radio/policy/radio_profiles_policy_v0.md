@@ -41,18 +41,18 @@ The policy does not define the exact encoding of channel or preset; it requires 
 
 | Term | Meaning |
 |------|--------|
-| **Default profile** | Single, **immutable** profile that **MUST** always exist. Defined by product/firmware (or registry); not user-editable. Used when no user choice exists and after factory reset. |
+| **Default profile** | Single, **immutable** profile that **MUST** always exist. **Embedded in firmware** (or product/registry); not user-editable. On first boot (or when no valid current exists), the device **stores the default as an immutable record** in the persisted store so it can be referenced by CurrentProfileId; the default itself is never removed. Used when no user choice exists and after factory reset. |
 | **User profiles** | Zero or more profiles created or modified by the user (add/remove). Mutable. |
-| **CurrentProfileId** | Persisted **pointer** (id or handle) to the profile used for radio operation. **Used on boot** to restore last chosen profile. |
-| **PreviousProfileId** | Optional persisted pointer to the previously active profile; used for **rollback UX** (e.g. “revert to previous”). May be empty. |
+| **CurrentProfileId** | Persisted **pointer** (id or handle) to the profile used for radio operation — **not** the profile content itself. **Used on boot** to restore last chosen profile. |
+| **PreviousProfileId** | Optional persisted **pointer** to the previously active profile; used for **rollback UX** (e.g. “revert to previous”). May be empty. |
 
 ---
 
 ## 4) Persistence semantics (pointers and expectations)
 
-- **Default profile** is always present; it is not stored as “user data” and is not removed by factory reset.
+- **Default profile** is always present: embedded in firmware, and (on first boot or when needed) stored as an **immutable record** in the persisted store so that CurrentProfileId can point to it. It is not “user data” and is not removed by factory reset.
 - **User profiles** are stored in implementation-defined storage; policy only requires that they can be **added** and **removed** (or marked inactive).
-- **CurrentProfileId** MUST be persisted and MUST be used on boot to select the active profile. If it references a user profile that no longer exists (e.g. after partial reset), behavior is implementation-defined fallback (e.g. treat as “no current” and apply first-boot rule).
+- **CurrentProfileId** and **PreviousProfileId** are **pointers** (ids/handles) only; they reference a profile record, they do not hold profile content. CurrentProfileId MUST be persisted and MUST be used on boot to select the active profile. If it references a user profile that no longer exists (e.g. after partial reset), behavior is implementation-defined fallback (e.g. treat as “no current” and apply first-boot rule).
 - **PreviousProfileId** is optional; if present it MAY be used for rollback. No requirement to persist it across reboot; policy allows “clear previous” on factory reset.
 
 Storage format and location are out of scope; this section defines only **semantic** expectations.
