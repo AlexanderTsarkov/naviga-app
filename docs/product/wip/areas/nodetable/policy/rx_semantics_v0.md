@@ -48,7 +48,7 @@ This policy defines how the receiver interprets and applies incoming packets (Be
 
 ## 4) Tail-1 and position: no revocation of Core
 
-- **BeaconCore** is position-bearing; when a receiver has accepted a BeaconCore with valid lat/lon, that position is **authoritative** for that node until a **new** BeaconCore with a newer seq16 updates it.
+- **Baseline** (first Core sent) is defined in [field_cadence_v0](field_cadence_v0.md) §2.1; once a node has sent at least one BeaconCore, it has a baseline. **BeaconCore** is position-bearing; when a receiver has accepted a BeaconCore with valid lat/lon, that position is **authoritative** for that node until a **new** BeaconCore with a newer seq16 updates it.
 - **Tail-1** carries posFlags/sats that **qualify** the **same** Core sample (same core_seq16). Tail-1 **MUST NOT** be interpreted as revoking or invalidating position already received in BeaconCore. In particular: if the receiver already has position from Core for that node, a subsequent Tail-1 with posFlags = 0 (or “no fix”) **does not** clear or invalidate that position; it only qualifies the metadata for that sample. Position is overwritten only by a newer BeaconCore.
 
 ---
