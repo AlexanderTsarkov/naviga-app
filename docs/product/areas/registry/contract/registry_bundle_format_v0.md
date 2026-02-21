@@ -3,7 +3,7 @@
 **Status:** Canon (contract).  
 **Work Area:** Product Specs WIP · **Parent:** [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) · **Issue:** [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184)
 
-This contract defines the **v0 registry bundle format**: a single, transport-independent structure for delivering HW profiles, radio presets/params, and optional channel/region plans into the system (embedded, app-packaged, or downloaded). It does **not** define domain semantics, channel selection rules, or OOTB behaviour; those are policy. Canonical ownership and distribution rules are in [distribution_ownership_v0](../../../wip/areas/registry/distribution_ownership_v0.md).
+This contract defines the **v0 registry bundle format**: a single, transport-independent structure for delivering HW profiles, radio presets/params, and optional channel/region plans into the system (embedded, app-packaged, or downloaded). It does **not** define domain semantics, channel selection rules, or OOTB behaviour; those are policy. Canonical ownership and distribution rules are in [distribution_ownership_v0](../policy/distribution_ownership_v0.md).
 
 ---
 
@@ -28,7 +28,7 @@ This contract defines the **v0 registry bundle format**: a single, transport-ind
 
 ### 3.1 Bundle format version (schema version)
 
-- The bundle has a **schema version** (e.g. `schemaVersion: "v0"` or integer). Clients that do not support that version **MUST** ignore or reject the bundle (and may prompt for update per [distribution_ownership_v0](../../../wip/areas/registry/distribution_ownership_v0.md)).
+- The bundle has a **schema version** (e.g. `schemaVersion: "v0"` or integer). Clients that do not support that version **MUST** ignore or reject the bundle (and may prompt for update per [distribution_ownership_v0](../policy/distribution_ownership_v0.md)).
 - Backward/forward compatibility: **v0 rule** — add new optional top-level keys or registry sections only; do not remove or rename keys used by v0. New schema versions (v1, v2) may introduce breaking changes; clients that support only v0 ignore unknown schema versions.
 
 ### 3.2 Registry content versioning
@@ -96,14 +96,14 @@ The bundle is a single document. Example shape (JSON; YAML or other equivalent i
 ## 8) Pointers to future work
 
 - **Signatures:** Placeholder for signed bundles; no crypto or verification in v0.
-- **Backend distribution:** [distribution_ownership_v0](../../../wip/areas/registry/distribution_ownership_v0.md) §8; bundle format is transport-agnostic so backend can deliver the same structure.
+- **Backend distribution:** [distribution_ownership_v0](../policy/distribution_ownership_v0.md) §8; bundle format is transport-agnostic so backend can deliver the same structure.
 - **Channel list source / discovery (#175):** Channel plans may be part of the bundle; **which** channel list is used and how discovery works is out of scope here. This contract only defines that `channelPlans` (or equivalent) can appear in the bundle; [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) defines inputs and flow.
 
 ---
 
 ## 9) Related
 
-- **Distribution & ownership:** [distribution_ownership_v0](../../../wip/areas/registry/distribution_ownership_v0.md) — who owns content, how it is shipped (bundled in v0), schema rev rules, unknown profile handling.
+- **Distribution & ownership:** [distribution_ownership_v0](../policy/distribution_ownership_v0.md) — who owns content, how it is shipped (bundled in v0), schema rev rules, unknown profile handling.
 - **HW registry:** [registry_hw_capabilities_v0](../../hardware/contract/registry_hw_capabilities_v0.md) — semantics of hwProfiles entries.
 - **Radio registry:** [registry_radio_profiles_v0](../../../wip/areas/radio/registry_radio_profiles_v0.md) — semantics of radioProfiles / channelPlans.
 - **Selection policy:** [selection_policy_v0](../../../wip/areas/radio/selection_policy_v0.md) — consumes registries; does not define bundle format.
