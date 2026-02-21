@@ -16,19 +16,19 @@ This policy defines **device-level** module boot configuration: parameters to se
 
 ## 2) E220 / E22 modem boot config (device-level)
 
-**Strategy note:** Prefer **verify-and-repair on boot** for parameters critical to comms (RSSI, LBT, UART, sub-packet). One-time init + “configured” flag may be used for parameters that rarely change and are persisted; document per row below.
+**Critical parameters (verify-and-repair every boot):** The following **MUST** be verified on every boot and repaired on mismatch: **Enable RSSI Byte**, **LBT Enable**, **UART baud/parity**, **sub-packet**, **RSSI ambient/enable**. All other parameters may use one-time init or init-on-change (see table).
 
 | Parameter | Required value / policy | When applied | Rationale | Notes |
 |-----------|-------------------------|--------------|-----------|--------|
-| **Enable RSSI Byte** | ON | Verify-on-boot (recommended) or one-time init | Link metrics / receiver-side RSSI; required for NodeTable and activity. | If one-time: persist “configured” and re-verify after factory reset. |
-| **LBT Enable** | OFF | Verify-on-boot (recommended) or one-time init | Policy: sense unsupported; mitigation is jitter-only, no CAD/LBT. | Must match product policy. |
-| **UART baud / parity** | Product-defined; must match host | Verify-on-boot recommended | Consistent host–modem link; wrong baud breaks comms. | Same as “when applied” for other critical UART params. |
-| **Sub-packet setting** | Product-defined; consistent for TX/RX | Verify-on-boot recommended | Payload and framing must match encoding contract. | Align with [beacon_payload_encoding](../../nodetable/contract/beacon_payload_encoding_v0.md) and modem capability. |
-| **RSSI ambient noise / enable** | Align with “RSSI Byte ON”; enable RSSI reporting | Verify-on-boot recommended | Ensures RSSI byte is valid for link metrics. | May be single register; keep consistent with Enable RSSI Byte. |
-| **WOR cycle** | Set only if WOR used | One-time init or verify-on-boot (product choice) | Low-power listen cycle; not required for basic beacon cadence. | Only if used; otherwise leave default or disable. |
+| **Enable RSSI Byte** | ON | **Verify-and-repair every boot** | Link metrics / receiver-side RSSI; required for NodeTable and activity. | Critical. |
+| **LBT Enable** | OFF | **Verify-and-repair every boot** | Policy: sense unsupported; mitigation is jitter-only, no CAD/LBT. | Critical. |
+| **UART baud / parity** | Product-defined; must match host | **Verify-and-repair every boot** | Consistent host–modem link; wrong baud breaks comms. | Critical. |
+| **Sub-packet setting** | Product-defined; consistent for TX/RX | **Verify-and-repair every boot** | Payload and framing must match encoding contract. | Critical. Align with [beacon_payload_encoding](../../nodetable/contract/beacon_payload_encoding_v0.md). |
+| **RSSI ambient noise / enable** | Align with “RSSI Byte ON”; enable RSSI reporting | **Verify-and-repair every boot** | Ensures RSSI byte is valid for link metrics. | Critical. |
+| **WOR cycle** | Set only if WOR used | One-time init or init-on-change | Low-power listen cycle; not required for basic beacon cadence. | Only if used; otherwise leave default or disable. |
 | **Key bytes** (e.g. AES) | Set only if encryption used | One-time init (only if used) | Out of scope for v0 unless product requires. | Mark “only if used”; likely out of scope v0. |
 
-**Boot strategy summary (E220):** Critical comms parameters (RSSI Byte ON, LBT OFF, UART, sub-packet, RSSI enable) — **prefer verify-and-repair on every boot**. Optional or rarely changed (WOR, key bytes) — one-time init or product-defined.
+**Boot strategy summary (E220):** Critical parameters (RSSI Byte, LBT, UART, sub-packet, RSSI enable) — **verify-and-repair on every boot**. Optional (WOR, key bytes) — one-time init or product-defined.
 
 ---
 
@@ -36,12 +36,12 @@ This policy defines **device-level** module boot configuration: parameters to se
 
 | Parameter | Required value / policy | When applied | Rationale | Notes |
 |-----------|-------------------------|--------------|-----------|--------|
-| **Baud / protocol** | Product-defined (e.g. 9600 NMEA or UBX) | Verify-on-boot recommended | Host–GNSS link must be consistent for fix and time. | NMEA or UBX; document which in product. |
-| **Protocol** | NMEA or UBX (choose one) | One-time init or verify-on-boot | Determines message set and parsing. | UBX allows tighter control; NMEA is common. |
-| **Message rate / required sentences** | High-level: fix + time at rate sufficient for beacon cadence | Verify-on-boot or one-time init | BeaconCore needs position when fix available; Alive when no fix. | E.g. GGA + RMC (NMEA) or equivalent UBX; rate ≥ 1 Hz typical for tracking. |
-| **Required outputs** | Position (lat/lon), fix quality, time (for freshness) | As above | Core payload and first-fix bootstrap depend on valid fix. | No new semantics; align with [field_cadence_v0](../../nodetable/policy/field_cadence_v0.md) §2.1. |
+| **Baud / protocol** | Product-defined (e.g. NMEA or UBX) | Minimal verify-on-boot; repair on mismatch | Host–GNSS link must be consistent for fix and time. | See strategy below. |
+| **Protocol** | NMEA or UBX (choose one) | Full config on first boot or when needed | Determines message set and parsing. | UBX allows tighter control; NMEA is common. |
+| **Message rate / required sentences** | High-level: fix + time at rate sufficient for beacon cadence | Full config on first boot or when needed | BeaconCore needs position when fix available; Alive when no fix. | E.g. GGA + RMC (NMEA) or equivalent UBX. |
+| **Required outputs** | Position (lat/lon), fix quality, time (for freshness) | As above | Core payload and first-fix bootstrap depend on valid fix. | Align with [field_cadence_v0](../../nodetable/policy/field_cadence_v0.md) §2.1. |
 
-**Boot strategy summary (GNSS):** Baud/protocol and message set — **verify-and-repair on boot** recommended so that after Phase A the device can obtain fix and time reliably; one-time init acceptable if product documents persistence and re-apply on factory reset.
+**Boot strategy summary (GNSS):** **Minimal verify-on-boot** — baud/protocol and responsiveness (that the link is usable); **repair on mismatch**. **Full config** (message set, rate, required outputs) on **first boot or when needed**; no concrete timing constants in this policy.
 
 ---
 

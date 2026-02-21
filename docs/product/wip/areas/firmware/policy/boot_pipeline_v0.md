@@ -24,8 +24,8 @@ This policy defines the **v0 boot pipeline**: ordered phases from power-on to fi
 ## 3) Phase A: HW bring-up (module boot configs)
 
 - FW brings hardware modules (radio, GNSS, and any others required for comms) to the **required Naviga operating mode**.
-- **Verify-and-repair on boot:** Where policy or product requires it, FW MUST **verify** that module config matches the expected state and **repair** (re-init or re-apply config) if not. Whether each module uses “verify every boot” vs “one-time init + configured flag” is defined per module in [module_boot_config_v0](module_boot_config_v0.md) ([#215](https://github.com/AlexanderTsarkov/naviga-app/issues/215)); this pipeline only requires that **by end of Phase A** all modules needed for comms are in the correct state.
-- **Invariant by end of Phase A:** All modules needed for comms are in the correct state for Naviga. No reliance on “one-time init” unless explicitly documented elsewhere; otherwise assume verify-and-repair on boot.
+- **Strategy:** Where a module uses **one-time init**, it sets a “configured” state (e.g. persisted flag); **then on every boot** FW MUST **verify** that critical module config matches the expected state and **repair** (re-init or re-apply config) on mismatch. For **critical** module configs (parameters required for comms), verify-and-repair on boot is **required**; see [module_boot_config_v0](module_boot_config_v0.md) ([#215](https://github.com/AlexanderTsarkov/naviga-app/issues/215)) for which parameters are critical per module.
+- **Invariant by end of Phase A:** All modules needed for comms are in the correct state for Naviga. Critical configs are verified (and repaired if needed) every boot; one-time init alone is not sufficient unless explicitly documented per parameter elsewhere.
 
 ---
 
@@ -69,4 +69,4 @@ By the time first radio comms (Alive or Beacon) are sent:
 - **Radio profiles:** [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)).
 - **Field cadence / first-fix:** [field_cadence_v0](../../nodetable/policy/field_cadence_v0.md) §2.1 ([PR #213](https://github.com/AlexanderTsarkov/naviga-app/pull/213)).
 - **Beacon / Alive encoding:** [beacon_payload_encoding_v0](../../nodetable/contract/beacon_payload_encoding_v0.md), [alive_packet_encoding_v0](../../nodetable/contract/alive_packet_encoding_v0.md) ([PR #205](https://github.com/AlexanderTsarkov/naviga-app/pull/205)).
-- **Module boot config (E220, GNSS):** [#215](https://github.com/AlexanderTsarkov/naviga-app/issues/215) (module_boot_config_v0 — when written).
+- **Module boot config (E220, GNSS):** [module_boot_config_v0](module_boot_config_v0.md) ([#215](https://github.com/AlexanderTsarkov/naviga-app/issues/215)).
