@@ -86,6 +86,8 @@ Next 3–5 docs-only tasks are listed in **Next issues (proposed)** below; they 
 
 *V1-A? = **IN** (in first vertical slice scope) | **OUT** (deferred) | **MAYBE** (conditional). **Promote** = **Idea** (early/stub) | **Candidate** (doc exists; review or deps in progress) | **Ready** (canon v0; ready to promote when implementation aligns).*
 
+**Promotion status:** The **Promote** column follows the convention in [docs_promotion_policy_v0.md](../../policy/docs_promotion_policy_v0.md) (§7). Allowed values: **WIP-Idea** | **WIP-Candidate** | **WIP-Ready** | **Promoted** | **Deprecated**. Current table uses Idea / Candidate / Ready as WIP-*; Promoted/Deprecated used when a doc is elevated or superseded.
+
 ---
 
 ## 2) Blockers for first vertical slice
@@ -118,12 +120,14 @@ List of next docs-only tasks that align with this map. Update when spec_map or p
 
 - Umbrella: [#147 NodeTable — Define & Research](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 - Canon areas: [areas/](areas/)
+- Promotion policy (lifecycle, source of truth, spec_map convention): [docs_promotion_policy_v0.md](../../policy/docs_promotion_policy_v0.md)
 
 ---
 
 **Last updated:** 2026-02-21
 
 **Changelog:**
+- 2026-02-21: Promotion policy v0: new [docs_promotion_policy_v0.md](../policy/docs_promotion_policy_v0.md) (lifecycle, source of truth, coexistence, spec_map convention). Spec_map: Promotion status convention (§7 link), Related link. [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224), [#225](https://github.com/AlexanderTsarkov/naviga-app/issues/225).
 - 2026-02-21: NodeTable hub ([areas/nodetable/index.md](areas/nodetable/index.md)): V1-A entry point restructured; invariants summary (Alive/Core-only-with-fix/seq16/Tail-1 no revoke), canon Contracts/Policies links, post-V1-A (#175) explicit; promotion criteria. [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
 - 2026-02-21: Provisioning interface v0: new [provisioning_interface_v0](areas/firmware/policy/provisioning_interface_v0.md) (serial-only: role/radio get/set/reset, factory reset, status; persistence; boot pipeline interaction). Spec_map: Inventory row added (IN, Candidate). [#221](https://github.com/AlexanderTsarkov/naviga-app/issues/221). (PR [#222](https://github.com/AlexanderTsarkov/naviga-app/pull/222))
 - 2026-02-21: Role profiles v0: OOTB normative defaults (Person/Dog/Infra) in [role_profiles_policy_v0](areas/domain/policy/role_profiles_policy_v0.md); Infra maxSilence10s encoding clamp noted. Spec_map: [role_profiles_policy_v0](areas/domain/policy/role_profiles_policy_v0.md) Promote → Ready (V1-A IN). [#219](https://github.com/AlexanderTsarkov/naviga-app/issues/219). (PR [#220](https://github.com/AlexanderTsarkov/naviga-app/pull/220))
