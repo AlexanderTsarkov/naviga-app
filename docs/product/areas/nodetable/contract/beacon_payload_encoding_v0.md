@@ -162,7 +162,7 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 
 ## 6) Payload budgets per RadioProfile class
 
-Payload size (in bytes) **MUST NOT** exceed the budget for the **RadioProfile class** in use for that beacon. Profile classes are defined in [registry_radio_profiles_v0.md](../../../wip/areas/radio/registry_radio_profiles_v0.md) (Default / LongDist / Fast).
+Payload size (in bytes) **MUST NOT** exceed the budget for the **RadioProfile class** in use for that beacon. Profile classes are defined in [registry_radio_profiles_v0.md](../../../radio/policy/registry_radio_profiles_v0.md) (Default / LongDist / Fast).
 
 | Profile class | Max beacon payload (bytes) | Rationale |
 |---------------|----------------------------|------------|
@@ -188,5 +188,5 @@ Payload size (in bytes) **MUST NOT** exceed the budget for the **RadioProfile cl
 - **Alive packet (no-fix liveness):** [alive_packet_encoding_v0.md](alive_packet_encoding_v0.md) — Alive packet encoding; position-bearing vs alive-bearing in §3.1 above.
 - **Field cadence (Core/Tail semantics):** [../policy/field_cadence_v0.md](../policy/field_cadence_v0.md) — §2 Beacon split definitions; receiver rule for Tail-1.
 - **Minset (field semantics):** [link-telemetry-minset-v0.md](link-telemetry-minset-v0.md) — [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158)
-- **RadioProfiles & ChannelPlan:** [../../../wip/areas/radio/registry_radio_profiles_v0.md](../../../wip/areas/radio/registry_radio_profiles_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)
+- **RadioProfiles & ChannelPlan:** [../../../radio/policy/registry_radio_profiles_v0.md](../../../radio/policy/registry_radio_profiles_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)
 - **NodeTable hub:** [../index.md](../index.md) — [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)

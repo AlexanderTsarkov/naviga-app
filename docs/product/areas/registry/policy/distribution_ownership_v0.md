@@ -18,7 +18,7 @@ This doc defines **registry distribution & ownership v0**: where registry "truth
 
 | # | Decision point | v0 choice | Open / follow-up |
 |---|----------------|-----------|-------------------|
-| 1 | Source of truth format | **Human-editable first:** canonical content lives in **Markdown** under `docs/product/wip/areas/` (e.g. [HW](../../hardware/contract/registry_hw_capabilities_v0.md), [Radio](../../../wip/areas/radio/registry_radio_profiles_v0.md)). Machine-consumable artifacts (JSON/YAML) may be generated later from the same source or maintained in parallel; v0 does not mandate a single canonical machine format. | Exact pipeline (MD→JSON, or hand-maintained JSON) is implementation; document when stable. |
+| 1 | Source of truth format | **Human-editable first:** canonical content lives in **Markdown** under `docs/product/wip/areas/` (e.g. [HW](../../hardware/contract/registry_hw_capabilities_v0.md), [Radio](../../radio/policy/registry_radio_profiles_v0.md)). Machine-consumable artifacts (JSON/YAML) may be generated later from the same source or maintained in parallel; v0 does not mandate a single canonical machine format. | Exact pipeline (MD→JSON, or hand-maintained JSON) is implementation; document when stable. |
 | 2 | Ownership map | **Canonical spec in repo:** owned by Product/Architecture (single merge owner). **Input owners:** Firmware/HW confirm hardware facts and hw_profile_id→capabilities mapping; Mobile is a consumer and provides UX constraints/format needs. **v1 note:** Later (v1), registry sources should be tool-generated (not hand-edited), with a human-readable render committed alongside. | Backend or firmware may later hold a *copy* or *cache*; ownership of the canonical content stays in repo/docs. |
 | 3 | Schema rev rules | **Append-only** capability/field keys; do not rename; deprecations keep old keys until a **schema rev window** (e.g. one major app version). **Who bumps rev:** owner (product/docs) when adding or deprecating in a way that requires client awareness. **"Update app" trigger:** when app or device sees **unknown hw_profile_id** or **registry_schema_rev** &gt; app's supported rev. | Exact rev numbering (v1, v2 vs semver) and window length are implementation. |
 | 4 | Mobile bundling | **Bundled with app:** registry assets (e.g. HW capabilities table, RadioProfiles + ChannelPlan) live in the **app repo** (e.g. under an assets or config path). They are **versioned with the app release**; no separate registry version in v0 beyond schema_rev inside the payload. App ships with a known schema_rev; store/play store update delivers new registries. | Exact path and format (single JSON vs per-registry files) are implementation. |
@@ -32,7 +32,7 @@ This doc defines **registry distribution & ownership v0**: where registry "truth
 
 - **Canonical content** for v0 lives in the **repo** under `docs/product/wip/areas/`:
   - HW Capabilities: [hardware/registry_hw_capabilities_v0.md](../../hardware/contract/registry_hw_capabilities_v0.md)
-  - RadioProfiles & ChannelPlan: [radio/registry_radio_profiles_v0.md](../../../wip/areas/radio/registry_radio_profiles_v0.md)
+  - RadioProfiles & ChannelPlan: [radio/registry_radio_profiles_v0.md](../../radio/policy/registry_radio_profiles_v0.md)
 - Content is **human-editable** (Markdown tables and lists). Machine-consumable exports (e.g. JSON) may be generated or maintained alongside; v0 does not require a single canonical machine format.
 - **Ownership:** Canonical spec in repo is owned by Product/Architecture (single merge owner). **Input owners:** Firmware/HW confirm hardware facts and hw_profile_id→capabilities mapping; Mobile is a consumer and provides UX constraints/format needs. Later (v1), registry sources should be tool-generated (not hand-edited), with a human-readable render committed alongside. Changes via PR, aligned with [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
 
@@ -103,5 +103,5 @@ This doc defines **registry distribution & ownership v0**: where registry "truth
 ## 11) Related
 
 - **HW Capabilities registry:** [registry_hw_capabilities_v0.md](../../hardware/contract/registry_hw_capabilities_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)
-- **RadioProfiles & ChannelPlan registry:** [registry_radio_profiles_v0.md](../../../wip/areas/radio/registry_radio_profiles_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)
+- **RadioProfiles & ChannelPlan registry:** [registry_radio_profiles_v0.md](../../radio/policy/registry_radio_profiles_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)
 - **NodeTable contract:** [nodetable/index.md](../../nodetable/index.md) — [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)

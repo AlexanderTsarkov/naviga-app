@@ -61,7 +61,7 @@ The following are **out of scope for V1-A**; do not block implementation or prom
 ## 6) Related (other areas)
 
 - [../../hardware/contract/registry_hw_capabilities_v0.md](../../hardware/contract/registry_hw_capabilities_v0.md) — HW Capabilities registry.
-- [../../wip/areas/radio/registry_radio_profiles_v0.md](../../wip/areas/radio/registry_radio_profiles_v0.md) — RadioProfiles & ChannelPlan (channel discovery [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) post V1-A).
+- [../../radio/policy/registry_radio_profiles_v0.md](../../radio/policy/registry_radio_profiles_v0.md) — RadioProfiles & ChannelPlan (channel discovery [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) post V1-A).
 - [../../wip/areas/radio/selection_policy_v0.md](../../wip/areas/radio/selection_policy_v0.md), [../../wip/areas/radio/autopower_policy_v0.md](../../wip/areas/radio/autopower_policy_v0.md) — Radio selection & AutoPower.
 - [../../wip/areas/identity/pairing_flow_v0.md](../../wip/areas/identity/pairing_flow_v0.md) — Identity & pairing.
 - [../../wip/areas/registry/distribution_ownership_v0.md](../../wip/areas/registry/distribution_ownership_v0.md) — Registry distribution.

@@ -87,5 +87,5 @@ Registry entries are grouped conceptually as follows. Schema format (JSON, proto
 
 - **NodeTable contract:** [nodetable/index.md](../../nodetable/index.md) — [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 - **Link/Telemetry minset:** [link-telemetry-minset-v0.md](../../nodetable/contract/link-telemetry-minset-v0.md) — [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158) (hwProfile field).
-- **Radio profiles registry:** [registry_radio_profiles_v0](../../../wip/areas/radio/registry_radio_profiles_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159).
+- **Radio profiles registry:** [registry_radio_profiles_v0](../../radio/policy/registry_radio_profiles_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159).
 - **Registry distribution & ownership:** [distribution_ownership_v0](../../../wip/areas/registry/distribution_ownership_v0.md) — [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184).
