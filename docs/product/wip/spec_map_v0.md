@@ -40,7 +40,7 @@
 ### Open (what blocks progress)
 
 - Channel list source & local discovery flow → [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175). *Clarification: #175 is post V1-A; V0/V1-A uses deterministic OOTB default profile per [#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211).*
-- Registry bundle format → [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184) doc added ([registry_bundle_format_v0](areas/registry/contract/registry_bundle_format_v0.md)); path/pipeline implementation when stable.
+- Registry bundle format → [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184) doc added ([registry_bundle_format_v0](../areas/registry/contract/registry_bundle_format_v0.md)); path/pipeline implementation when stable.
 - Secure claim protocol & threat model (if required for v1) → [#187](https://github.com/AlexanderTsarkov/naviga-app/issues/187); stub only today.
 - NodeTable implementation order / wiring for first slice → [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
 
@@ -68,7 +68,7 @@ Next 3–5 docs-only tasks are listed in **Next issues (proposed)** below; they 
 | Hardware | [areas/hardware/registry_hw_capabilities_v0.md](areas/hardware/registry_hw_capabilities_v0.md) | Doc | v0 | HW capabilities (hw_profile_id, adapter_type, confidence, local vs remote) | — | [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184) (distribution) | — | N | — | IN | Ready |
 | Radio | [areas/radio/registry_radio_profiles_v0.md](areas/radio/registry_radio_profiles_v0.md) | Doc | v0 | RadioProfiles & ChannelPlan (Default/LongDist/Fast, profile–channel compatibility) | HW registry | [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) (channel discovery) | — | **Y** — channel list/source and discovery flow not fully specified | — | MAYBE | Candidate |
 | Registry | [areas/registry/distribution_ownership_v0.md](areas/registry/distribution_ownership_v0.md) | Doc | v0 | Distribution & ownership (source of truth, bundling, schema rev, BT vs registry merge) | HW + Radio registries | — | — | N | — | IN | Ready |
-| Registry | [areas/registry/contract/registry_bundle_format_v0.md](areas/registry/contract/registry_bundle_format_v0.md) | Doc | v0 | Bundle format v0: schema (metadata, contents, registries), versioning, integrity, transport-independent, replace/merge semantics | distribution_ownership_v0, HW + Radio registries | [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184) | — | N | #184 bundle format contract | IN | Ready |
+| Registry | [../areas/registry/contract/registry_bundle_format_v0.md](../areas/registry/contract/registry_bundle_format_v0.md) | Doc | v0 | Bundle format v0: schema (metadata, contents, registries), versioning, integrity, transport-independent, replace/merge semantics | distribution_ownership_v0, HW + Radio registries | [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184) | — | N | Promoted path: docs/product/areas/registry/contract/registry_bundle_format_v0.md | IN | Promoted |
 | Radio policy | [../areas/radio/policy/radio_profiles_policy_v0.md](../areas/radio/policy/radio_profiles_policy_v0.md) | Doc | v0 | RadioProfile model; default (immutable) + user profiles; CurrentProfileId/PreviousProfileId; first boot; factory reset; minimal API (list/select/reset) | selection_policy, registry_radio_profiles | [#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211) | — | N | Promoted path: docs/product/areas/radio/policy/radio_profiles_policy_v0.md | IN | Promoted |
 | Radio policy | [areas/radio/selection_policy_v0.md](areas/radio/selection_policy_v0.md) | Doc | v0 | SelectionPolicy (default profile/channel, throttling, user advice) | #159, #158 | [#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180) (AutoPower) | — | N | — | IN | Ready |
 | Radio policy | [areas/radio/autopower_policy_v0.md](areas/radio/autopower_policy_v0.md) | Doc | v0 | AutoPower (node-side tx power, bounds, hysteresis, fallback) | #159, #158 | — | — | N | — | IN | Ready |
@@ -100,7 +100,7 @@ Next 3–5 docs-only tasks are listed in **Next issues (proposed)** below; they 
 | NodeTable as central consumer (implementation order, wiring) | [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) | In progress | Single end-to-end slice until shape fixed |
 | Channel discovery & selection (channel list source, local discovery flow) | [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) | Open | Post V1-A; V1-A uses deterministic OOTB default per [#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211) |
 | Secure claim (stub; threat model / protocol TBD) | [#187](https://github.com/AlexanderTsarkov/naviga-app/issues/187) | Stub | Only if product requires ownership/anti-spoofing for first slice |
-| Registry bundle format (path, JSON vs per-registry; implementation when stable) | [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184) | Doc | Bundle format contract done ([registry_bundle_format_v0](areas/registry/contract/registry_bundle_format_v0.md)); app/firmware consumption can proceed |
+| Registry bundle format (path, JSON vs per-registry; implementation when stable) | [#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184) | Doc | Bundle format contract done ([registry_bundle_format_v0](../areas/registry/contract/registry_bundle_format_v0.md)); app/firmware consumption can proceed |
 
 ---
 
@@ -110,7 +110,7 @@ List of next docs-only tasks that align with this map. Update when spec_map or p
 
 1. **[#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173)** — Beacon payload & encoding: contract done ([beacon_payload_encoding_v0.md](../areas/nodetable/contract/beacon_payload_encoding_v0.md)); implementation/validation next.
 2. **[#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175)** — Channel discovery & selection (channel list source, local discovery flow).
-3. **[#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184)** — Registry bundle format v0 doc added ([registry_bundle_format_v0](areas/registry/contract/registry_bundle_format_v0.md)); implementation (path, pipeline) when stable.
+3. **[#184](https://github.com/AlexanderTsarkov/naviga-app/issues/184)** — Registry bundle format v0 doc added ([registry_bundle_format_v0](../areas/registry/contract/registry_bundle_format_v0.md)); implementation (path, pipeline) when stable.
 4. **[#187](https://github.com/AlexanderTsarkov/naviga-app/issues/187)** — Secure claim: expand stub to threat model + protocol outline if required for v1.
 5. **#147 / NodeTable** — Implementation order and wiring for first vertical slice (docs/decisions, not code).
 
@@ -131,6 +131,7 @@ List of next docs-only tasks that align with this map. Update when spec_map or p
 **Last updated:** 2026-02-21
 
 **Changelog:**
+- 2026-02-21: Registry bundle format V1-A promotion: moved [registry_bundle_format_v0](../areas/registry/contract/registry_bundle_format_v0.md) from `wip/areas/registry/contract/` to `docs/product/areas/registry/contract/`. WIP path replaced with redirect stub. Spec_map: Registry bundle format row set to Promoted + Promoted path. [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224), [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
 - 2026-02-21: Role Profiles V1-A promotion: moved [role_profiles_policy_v0](../areas/domain/policy/role_profiles_policy_v0.md) from `wip/areas/domain/policy/` to `docs/product/areas/domain/policy/`. WIP path replaced with redirect stub. Spec_map: Domain role profiles row set to Promoted + Promoted path. [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224), [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
 - 2026-02-21: Radio Profiles V1-A promotion: moved [radio_profiles_policy_v0](../areas/radio/policy/radio_profiles_policy_v0.md) from `wip/areas/radio/policy/` to `docs/product/areas/radio/policy/`. WIP path replaced with redirect stub. Spec_map: Radio profiles row set to Promoted + Promoted path. [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224), [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
 - 2026-02-21: Firmware V1-A promotion pilot: moved 3 policy docs from `wip/areas/firmware/policy/` to `docs/product/areas/firmware/policy/` (boot_pipeline_v0, module_boot_config_v0, provisioning_interface_v0). WIP paths replaced with redirect stubs. Spec_map: Firmware rows set to Promoted + Promoted path. [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224), [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
