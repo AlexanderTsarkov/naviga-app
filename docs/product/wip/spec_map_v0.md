@@ -88,6 +88,8 @@ Next 3–5 docs-only tasks are listed in **Next issues (proposed)** below; they 
 
 **Promotion status:** The **Promote** column follows the convention in [docs_promotion_policy_v0.md](../../policy/docs_promotion_policy_v0.md) (§7). Allowed values: **WIP-Idea** | **WIP-Candidate** | **WIP-Ready** | **Promoted** | **Deprecated**. Current table uses Idea / Candidate / Ready as WIP-*; Promoted/Deprecated used when a doc is elevated or superseded.
 
+**Promoted path:** When status = **Promoted**, the canonical doc lives at `docs/product/areas/<area>/{contract,policy}/<name>.md` per [docs_layout_policy_v0.md](../../policy/docs_layout_policy_v0.md). Record the promoted path in the Inventory (e.g. in Promotion note or a dedicated column) so links point to the canon location after move.
+
 ---
 
 ## 2) Blockers for first vertical slice
@@ -121,12 +123,14 @@ List of next docs-only tasks that align with this map. Update when spec_map or p
 - Umbrella: [#147 NodeTable — Define & Research](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 - Canon areas: [areas/](areas/)
 - Promotion policy (lifecycle, source of truth, spec_map convention): [docs_promotion_policy_v0.md](../../policy/docs_promotion_policy_v0.md)
+- Layout policy (canon structure, promoted path, redirect stubs): [docs_layout_policy_v0.md](../../policy/docs_layout_policy_v0.md)
 
 ---
 
 **Last updated:** 2026-02-21
 
 **Changelog:**
+- 2026-02-21: Layout policy v0: new [docs_layout_policy_v0.md](../policy/docs_layout_policy_v0.md) (four-layer structure: product/wip/legacy/ootb; canon `areas/<area>/{contract,policy}`; naming; redirect stub rule; promoted path). Spec_map: Promoted path convention, Related link. [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224), [#226](https://github.com/AlexanderTsarkov/naviga-app/issues/226).
 - 2026-02-21: Promotion policy v0: new [docs_promotion_policy_v0.md](../policy/docs_promotion_policy_v0.md) (lifecycle, source of truth, coexistence, spec_map convention). Spec_map: Promotion status convention (§7 link), Related link. [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224), [#225](https://github.com/AlexanderTsarkov/naviga-app/issues/225).
 - 2026-02-21: NodeTable hub ([areas/nodetable/index.md](areas/nodetable/index.md)): V1-A entry point restructured; invariants summary (Alive/Core-only-with-fix/seq16/Tail-1 no revoke), canon Contracts/Policies links, post-V1-A (#175) explicit; promotion criteria. [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
 - 2026-02-21: Provisioning interface v0: new [provisioning_interface_v0](areas/firmware/policy/provisioning_interface_v0.md) (serial-only: role/radio get/set/reset, factory reset, status; persistence; boot pipeline interaction). Spec_map: Inventory row added (IN, Candidate). [#221](https://github.com/AlexanderTsarkov/naviga-app/issues/221). (PR [#222](https://github.com/AlexanderTsarkov/naviga-app/pull/222))
