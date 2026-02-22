@@ -6,6 +6,7 @@
 #include "domain/logger.h"
 #include "services/oled_status.h"
 #include "services/radio_smoke_service.h"
+#include "services/serial_provisioning.h"
 
 namespace naviga {
 
@@ -26,6 +27,7 @@ class AppServices {
   domain::Logger event_logger_;
   M1Runtime runtime_;
   OledStatus oled_;
+  SerialProvisioning serial_provisioning_;
 };
 
 } // namespace naviga
