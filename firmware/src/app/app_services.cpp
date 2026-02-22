@@ -172,6 +172,7 @@ void AppServices::init() {
 
   // --- Phase B: Provision role + radio profile (boot_pipeline_v0) ---
   // Defaults per role_profiles_policy_v0 / radio_profiles_policy_v0. Id 0 = Person (18s), Dog (9), Infra (360). Radio 0 = channel 1.
+  // TODO(F6/F7): Replace hardcoded ID validity with registry/table lookup.
   constexpr uint32_t kDefaultRoleId = 0;
   constexpr uint32_t kDefaultRadioProfileId = 0;
   PersistedPointers ptrs{};
@@ -185,18 +186,25 @@ void AppServices::init() {
     if (effective_role_id > 2) { effective_role_id = kDefaultRoleId; use_persisted = false; }
     if (effective_radio_id != 0) { effective_radio_id = kDefaultRadioProfileId; use_persisted = false; }
   }
+  // When effective differs from persisted current (e.g. invalid id → default), set previous = last persisted current.
+  const bool role_changed = loaded && ptrs.has_current_role && (effective_role_id != ptrs.current_role_id);
+  const bool radio_changed = loaded && ptrs.has_current_radio && (effective_radio_id != ptrs.current_radio_profile_id);
+  const uint32_t new_previous_role = role_changed ? ptrs.current_role_id : ptrs.previous_role_id;
+  const uint32_t new_previous_radio = radio_changed ? ptrs.current_radio_profile_id : ptrs.previous_radio_profile_id;
   uint16_t effective_interval_s = 18;
   if (effective_role_id == 0) effective_interval_s = 18;
   else if (effective_role_id == 1) effective_interval_s = 9;
   else if (effective_role_id == 2) effective_interval_s = 360;
   uint8_t effective_channel = (effective_radio_id == 0) ? 1 : 1;
-  save_pointers(effective_role_id, effective_radio_id, ptrs.previous_role_id, ptrs.previous_radio_profile_id);
+  save_pointers(effective_role_id, effective_radio_id, new_previous_role, new_previous_radio);
   {
-    char buf[64] = {0};
-    std::snprintf(buf, sizeof(buf), "Phase B: role=%lu profile=%lu source=%s",
+    const bool fallback = loaded && !use_persisted;
+    char buf[80] = {0};
+    std::snprintf(buf, sizeof(buf), "Phase B: role=%lu profile=%lu source=%s%s",
                   static_cast<unsigned long>(effective_role_id),
                   static_cast<unsigned long>(effective_radio_id),
-                  use_persisted ? "persisted" : "default");
+                  use_persisted ? "persisted" : "default",
+                  fallback ? " (invalid persisted id)" : "");
     log_line(buf);
   }
 
