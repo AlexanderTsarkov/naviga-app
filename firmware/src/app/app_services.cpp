@@ -151,6 +151,22 @@ void AppServices::init() {
   static E220Radio radio_instance(profile.pins);
   radio = &radio_instance;
   const bool radio_ready = radio->begin();
+  {
+    char buf[80] = {0};
+    switch (radio->last_boot_config_result()) {
+      case E220BootConfigResult::Ok:
+        log_line("E220 boot: config ok");
+        break;
+      case E220BootConfigResult::Repaired:
+        std::snprintf(buf, sizeof(buf), "E220 boot: repaired (%s)", radio->last_boot_config_message());
+        log_line(buf);
+        break;
+      case E220BootConfigResult::RepairFailed:
+        std::snprintf(buf, sizeof(buf), "E220 boot: repair failed (%s)", radio->last_boot_config_message());
+        log_line(buf);
+        break;
+    }
+  }
   format_short_id_hex(short_id_, short_id_hex_, sizeof(short_id_hex_));
   format_mac_colon_hex(mac_bytes, mac_hex_, sizeof(mac_hex_));
   extract_bt_short(mac_hex_, bt_short_, sizeof(bt_short_));
