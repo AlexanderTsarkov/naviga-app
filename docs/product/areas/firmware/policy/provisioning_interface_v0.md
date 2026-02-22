@@ -3,7 +3,7 @@
 **Status:** Canon (policy).  
 **Work Area:** Product Specs WIP · **Parent:** [#221](https://github.com/AlexanderTsarkov/naviga-app/issues/221) · **Umbrella:** [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 
-This policy defines the **v0 provisioning interface**: **serial console commands** to set role and radio profile pointers, reset to defaults, and query status. It enables **one firmware image** for V1-A: the device is configured per-unit via provisioning; boot pipeline ([#214](https://github.com/AlexanderTsarkov/naviga-app/issues/214)) reads persisted pointers in Phase B before Start comms (Phase C). Role semantics: [role_profiles_policy_v0](../../../wip/areas/domain/policy/role_profiles_policy_v0.md) ([#219](https://github.com/AlexanderTsarkov/naviga-app/issues/219)). Radio profile semantics: [radio_profiles_policy_v0](../../../wip/areas/radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)). This doc does not change those policies; it defines the **interface** that writes the pointers they rely on.
+This policy defines the **v0 provisioning interface**: **serial console commands** to set role and radio profile pointers, reset to defaults, and query status. It enables **one firmware image** for V1-A: the device is configured per-unit via provisioning; boot pipeline ([#214](https://github.com/AlexanderTsarkov/naviga-app/issues/214)) reads persisted pointers in Phase B before Start comms (Phase C). Role semantics: [role_profiles_policy_v0](../../domain/policy/role_profiles_policy_v0.md) ([#219](https://github.com/AlexanderTsarkov/naviga-app/issues/219)). Radio profile semantics: [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)). This doc does not change those policies; it defines the **interface** that writes the pointers they rely on.
 
 ---
 
@@ -18,7 +18,7 @@ This policy defines the **v0 provisioning interface**: **serial console commands
 
 - No [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) channel discovery; no BLE bridge; no mesh/JOIN; no backend.
 - No implementation of the commands in this issue — docs-first; code later.
-- No changes to [role_profiles_policy_v0](../../../wip/areas/domain/policy/role_profiles_policy_v0.md), [radio_profiles_policy_v0](../../../wip/areas/radio/policy/radio_profiles_policy_v0.md), or [boot_pipeline_v0](boot_pipeline_v0.md) — only references.
+- No changes to [role_profiles_policy_v0](../../domain/policy/role_profiles_policy_v0.md), [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md), or [boot_pipeline_v0](boot_pipeline_v0.md) — only references.
 
 ---
 
@@ -35,7 +35,7 @@ This policy defines the **v0 provisioning interface**: **serial console commands
 
 ### 3.2 Defaults and factory reset
 
-- **Default role** and **default radio profile** are **immutable** (embedded in firmware / product). They are defined in [role_profiles_policy_v0](../../../wip/areas/domain/policy/role_profiles_policy_v0.md) and [radio_profiles_policy_v0](../../../wip/areas/radio/policy/radio_profiles_policy_v0.md).
+- **Default role** and **default radio profile** are **immutable** (embedded in firmware / product). They are defined in [role_profiles_policy_v0](../../domain/policy/role_profiles_policy_v0.md) and [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md).
 - **Factory reset** (normative): Remove or deactivate all **user** roles and **user** radio profiles; set **CurrentRoleId** and **CurrentRadioProfileId** to the default role and default radio profile; clear **PreviousRoleId** and **PreviousRadioProfileId**. After factory reset, next boot uses defaults only.
 
 ---
@@ -48,7 +48,7 @@ This policy defines the **v0 provisioning interface**: **serial console commands
 |---------|-------------------|
 | **role get** | Return the **current role** (CurrentRoleId resolved to a display form, e.g. person \| dog \| infra or a stable id). MUST reflect persisted CurrentRoleId. |
 | **role set \<person\|dog\|infra\>** | Set current role to the given OOTB role. **MUST** persist **CurrentRoleId** immediately (pointer to that role). MAY set PreviousRoleId to the previous current. Invalid argument → error; no change to persisted state. |
-| **role reset** | Set CurrentRoleId to the **default role** and persist; clear PreviousRoleId. Semantics per [role_profiles_policy_v0](../../../wip/areas/domain/policy/role_profiles_policy_v0.md) factory reset for role only. |
+| **role reset** | Set CurrentRoleId to the **default role** and persist; clear PreviousRoleId. Semantics per [role_profiles_policy_v0](../../domain/policy/role_profiles_policy_v0.md) factory reset for role only. |
 
 ### 4.2 Radio
 
@@ -56,7 +56,7 @@ This policy defines the **v0 provisioning interface**: **serial console commands
 |---------|-------------------|
 | **radio get** | Return the **current radio profile** (CurrentProfileId resolved to display form, e.g. profileId or channel/preset/txPower). MUST reflect persisted CurrentRadioProfileId. |
 | **radio set \<profileId\>** | Set current radio profile to the given profile (by id). **MUST** persist **CurrentRadioProfileId** immediately. MAY set PreviousRadioProfileId to the previous current. If profileId is not yet implemented, **radio set \<channel\> \<preset\> \<txPower\>** (or equivalent) is allowed as alternative; implementation MUST persist a valid CurrentRadioProfileId. Invalid args → error; no change. |
-| **radio reset** | Set CurrentRadioProfileId to the **default radio profile** and persist; clear PreviousRadioProfileId. Semantics per [radio_profiles_policy_v0](../../../wip/areas/radio/policy/radio_profiles_policy_v0.md) factory reset for radio only. |
+| **radio reset** | Set CurrentRadioProfileId to the **default radio profile** and persist; clear PreviousRadioProfileId. Semantics per [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) factory reset for radio only. |
 
 ### 4.3 Factory reset and status
 
@@ -85,7 +85,7 @@ This policy defines the **v0 provisioning interface**: **serial console commands
 ## 7) Examples (informative)
 
 - **Set role to Person:** `role set person` → CurrentRoleId persisted to Person; next boot uses Person operational params.
-- **Set role to Dog:** `role set dog` → CurrentRoleId persisted to Dog (minIntervalSec=9, minDisplacementM=15, maxSilence10s=3 per [role_profiles_policy_v0](../../../wip/areas/domain/policy/role_profiles_policy_v0.md) OOTB).
+- **Set role to Dog:** `role set dog` → CurrentRoleId persisted to Dog (minIntervalSec=9, minDisplacementM=15, maxSilence10s=3 per [role_profiles_policy_v0](../../domain/policy/role_profiles_policy_v0.md) OOTB).
 - **Select default radio profile:** `radio reset` or `radio set default` (if supported) → CurrentRadioProfileId points to default; next boot uses default channel/preset/txPower.
 - **Factory reset:** `factory reset` → all user roles/profiles cleared or deactivated; CurrentRoleId and CurrentRadioProfileId set to defaults; device behaves as OOTB after next boot.
 
@@ -94,5 +94,5 @@ This policy defines the **v0 provisioning interface**: **serial console commands
 ## 8) Related
 
 - **Boot pipeline:** [boot_pipeline_v0](boot_pipeline_v0.md) ([#214](https://github.com/AlexanderTsarkov/naviga-app/issues/214)) — Phase B reads pointers; Phase C starts comms.
-- **Role profiles:** [role_profiles_policy_v0](../../../wip/areas/domain/policy/role_profiles_policy_v0.md) ([#219](https://github.com/AlexanderTsarkov/naviga-app/issues/219)) — defaults, persistence, factory reset semantics.
-- **Radio profiles:** [radio_profiles_policy_v0](../../../wip/areas/radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)) — defaults, persistence, factory reset semantics.
+- **Role profiles:** [role_profiles_policy_v0](../../domain/policy/role_profiles_policy_v0.md) ([#219](https://github.com/AlexanderTsarkov/naviga-app/issues/219)) — defaults, persistence, factory reset semantics.
+- **Radio profiles:** [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)) — defaults, persistence, factory reset semantics.
