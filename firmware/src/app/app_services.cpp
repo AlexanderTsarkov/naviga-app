@@ -6,6 +6,7 @@
 #include "domain/node_table.h"
 #include "hw_profile.h"
 #include "platform/arduino_clock.h"
+#include "platform/provisioning_adapter.h"
 #include "platform/arduino_gpio.h"
 #include "platform/arduino_logger.h"
 #include "platform/device_id.h"
@@ -109,7 +110,14 @@ void extract_bt_short(const char* mac, char* out, size_t out_len) {
   std::snprintf(out, out_len, "%s", mac + (len - 4));
 }
 
-} // namespace
+}  // namespace
+
+AppServices::AppServices() : provisioning_(new ProvisioningAdapter()) {}
+
+AppServices::~AppServices() {
+  delete provisioning_;
+  provisioning_ = nullptr;
+}
 
 void AppServices::init() {
   last_heartbeat_ms_ = 0;
@@ -169,8 +177,8 @@ void AppServices::init() {
         break;
     }
   }
-  serial_provisioning_.set_e220_boot_info(static_cast<int>(radio->last_boot_config_result()),
-                                          radio->last_boot_config_message());
+  provisioning_->set_e220_boot_info(static_cast<int>(radio->last_boot_config_result()),
+                                           radio->last_boot_config_message());
 
   // --- Phase B: Provision role + radio profile (boot_pipeline_v0) ---
   // Defaults per role_profiles_policy_v0 / radio_profiles_policy_v0. Id 0 = Person (18s), Dog (9), Infra (360). Radio 0 = channel 1.
@@ -251,7 +259,7 @@ void AppServices::init() {
 }
 
 void AppServices::tick(uint32_t now_ms) {
-  serial_provisioning_.tick(now_ms);
+  provisioning_->tick(now_ms);
 
 #if defined(GNSS_PROVIDER_UBLOX)
   GnssUbloxDiagEvents ubx_events{};
