@@ -169,8 +169,8 @@ void AppServices::init() {
     }
   }
 
-  // --- Phase B: Provision role + radio profile (boot_pipeline_v0). Stub until F4/F5. ---
-  // (No persisted load/apply here yet.)
+  // --- Phase B: Provision role + radio profile (boot_pipeline_v0). Stub until F5. ---
+  // F4: naviga_storage provides load_pointers/save_pointers; F5 will load and apply here.
 
   // --- Phase C: Start comms — wire runtime; tick() runs Alive/Beacon cadence ---
   format_short_id_hex(short_id_, short_id_hex_, sizeof(short_id_hex_));
