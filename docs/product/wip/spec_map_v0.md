@@ -118,7 +118,40 @@ List of next docs-only tasks that align with this map. Update when spec_map or p
 
 ---
 
-## 4) Related
+## 4) Canon → WIP dependencies (temporary)
+
+Canon docs under `docs/product/areas/**` that still link into `docs/product/wip/**`. Inventory only; no content or link changes in canon in this sweep. Classifications: **Stale** = target already promoted (canon source should be updated to canon path); **post-V1A** = explicitly deferred past V1-A; **V1-A must-promote next** = candidate for next promotion if blocking; **optional/reference** = supporting or future.
+
+| Canon source | WIP target | Classification | Notes |
+|--------------|------------|----------------|--------|
+| `areas/hardware/contract/registry_hw_capabilities_v0.md` | `wip/areas/registry/distribution_ownership_v0.md` | Stale | distribution_ownership is canon; fix link to `../registry/policy/distribution_ownership_v0.md`. |
+| `areas/firmware/policy/provisioning_interface_v0.md` | `wip/areas/domain/policy/role_profiles_policy_v0.md` | Stale | role_profiles is canon; fix link to `../../domain/policy/role_profiles_policy_v0.md`. |
+| `areas/firmware/policy/provisioning_interface_v0.md` | `wip/areas/radio/policy/radio_profiles_policy_v0.md` | Stale | radio_profiles is canon; fix link to `../radio_profiles_policy_v0.md`. |
+| `areas/firmware/policy/module_boot_config_v0.md` | `wip/areas/radio/policy/radio_profiles_policy_v0.md` | Stale | radio_profiles is canon; fix link. |
+| `areas/firmware/policy/boot_pipeline_v0.md` | `wip/areas/radio/policy/radio_profiles_policy_v0.md` | Stale | radio_profiles is canon; fix link. |
+| `areas/registry/contract/registry_bundle_format_v0.md` | `wip/areas/radio/selection_policy_v0.md` | post-V1A | [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) channel discovery post V1-A; selection policy consumed by bundle, not defining. |
+| `areas/radio/policy/registry_radio_profiles_v0.md` | `wip/areas/radio/selection_policy_v0.md` | post-V1A | SelectionPolicy choice rules; post-V1A. |
+| `areas/radio/policy/registry_radio_profiles_v0.md` | `wip/areas/radio/autopower_policy_v0.md` | post-V1A | [#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180) AutoPower; post-V1A. |
+| `areas/radio/policy/registry_radio_profiles_v0.md` | `wip/areas/radio/policy/channel-discovery-selection-v0.md` | post-V1A | [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) channel discovery; post-V1A. |
+| `areas/nodetable/index.md` | `wip/areas/radio/selection_policy_v0.md`, `wip/areas/radio/autopower_policy_v0.md` | post-V1A | Radio selection & AutoPower; post-V1A. |
+| `areas/nodetable/policy/field_cadence_v0.md` | `wip/areas/radio/policy/traffic_model_v0.md` | optional/reference | ProductMaxFrameBytes=96, OOTB vs Session/Group; reference for cadence. |
+| `areas/nodetable/policy/activity_state_v0.md` | `wip/areas/radio/policy/traffic_model_v0.md` | optional/reference | Frame limits, beacon-only forwarding reference. |
+| `areas/nodetable/policy/nodetable_fields_inventory_v0.md` | `wip/areas/radio/policy/traffic_model_v0.md` | optional/reference | OOTB public beacon-only; session-only extras. |
+| `areas/nodetable/contract/link-telemetry-minset-v0.md` | `wip/areas/nodetable/policy/source-precedence-v0.md`, `snapshot-semantics-v0.md`, `restore-merge-rules-v0.md` | optional/reference | Supporting NodeTable policies; consider promote with NodeTable if minset becomes normative ref. |
+| `areas/nodetable/index.md` | `wip/spec_map_v0.md` | optional/reference | Meta; spec_map stays in WIP. |
+| `areas/nodetable/index.md` | `wip/areas/identity/pairing_flow_v0.md` | Identity | Pairing flow [#182](https://github.com/AlexanderTsarkov/naviga-app/issues/182); see Identity row below. |
+| `areas/nodetable/index.md` | `wip/areas/registry/distribution_ownership_v0.md` | Stale | distribution_ownership is canon; fix link. |
+| `areas/nodetable/index.md` | `wip/areas/nodetable/policy/*` (source-precedence, ootb-profiles, persistence, snapshot-semantics, restore-merge-rules, persistence-cadence-limits), `wip/areas/nodetable/research/` | optional/reference | Supporting policies and research; not yet promoted. |
+| `areas/firmware/policy/module_boot_config_v0.md` | `wip/areas/identity/pairing_flow_v0.md` | Identity | NFC TBD; “see pairing_flow for flow”. Not blocking boot config semantics. |
+| `areas/power.md`, `areas/nodetable.md`, `areas/groups.md` | `wip/areas/power/`, `wip/areas/nodetable/`, `wip/areas/groups/` | optional/reference | Hub stubs pointing to WIP area roots. |
+
+**Identity dependencies:** Canon references to identity are limited to (1) NodeTable index link to pairing_flow_v0, (2) module_boot_config NFC placeholder (“see pairing_flow for flow”). Neither is a hard V1-A semantic blocker for boot or provisioning. **Suggestion:** If V1-A requires normative NFC/pairing semantics, consider **minimal identity promotion** (e.g. promote `pairing_flow_v0.md` to canon) and then fix the two canon links; otherwise treat as optional/reference.
+
+**Radio post-V1A (explicit):** selection_policy_v0, autopower_policy_v0, channel-discovery-selection-v0 are **post-V1A**; [#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175) channel discovery and [#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180) AutoPower are out of V1-A scope; V1-A uses OOTB default profile per [#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211).
+
+---
+
+## 5) Related
 
 - Umbrella: [#147 NodeTable — Define & Research](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 - Canon areas: [areas/](areas/)
@@ -131,6 +164,7 @@ List of next docs-only tasks that align with this map. Update when spec_map or p
 **Last updated:** 2026-02-21
 
 **Changelog:**
+- 2026-02-21: Canon → WIP dependency sweep: new §4 “Canon → WIP dependencies (temporary)” in spec_map. Inventory of all canon→WIP links with classification (Stale / post-V1A / optional/reference / Identity). Radio selection_policy, autopower_policy, channel-discovery explicitly marked post-V1A. Identity (pairing_flow_v0) identified; minimal identity promotion suggested if V1-A requires NFC/pairing. No content or link changes in canon. [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224), [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
 - 2026-02-21: Registry radio profiles V1-A promotion: moved [registry_radio_profiles_v0](../areas/radio/policy/registry_radio_profiles_v0.md) from `wip/areas/radio/` to `docs/product/areas/radio/policy/`. WIP path replaced with redirect stub. Canon [distribution_ownership_v0](../areas/registry/policy/distribution_ownership_v0.md) and [registry_bundle_format_v0](../areas/registry/contract/registry_bundle_format_v0.md) now link to canon radio registry. Spec_map: Radio registry row set to Promoted + Promoted path. [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224), [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
 - 2026-02-21: Registry distribution ownership V1-A promotion: moved [distribution_ownership_v0](../areas/registry/policy/distribution_ownership_v0.md) from `wip/areas/registry/` to `docs/product/areas/registry/policy/`. WIP path replaced with redirect stub. Canon [registry_bundle_format_v0](../areas/registry/contract/registry_bundle_format_v0.md) now links to canon distribution_ownership. Spec_map: Registry distribution row set to Promoted + Promoted path. [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224), [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
 - 2026-02-21: HW capabilities V1-A promotion: moved [registry_hw_capabilities_v0](../areas/hardware/contract/registry_hw_capabilities_v0.md) from `wip/areas/hardware/` to `docs/product/areas/hardware/contract/`. WIP path replaced with redirect stub. Canon [registry_bundle_format_v0](../areas/registry/contract/registry_bundle_format_v0.md) now links to canon hardware doc. Spec_map: Hardware row set to Promoted + Promoted path. [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224), [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
