@@ -115,6 +115,7 @@ void AppServices::init() {
   last_summary_ms_ = 0;
   fix_logged_ = false;
 
+  // --- Phase A: HW bring-up (module boot configs) per boot_pipeline_v0 ---
   const auto& profile = get_hw_profile();
   platform::configure_input_pullup(profile.pins.role_pin);
   clock_.sleep_ms(30);
@@ -167,6 +168,11 @@ void AppServices::init() {
         break;
     }
   }
+
+  // --- Phase B: Provision role + radio profile (boot_pipeline_v0). Stub until F4/F5. ---
+  // (No persisted load/apply here yet.)
+
+  // --- Phase C: Start comms — wire runtime; tick() runs Alive/Beacon cadence ---
   format_short_id_hex(short_id_, short_id_hex_, sizeof(short_id_hex_));
   format_mac_colon_hex(mac_bytes, mac_hex_, sizeof(mac_hex_));
   extract_bt_short(mac_hex_, bt_short_, sizeof(bt_short_));
