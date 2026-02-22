@@ -20,6 +20,7 @@ void M1Runtime::init(uint64_t self_id,
                      IRadio* radio,
                      bool radio_ready,
                      bool rssi_available,
+                     uint16_t expected_interval_s,
                      domain::Logger* event_logger,
                      IChannelSense* channel_sense) {
   radio_ = radio;
@@ -33,7 +34,7 @@ void M1Runtime::init(uint64_t self_id,
   stats_.radio_ready = radio_ready_;
   stats_.rssi_available = rssi_available_;
 
-  node_table_.set_expected_interval_s(10);
+  node_table_.set_expected_interval_s(expected_interval_s);
   node_table_.init_self(self_id, now_ms);
 
   self_fields_ = {};

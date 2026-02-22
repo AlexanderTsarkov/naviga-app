@@ -13,6 +13,7 @@
 #include "platform/e220_radio.h"
 #include "platform/gnss_ubx_uart_io.h"
 #include "platform/log_export_uart.h"
+#include "platform/naviga_storage.h"
 #include "platform/timebase.h"
 #include "services/gnss_stub_service.h"
 #include "services/gnss_ublox_service.h"
@@ -169,8 +170,35 @@ void AppServices::init() {
     }
   }
 
-  // --- Phase B: Provision role + radio profile (boot_pipeline_v0). Stub until F5. ---
-  // F4: naviga_storage provides load_pointers/save_pointers; F5 will load and apply here.
+  // --- Phase B: Provision role + radio profile (boot_pipeline_v0) ---
+  // Defaults per role_profiles_policy_v0 / radio_profiles_policy_v0. Id 0 = Person (18s), Dog (9), Infra (360). Radio 0 = channel 1.
+  constexpr uint32_t kDefaultRoleId = 0;
+  constexpr uint32_t kDefaultRadioProfileId = 0;
+  PersistedPointers ptrs{};
+  const bool loaded = load_pointers(&ptrs);
+  bool use_persisted = loaded && ptrs.has_current_role && ptrs.has_current_radio;
+  uint32_t effective_role_id = kDefaultRoleId;
+  uint32_t effective_radio_id = kDefaultRadioProfileId;
+  if (use_persisted) {
+    effective_role_id = ptrs.current_role_id;
+    effective_radio_id = ptrs.current_radio_profile_id;
+    if (effective_role_id > 2) { effective_role_id = kDefaultRoleId; use_persisted = false; }
+    if (effective_radio_id != 0) { effective_radio_id = kDefaultRadioProfileId; use_persisted = false; }
+  }
+  uint16_t effective_interval_s = 18;
+  if (effective_role_id == 0) effective_interval_s = 18;
+  else if (effective_role_id == 1) effective_interval_s = 9;
+  else if (effective_role_id == 2) effective_interval_s = 360;
+  uint8_t effective_channel = (effective_radio_id == 0) ? 1 : 1;
+  save_pointers(effective_role_id, effective_radio_id, ptrs.previous_role_id, ptrs.previous_radio_profile_id);
+  {
+    char buf[64] = {0};
+    std::snprintf(buf, sizeof(buf), "Phase B: role=%lu profile=%lu source=%s",
+                  static_cast<unsigned long>(effective_role_id),
+                  static_cast<unsigned long>(effective_radio_id),
+                  use_persisted ? "persisted" : "default");
+    log_line(buf);
+  }
 
   // --- Phase C: Start comms — wire runtime; tick() runs Alive/Beacon cadence ---
   format_short_id_hex(short_id_, short_id_hex_, sizeof(short_id_hex_));
@@ -204,12 +232,12 @@ void AppServices::init() {
   device_info.channel_min = 0;
   device_info.channel_max = 255;
   device_info.network_mode = 0;
-  device_info.channel_id = 1;
-  device_info.public_channel_id = 1;
+  device_info.channel_id = effective_channel;
+  device_info.public_channel_id = effective_channel;
   device_info.capabilities = 0;
 
   runtime_.init(full_id, short_id_, uptime_ms(), device_info, radio, radio_ready,
-                radio->rssi_available(), &event_logger_, nullptr);
+                radio->rssi_available(), effective_interval_s, &event_logger_, nullptr);
 }
 
 void AppServices::tick(uint32_t now_ms) {
