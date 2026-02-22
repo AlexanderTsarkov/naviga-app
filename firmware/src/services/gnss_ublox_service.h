@@ -42,6 +42,8 @@ class GnssUbloxService : public IGnss {
   void set_io(IGnssUbxIo* io);
   void init(uint64_t seed);
   bool tick(uint32_t now_ms);
+  /** Lightweight verify: within timeout_ms, run tick until at least one byte received from GNSS UART. */
+  bool verify_on_boot(uint32_t timeout_ms);
   bool get_snapshot(GnssSnapshot* out) override;
   bool get_diag(GnssUbloxDiag* out) const;
   bool take_diag_events(GnssUbloxDiagEvents* out);

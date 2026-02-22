@@ -1,6 +1,7 @@
 #include "services/gnss_ublox_service.h"
 
 #include "hw_profile.h"
+#include "platform/timebase.h"
 
 namespace naviga {
 
@@ -103,6 +104,21 @@ void GnssUbloxService::init(uint64_t /*seed*/) {
     send_cfg_enable_nav_pvt();
   }
 #endif
+}
+
+bool GnssUbloxService::verify_on_boot(uint32_t timeout_ms) {
+  if (!uart_ready_ || !io_) {
+    return false;
+  }
+  const uint32_t start_ms = uptime_ms();
+  while (static_cast<uint32_t>(uptime_ms() - start_ms) < timeout_ms) {
+    tick(uptime_ms());
+    GnssUbloxDiag d{};
+    if (get_diag(&d) && d.bytes_rx > 0) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void GnssUbloxService::apply_fix_from_nav_pvt(uint8_t fix_type,

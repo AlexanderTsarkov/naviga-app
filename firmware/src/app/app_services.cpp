@@ -146,6 +146,15 @@ void AppServices::init() {
   gnss_provider_.set_io(&gnss_ubx_io_);
 #endif
   gnss_provider_.init(full_id);
+  constexpr uint32_t kGnssVerifyTimeoutMs = 500U;
+  const bool first_verify = gnss_provider_.verify_on_boot(kGnssVerifyTimeoutMs);
+  if (first_verify) {
+    log_line("GNSS boot: ok");
+  } else {
+    gnss_provider_.init(full_id);
+    const bool second_verify = gnss_provider_.verify_on_boot(kGnssVerifyTimeoutMs);
+    log_line(second_verify ? "GNSS boot: repaired" : "GNSS boot: failed");
+  }
   self_policy.init();
 #if defined(GNSS_PROVIDER_UBLOX) && GNSS_UBLOX_DIAG
   gnss_diag_next_ms = 0;

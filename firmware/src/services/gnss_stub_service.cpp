@@ -95,6 +95,10 @@ bool GnssStubService::tick(uint32_t now_ms) {
   return true;
 }
 
+bool GnssStubService::verify_on_boot(uint32_t /*timeout_ms*/) {
+  return true;  // No hardware; nothing to verify.
+}
+
 bool GnssStubService::get_snapshot(GnssSnapshot* out) {
   if (!out) {
     return false;
