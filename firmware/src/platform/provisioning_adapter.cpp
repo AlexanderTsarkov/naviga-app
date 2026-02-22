@@ -9,8 +9,8 @@
 
 namespace naviga {
 
-void ProvisioningAdapter::set_e220_boot_info(int result_enum, const char* message) {
-  shell_.set_e220_boot_info(result_enum, message);
+void ProvisioningAdapter::set_radio_boot_info(int result_enum, const char* message) {
+  shell_.set_radio_boot_info(result_enum, message);
 }
 
 void ProvisioningAdapter::tick(uint32_t /*now_ms*/) {

@@ -13,8 +13,8 @@ namespace naviga {
  */
 class ProvisioningAdapter {
  public:
-  /** Call once after E220 begin(); result_enum = E220BootConfigResult (0=Ok, 1=Repaired, 2=RepairFailed). */
-  void set_e220_boot_info(int result_enum, const char* message);
+  /** Call once after radio modem begin(); result_enum = 0=Ok, 1=Repaired, 2=RepairFailed. */
+  void set_radio_boot_info(int result_enum, const char* message);
 
   /** Read one line (non-blocking), handle via shell, print response; at most one line per call. */
   void tick(uint32_t now_ms);

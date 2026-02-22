@@ -186,8 +186,8 @@ void AppServices::init() {
         break;
     }
   }
-  provisioning_->set_e220_boot_info(static_cast<int>(radio->last_boot_config_result()),
-                                           radio->last_boot_config_message());
+  provisioning_->set_radio_boot_info(static_cast<int>(radio->last_boot_config_result()),
+                                    radio->last_boot_config_message());
 
   // --- Phase B: Provision role + radio profile (boot_pipeline_v0) ---
   // Defaults per role_profiles_policy_v0 / radio_profiles_policy_v0. Id 0 = Person (18s), Dog (9), Infra (360). Radio 0 = channel 1.

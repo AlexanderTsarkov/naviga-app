@@ -42,16 +42,16 @@ void split_tokens(const char* line, char* t0, size_t len0, char* t1, size_t len1
 
 }  // namespace
 
-void ProvisioningShell::set_e220_boot_info(int result_enum, const char* message) {
-  e220_result_ = result_enum;
+void ProvisioningShell::set_radio_boot_info(int result_enum, const char* message) {
+  radio_boot_result_ = result_enum;
   if (message) {
-    std::snprintf(e220_message_, sizeof(e220_message_), "%s", message);
+    std::snprintf(radio_boot_message_, sizeof(radio_boot_message_), "%s", message);
   } else {
-    e220_message_[0] = '\0';
+    radio_boot_message_[0] = '\0';
   }
 }
 
-const char* ProvisioningShell::e220_result_str(int result_enum) {
+const char* ProvisioningShell::radio_boot_result_str(int result_enum) {
   switch (result_enum) {
     case 0: return "OK";
     case 1: return "REPAIRED";
@@ -83,14 +83,14 @@ bool ProvisioningShell::handle_line(const char* line,
     const bool loaded = load_pointers(&ptrs);
     const char* source = (loaded && ptrs.has_current_role && ptrs.has_current_radio) ? "persisted" : "default";
     std::snprintf(out_response, out_response_size,
-                 "role_cur=%lu role_prev=%lu radio_cur=%lu radio_prev=%lu source=%s e220_boot=%s e220_msg=\"%s\"",
+                 "role_cur=%lu role_prev=%lu radio_cur=%lu radio_prev=%lu source=%s radio_boot=%s radio_boot_msg=\"%s\"",
                  static_cast<unsigned long>(ptrs.current_role_id),
                  static_cast<unsigned long>(ptrs.previous_role_id),
                  static_cast<unsigned long>(ptrs.current_radio_profile_id),
                  static_cast<unsigned long>(ptrs.previous_radio_profile_id),
                  source,
-                 e220_result_str(e220_result_),
-                 e220_message_);
+                 radio_boot_result_str(radio_boot_result_),
+                 radio_boot_message_);
     return true;
   }
   if (std::strcmp(t0, "get") == 0) {

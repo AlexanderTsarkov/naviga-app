@@ -15,8 +15,8 @@ class ProvisioningShell {
   static constexpr size_t kResponseMax = 256;
   static constexpr size_t kLineMax = 128;
 
-  /** Call once after E220 begin(); result_enum = E220BootConfigResult (0=Ok, 1=Repaired, 2=RepairFailed). */
-  void set_e220_boot_info(int result_enum, const char* message);
+  /** Call once after radio modem begin(); result_enum = 0=Ok, 1=Repaired, 2=RepairFailed. */
+  void set_radio_boot_info(int result_enum, const char* message);
 
   /**
    * Parse and execute one command line. Fills out_response with reply text (null-terminated).
@@ -29,10 +29,10 @@ class ProvisioningShell {
                    bool* reboot_requested = nullptr);
 
  private:
-  static const char* e220_result_str(int result_enum);
+  static const char* radio_boot_result_str(int result_enum);
 
-  int e220_result_ = 0;
-  char e220_message_[48] = {};
+  int radio_boot_result_ = 0;
+  char radio_boot_message_[48] = {};
 };
 
 }  // namespace naviga
