@@ -18,7 +18,7 @@ This policy defines the **v0 boot pipeline**: ordered phases from power-on to fi
 
 - No mesh/JOIN; no channel discovery ([#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175)); no backend.
 - No UI description; no implementation detail (e.g. exact code paths).
-- Radio profile **model** and first-boot/factory-reset rules are in [radio_profiles_policy_v0](../../../wip/areas/radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)); this doc only requires that provisioning follows that policy.
+- Radio profile **model** and first-boot/factory-reset rules are in [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)); this doc only requires that provisioning follows that policy.
 
 ---
 
@@ -33,7 +33,7 @@ This policy defines the **v0 boot pipeline**: ordered phases from power-on to fi
 ## 4) Phase B: Provision mandatory runtime settings
 
 - **Role provisioning:** If no persisted role exists → apply **default role** and persist. Role is required for comms (e.g. DOG_COLLAR vs HUMAN per [field_cadence_v0](../../nodetable/policy/field_cadence_v0.md) §6).
-- **RadioProfile provisioning:** Apply default/current/previous per [radio_profiles_policy_v0](../../../wip/areas/radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)): first-boot rule (no persisted CurrentProfileId → apply default and persist), CurrentProfileId/PreviousProfileId semantics. Do not duplicate that policy here — only require that FW has **provisioned** a current profile (and optional previous) before Phase C.
+- **RadioProfile provisioning:** Apply default/current/previous per [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)): first-boot rule (no persisted CurrentProfileId → apply default and persist), CurrentProfileId/PreviousProfileId semantics. Do not duplicate that policy here — only require that FW has **provisioned** a current profile (and optional previous) before Phase C.
 - **Invariant:** **Role** and **radio profile** (current) are **both** required for comms. OOTB MUST guarantee defaults exist so that "first comms" does not depend on UI or backend.
 
 ---
@@ -67,7 +67,7 @@ By the time first radio comms (Alive or Beacon) are sent:
 
 ## 8) Related
 
-- **Radio profiles:** [radio_profiles_policy_v0](../../../wip/areas/radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)).
+- **Radio profiles:** [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)).
 - **Field cadence / first-fix:** [field_cadence_v0](../../nodetable/policy/field_cadence_v0.md) §2.1 ([PR #213](https://github.com/AlexanderTsarkov/naviga-app/pull/213)).
 - **Beacon / Alive encoding:** [beacon_payload_encoding_v0](../../nodetable/contract/beacon_payload_encoding_v0.md), [alive_packet_encoding_v0](../../nodetable/contract/alive_packet_encoding_v0.md) ([PR #205](https://github.com/AlexanderTsarkov/naviga-app/pull/205)).
 - **Module boot config (E220, GNSS):** [module_boot_config_v0](module_boot_config_v0.md) ([#215](https://github.com/AlexanderTsarkov/naviga-app/issues/215)).

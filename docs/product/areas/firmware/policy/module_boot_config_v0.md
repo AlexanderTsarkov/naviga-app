@@ -3,7 +3,7 @@
 **Status:** Canon (policy).  
 **Work Area:** Product Specs WIP · **Parent:** [#215](https://github.com/AlexanderTsarkov/naviga-app/issues/215) · **Umbrella:** [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 
-This policy defines **device-level** module boot configuration: parameters to set/verify on startup and the **boot strategy** (verify-and-repair vs one-time init) per module. **This is not user radio profile selection** — that is [radio_profiles_policy_v0](../../../wip/areas/radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)). User profile (channel, modulation preset, txPower) is applied **after** module config; this doc covers the modem/GNSS/NFC/power **device state** required for predictable operation. Ordering of boot phases (when this runs) is in [boot_pipeline_v0](boot_pipeline_v0.md) ([#214](https://github.com/AlexanderTsarkov/naviga-app/issues/214)) Phase A.
+This policy defines **device-level** module boot configuration: parameters to set/verify on startup and the **boot strategy** (verify-and-repair vs one-time init) per module. **This is not user radio profile selection** — that is [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)). User profile (channel, modulation preset, txPower) is applied **after** module config; this doc covers the modem/GNSS/NFC/power **device state** required for predictable operation. Ordering of boot phases (when this runs) is in [boot_pipeline_v0](boot_pipeline_v0.md) ([#214](https://github.com/AlexanderTsarkov/naviga-app/issues/214)) Phase A.
 
 ---
 
@@ -65,5 +65,5 @@ When defined, add parameter table and boot strategy per module; until then this 
 ## 5) Related
 
 - **Boot pipeline (ordering):** [boot_pipeline_v0](boot_pipeline_v0.md) ([#214](https://github.com/AlexanderTsarkov/naviga-app/issues/214)) — Phase A uses this doc for "what to verify/repair."
-- **User radio profile (not this doc):** [radio_profiles_policy_v0](../../../wip/areas/radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)) — channel, modulation preset, txPower are **user/profile** choices applied after module boot config.
+- **User radio profile (not this doc):** [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)) — channel, modulation preset, txPower are **user/profile** choices applied after module boot config.
 - **Beacon / encoding:** [beacon_payload_encoding_v0](../../nodetable/contract/beacon_payload_encoding_v0.md), [field_cadence_v0](../../nodetable/policy/field_cadence_v0.md).
