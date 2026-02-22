@@ -201,11 +201,15 @@ void AppServices::init() {
   const bool radio_changed = loaded && ptrs.has_current_radio && (effective_radio_id != ptrs.current_radio_profile_id);
   const uint32_t new_previous_role = role_changed ? ptrs.current_role_id : ptrs.previous_role_id;
   const uint32_t new_previous_radio = radio_changed ? ptrs.current_radio_profile_id : ptrs.previous_radio_profile_id;
-  uint16_t effective_interval_s = 18;
+
+  // Single source for cadence and channel: role_id → interval_s, radio_profile_id → channel (V1-A: no registry lookup).
+  uint16_t effective_interval_s;
   if (effective_role_id == 0) effective_interval_s = 18;
   else if (effective_role_id == 1) effective_interval_s = 9;
   else if (effective_role_id == 2) effective_interval_s = 360;
-  uint8_t effective_channel = (effective_radio_id == 0) ? 1 : 1;
+  else effective_interval_s = 18;
+  const uint8_t effective_channel = (effective_radio_id == 0) ? 1 : 1;  // V1-A: only profile 0 → channel 1
+
   save_pointers(effective_role_id, effective_radio_id, new_previous_role, new_previous_radio);
   {
     const bool fallback = loaded && !use_persisted;
@@ -215,6 +219,15 @@ void AppServices::init() {
                   static_cast<unsigned long>(effective_radio_id),
                   use_persisted ? "persisted" : "default",
                   fallback ? " (invalid persisted id)" : "");
+    log_line(buf);
+  }
+  {
+    char buf[80] = {0};
+    std::snprintf(buf, sizeof(buf), "Applied: interval_s=%u channel=%u (role=%lu radio=%lu)",
+                  static_cast<unsigned>(effective_interval_s),
+                  static_cast<unsigned>(effective_channel),
+                  static_cast<unsigned long>(effective_role_id),
+                  static_cast<unsigned long>(effective_radio_id));
     log_line(buf);
   }
 
