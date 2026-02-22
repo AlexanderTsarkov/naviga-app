@@ -12,6 +12,8 @@ class GnssStubService : public IGnss {
  public:
   void init(uint64_t seed);
   bool tick(uint32_t now_ms);
+  /** Lightweight verify: stub has no hardware; always reports ok. */
+  bool verify_on_boot(uint32_t timeout_ms);
   bool get_snapshot(GnssSnapshot* out) override;
 
  private:
