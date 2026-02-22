@@ -9,8 +9,12 @@
 
 namespace naviga {
 
+class ProvisioningAdapter;
+
 class AppServices {
  public:
+  AppServices();
+  ~AppServices();
   void init();
   void tick(uint32_t now_ms);
 
@@ -26,6 +30,7 @@ class AppServices {
   domain::Logger event_logger_;
   M1Runtime runtime_;
   OledStatus oled_;
+  ProvisioningAdapter* provisioning_ = nullptr;
 };
 
-} // namespace naviga
+}  // namespace naviga
