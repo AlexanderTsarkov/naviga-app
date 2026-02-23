@@ -12,6 +12,20 @@ constexpr uint8_t kGeoBeaconMsgType = protocol::kGeoBeaconMsgType;
 constexpr uint32_t kSenseTimeoutMs = 20U;
 constexpr size_t kMaxRxPerTick = 4;
 
+const char* packet_log_type_str(domain::PacketLogType t) {
+  switch (t) {
+    case domain::PacketLogType::CORE: return "CORE";
+    case domain::PacketLogType::TAIL1: return "TAIL1";
+    case domain::PacketLogType::TAIL2: return "TAIL2";
+    case domain::PacketLogType::ALIVE: return "ALIVE";
+  }
+  return "?";
+}
+
+bool is_tail_type(domain::PacketLogType t) {
+  return t == domain::PacketLogType::TAIL1 || t == domain::PacketLogType::TAIL2;
+}
+
 } // namespace
 
 void M1Runtime::init(uint64_t self_id,
@@ -144,13 +158,15 @@ void M1Runtime::log_peer_dump(uint32_t now_ms) {
 void M1Runtime::handle_tx(uint32_t now_ms) {
   if (!send_policy_.has_pending()) {
     size_t out_len = 0;
-    domain::BeaconSubtype tx_subtype = domain::BeaconSubtype::CORE;
+    domain::PacketLogType tx_type = domain::PacketLogType::CORE;
+    uint16_t tx_core_seq = 0;
     if (!beacon_logic_.build_tx(now_ms, self_fields_, pending_payload_, sizeof(pending_payload_),
-                                &out_len, &tx_subtype)) {
+                                &out_len, &tx_type, &tx_core_seq)) {
       return;
     }
     pending_len_ = out_len;
-    last_tx_subtype_ = tx_subtype;
+    last_tx_type_ = tx_type;
+    last_tx_core_seq_ = tx_core_seq;
     send_policy_.on_payload_built(now_ms);
   }
 
@@ -163,9 +179,15 @@ void M1Runtime::handle_tx(uint32_t now_ms) {
     if (result.state == ChannelSenseState::BUSY || result.state == ChannelSenseState::ERROR) {
       send_policy_.on_channel_busy(now_ms);
       if (instrumentation_log_fn_ && instrumentation_ctx_) {
-        char line[64];
-        std::snprintf(line, sizeof(line), "pkt drop reason=CHANNEL_BUSY t_ms=%lu",
-                      static_cast<unsigned long>(now_ms));
+        char line[96];
+        if (is_tail_type(last_tx_type_)) {
+          std::snprintf(line, sizeof(line), "pkt drop t_ms=%lu type=%s reason=CHANNEL_BUSY core_seq=%u",
+                        static_cast<unsigned long>(now_ms), packet_log_type_str(last_tx_type_),
+                        static_cast<unsigned>(last_tx_core_seq_));
+        } else {
+          std::snprintf(line, sizeof(line), "pkt drop t_ms=%lu type=%s reason=CHANNEL_BUSY",
+                        static_cast<unsigned long>(now_ms), packet_log_type_str(last_tx_type_));
+        }
         instrumentation_log_fn_(line, instrumentation_ctx_);
       }
       log_event(now_ms, domain::LogEventId::RADIO_TX_ERR, domain::LogLevel::kWarn, &kGeoBeaconMsgType,
@@ -182,21 +204,31 @@ void M1Runtime::handle_tx(uint32_t now_ms) {
     stats_.tx_count++;
     stats_.last_tx_ms = now_ms;
     if (instrumentation_log_fn_ && instrumentation_ctx_) {
-      const char* sub = (last_tx_subtype_ == domain::BeaconSubtype::CORE) ? "CORE" : "ALIVE";
-      char line[72];
-      std::snprintf(line, sizeof(line), "pkt tx subtype=%s seq=%u t_ms=%lu",
-                    sub, static_cast<unsigned>(stats_.last_seq),
-                    static_cast<unsigned long>(now_ms));
+      char line[96];
+      if (is_tail_type(last_tx_type_)) {
+        std::snprintf(line, sizeof(line), "pkt tx t_ms=%lu type=%s seq=%u core_seq=%u",
+                      static_cast<unsigned long>(now_ms), packet_log_type_str(last_tx_type_),
+                      static_cast<unsigned>(stats_.last_seq), static_cast<unsigned>(last_tx_core_seq_));
+      } else {
+        std::snprintf(line, sizeof(line), "pkt tx t_ms=%lu type=%s seq=%u",
+                      static_cast<unsigned long>(now_ms), packet_log_type_str(last_tx_type_),
+                      static_cast<unsigned>(stats_.last_seq));
+      }
       instrumentation_log_fn_(line, instrumentation_ctx_);
     }
     log_event(now_ms, domain::LogEventId::RADIO_TX_OK, domain::LogLevel::kInfo, &kGeoBeaconMsgType, 1);
     pending_len_ = 0;
   } else {
     if (instrumentation_log_fn_ && instrumentation_ctx_) {
-      const char* sub = (last_tx_subtype_ == domain::BeaconSubtype::CORE) ? "CORE" : "ALIVE";
-      char line[72];
-      std::snprintf(line, sizeof(line), "pkt drop subtype=%s reason=SEND_FAIL t_ms=%lu",
-                    sub, static_cast<unsigned long>(now_ms));
+      char line[96];
+      if (is_tail_type(last_tx_type_)) {
+        std::snprintf(line, sizeof(line), "pkt drop t_ms=%lu type=%s reason=SEND_FAIL core_seq=%u",
+                      static_cast<unsigned long>(now_ms), packet_log_type_str(last_tx_type_),
+                      static_cast<unsigned>(last_tx_core_seq_));
+      } else {
+        std::snprintf(line, sizeof(line), "pkt drop t_ms=%lu type=%s reason=SEND_FAIL",
+                      static_cast<unsigned long>(now_ms), packet_log_type_str(last_tx_type_));
+      }
       instrumentation_log_fn_(line, instrumentation_ctx_);
     }
     log_event(now_ms, domain::LogEventId::RADIO_TX_ERR, domain::LogLevel::kWarn, &kGeoBeaconMsgType, 1);
@@ -223,18 +255,25 @@ void M1Runtime::handle_rx(uint32_t now_ms) {
     uint64_t rx_node_id = 0;
     uint16_t rx_seq = 0;
     bool rx_pos_valid = false;
+    domain::PacketLogType rx_type = domain::PacketLogType::CORE;
+    uint16_t rx_core_seq = 0;
     const bool updated = beacon_logic_.on_rx(now_ms, payload, out_len, stats_.last_rssi_dbm,
-                                             node_table_, &rx_node_id, &rx_seq, &rx_pos_valid);
+                                             node_table_, &rx_node_id, &rx_seq, &rx_pos_valid,
+                                             &rx_type, &rx_core_seq);
     if (instrumentation_log_fn_ && instrumentation_ctx_) {
-      const char* sub = rx_pos_valid ? "CORE" : "ALIVE";
       const uint16_t from_short = domain::NodeTable::compute_short_id(rx_node_id);
-      char line[88];
-      std::snprintf(line, sizeof(line), "pkt rx subtype=%s seq=%u from=%u rssi=%d t_ms=%lu",
-                    sub,
-                    static_cast<unsigned>(rx_seq),
-                    static_cast<unsigned>(from_short),
-                    static_cast<int>(stats_.last_rssi_dbm),
-                    static_cast<unsigned long>(now_ms));
+      char line[100];
+      if (is_tail_type(rx_type)) {
+        std::snprintf(line, sizeof(line), "pkt rx t_ms=%lu type=%s seq=%u core_seq=%u from=%u rssi=%d",
+                      static_cast<unsigned long>(now_ms), packet_log_type_str(rx_type),
+                      static_cast<unsigned>(rx_seq), static_cast<unsigned>(rx_core_seq),
+                      static_cast<unsigned>(from_short), static_cast<int>(stats_.last_rssi_dbm));
+      } else {
+        std::snprintf(line, sizeof(line), "pkt rx t_ms=%lu type=%s seq=%u from=%u rssi=%d",
+                      static_cast<unsigned long>(now_ms), packet_log_type_str(rx_type),
+                      static_cast<unsigned>(rx_seq), static_cast<unsigned>(from_short),
+                      static_cast<int>(stats_.last_rssi_dbm));
+      }
       instrumentation_log_fn_(line, instrumentation_ctx_);
     }
     log_event(now_ms, domain::LogEventId::RADIO_RX_OK, domain::LogLevel::kInfo, &kGeoBeaconMsgType, 1);

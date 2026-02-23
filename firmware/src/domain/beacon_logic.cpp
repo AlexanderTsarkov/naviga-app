@@ -18,7 +18,8 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
                            uint8_t* out,
                            size_t out_cap,
                            size_t* out_len,
-                           BeaconSubtype* out_subtype) {
+                           PacketLogType* out_type,
+                           uint16_t* out_core_seq) {
   if (!out || !out_len) {
     return false;
   }
@@ -31,11 +32,14 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
     return false;
   }
 
-  const BeaconSubtype subtype = time_for_silence
-      ? BeaconSubtype::ALIVE
-      : (self_fields.pos_valid != 0 ? BeaconSubtype::CORE : BeaconSubtype::ALIVE);
-  if (out_subtype) {
-    *out_subtype = subtype;
+  const PacketLogType ptype = time_for_silence
+      ? PacketLogType::ALIVE
+      : (self_fields.pos_valid != 0 ? PacketLogType::CORE : PacketLogType::ALIVE);
+  if (out_type) {
+    *out_type = ptype;
+  }
+  if (out_core_seq) {
+    *out_core_seq = 0;  // no tail on-air yet; core_seq only for TAIL1/TAIL2
   }
 
   protocol::GeoBeaconFields fields = self_fields;
@@ -59,7 +63,9 @@ bool BeaconLogic::on_rx(uint32_t now_ms,
                         NodeTable& table,
                         uint64_t* out_node_id,
                         uint16_t* out_seq,
-                        bool* out_pos_valid) {
+                        bool* out_pos_valid,
+                        PacketLogType* out_type,
+                        uint16_t* out_core_seq) {
   protocol::GeoBeaconFields fields{};
   const protocol::DecodeError err =
       protocol::decode_geo_beacon(protocol::ConstByteSpan{payload, len}, &fields);
@@ -74,6 +80,12 @@ bool BeaconLogic::on_rx(uint32_t now_ms,
   }
   if (out_pos_valid) {
     *out_pos_valid = (fields.pos_valid != 0);
+  }
+  if (out_type) {
+    *out_type = (fields.pos_valid != 0) ? PacketLogType::CORE : PacketLogType::ALIVE;
+  }
+  if (out_core_seq) {
+    *out_core_seq = 0;  // single format has no tail; core_seq only when tail decoded
   }
   return table.upsert_remote(fields.node_id,
                              fields.pos_valid != 0,

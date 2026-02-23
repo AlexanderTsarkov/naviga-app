@@ -78,7 +78,8 @@ class M1Runtime {
   RadioSmokeStats stats_{};
   uint8_t pending_payload_[protocol::kGeoBeaconSize] = {};
   size_t pending_len_ = 0;
-  domain::BeaconSubtype last_tx_subtype_ = domain::BeaconSubtype::CORE;
+  domain::PacketLogType last_tx_type_ = domain::PacketLogType::CORE;
+  uint16_t last_tx_core_seq_ = 0;
 
   void (*instrumentation_log_fn_)(const char* line, void* ctx) = nullptr;
   void* instrumentation_ctx_ = nullptr;
