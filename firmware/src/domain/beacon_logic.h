@@ -9,6 +9,14 @@
 namespace naviga {
 namespace domain {
 
+/** Packet type for instrumentation logs. On-air we have a single format; we log CORE/ALIVE from intent/pos_valid. TAIL1/TAIL2 reserved for when tail packets exist. */
+enum class PacketLogType {
+  CORE,
+  TAIL1,
+  TAIL2,
+  ALIVE,
+};
+
 class BeaconLogic {
  public:
   BeaconLogic();
@@ -20,7 +28,9 @@ class BeaconLogic {
                 const protocol::GeoBeaconFields& self_fields,
                 uint8_t* out,
                 size_t out_cap,
-                size_t* out_len);
+                size_t* out_len,
+                PacketLogType* out_type = nullptr,
+                uint16_t* out_core_seq = nullptr);
 
   bool on_rx(uint32_t now_ms,
              const uint8_t* payload,
@@ -28,7 +38,10 @@ class BeaconLogic {
              int8_t rssi_dbm,
              NodeTable& table,
              uint64_t* out_node_id = nullptr,
-             uint16_t* out_seq = nullptr);
+             uint16_t* out_seq = nullptr,
+             bool* out_pos_valid = nullptr,
+             PacketLogType* out_type = nullptr,
+             uint16_t* out_core_seq = nullptr);
 
   uint16_t seq() const {
     return seq_;
