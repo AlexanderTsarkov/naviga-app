@@ -1,6 +1,7 @@
 #include "app/m1_runtime.h"
 
 #include <algorithm>
+#include <cstdio>
 
 namespace naviga {
 
@@ -119,6 +120,27 @@ bool M1Runtime::ble_connected() const {
   return ble_transport_.connected();
 }
 
+void M1Runtime::set_instrumentation_logger(void (*log_line_fn)(const char* line, void* ctx), void* ctx) {
+  instrumentation_log_fn_ = log_line_fn;
+  instrumentation_ctx_ = ctx;
+}
+
+void M1Runtime::log_peer_dump(uint32_t now_ms) {
+  if (!instrumentation_log_fn_ || !instrumentation_ctx_) {
+    return;
+  }
+  constexpr size_t kMaxPeers = 3;
+  constexpr size_t kLineCap = 80;
+  char line[kLineCap];
+  for (size_t i = 0; i < kMaxPeers; ++i) {
+    const size_t len = node_table_.get_peer_dump_line(now_ms, i, line, sizeof(line));
+    if (len == 0) {
+      break;
+    }
+    instrumentation_log_fn_(line, instrumentation_ctx_);
+  }
+}
+
 void M1Runtime::handle_tx(uint32_t now_ms) {
   if (!send_policy_.has_pending()) {
     size_t out_len = 0;
@@ -151,6 +173,13 @@ void M1Runtime::handle_tx(uint32_t now_ms) {
   if (ok) {
     stats_.tx_count++;
     stats_.last_tx_ms = now_ms;
+    if (instrumentation_log_fn_ && instrumentation_ctx_) {
+      char line[64];
+      std::snprintf(line, sizeof(line), "pkt tx kind=BEACON seq=%u t_ms=%lu",
+                    static_cast<unsigned>(stats_.last_seq),
+                    static_cast<unsigned long>(now_ms));
+      instrumentation_log_fn_(line, instrumentation_ctx_);
+    }
     log_event(now_ms, domain::LogEventId::RADIO_TX_OK, domain::LogLevel::kInfo, &kGeoBeaconMsgType, 1);
     pending_len_ = 0;
   } else {
@@ -175,9 +204,22 @@ void M1Runtime::handle_rx(uint32_t now_ms) {
     if (rssi_available_) {
       stats_.last_rssi_dbm = radio_->last_rssi_dbm();
     }
+    uint64_t rx_node_id = 0;
+    uint16_t rx_seq = 0;
+    const bool updated = beacon_logic_.on_rx(now_ms, payload, out_len, stats_.last_rssi_dbm,
+                                             node_table_, &rx_node_id, &rx_seq);
+    if (instrumentation_log_fn_ && instrumentation_ctx_) {
+      const uint16_t from_short = domain::NodeTable::compute_short_id(rx_node_id);
+      char line[80];
+      std::snprintf(line, sizeof(line), "pkt rx kind=BEACON seq=%u from=%u rssi=%d t_ms=%lu",
+                    static_cast<unsigned>(rx_seq),
+                    static_cast<unsigned>(from_short),
+                    static_cast<int>(stats_.last_rssi_dbm),
+                    static_cast<unsigned long>(now_ms));
+      instrumentation_log_fn_(line, instrumentation_ctx_);
+    }
     log_event(now_ms, domain::LogEventId::RADIO_RX_OK, domain::LogLevel::kInfo, &kGeoBeaconMsgType, 1);
 
-    const bool updated = beacon_logic_.on_rx(now_ms, payload, out_len, stats_.last_rssi_dbm, node_table_);
     if (updated) {
       log_event(now_ms, domain::LogEventId::DECODE_OK, domain::LogLevel::kInfo);
       log_event(now_ms, domain::LogEventId::NODETABLE_UPDATE, domain::LogLevel::kInfo);

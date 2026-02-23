@@ -18,6 +18,9 @@ class ProvisioningShell {
   /** Call once after radio modem begin(); result_enum = 0=Ok, 1=Repaired, 2=RepairFailed. */
   void set_radio_boot_info(int result_enum, const char* message);
 
+  /** Optional: when set, "debug on" / "debug off" toggle *flag (e.g. instrumentation logging). */
+  void set_instrumentation_flag(bool* flag) { instrumentation_flag_ = flag; }
+
   /**
    * Parse and execute one command line. Fills out_response with reply text (null-terminated).
    * If the command is "reboot", sets *reboot_requested = true (caller must perform restart).
@@ -33,6 +36,7 @@ class ProvisioningShell {
 
   int radio_boot_result_ = 0;
   char radio_boot_message_[48] = {};
+  bool* instrumentation_flag_ = nullptr;
 };
 
 }  // namespace naviga

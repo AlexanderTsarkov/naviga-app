@@ -110,6 +110,12 @@ void extract_bt_short(const char* mac, char* out, size_t out_len) {
   std::snprintf(out, out_len, "%s", mac + (len - 4));
 }
 
+void app_instrumentation_log(const char* line, void* ctx) {
+  if (ctx) {
+    static_cast<AppServices*>(ctx)->log_instrumentation_line(line);
+  }
+}
+
 }  // namespace
 
 AppServices::AppServices() : provisioning_(new ProvisioningAdapter()) {}
@@ -278,6 +284,14 @@ void AppServices::init() {
 
   runtime_.init(full_id, short_id_, uptime_ms(), device_info, radio, radio_ready,
                 radio->rssi_available(), effective_interval_s, &event_logger_, nullptr);
+  provisioning_->set_instrumentation_flag(&instrumentation_enabled_);
+  runtime_.set_instrumentation_logger(app_instrumentation_log, this);
+}
+
+void AppServices::log_instrumentation_line(const char* line) {
+  if (instrumentation_enabled_ && line) {
+    log_line(line);
+  }
 }
 
 void AppServices::tick(uint32_t now_ms) {
@@ -394,6 +408,11 @@ void AppServices::tick(uint32_t now_ms) {
     std::snprintf(buffer, sizeof(buffer), "nodetable: size=%lu",
                   static_cast<unsigned long>(runtime_.node_count()));
     log_line(buffer);
+    if (instrumentation_enabled_ &&
+        (last_peer_dump_ms_ == 0 || (now_ms - last_peer_dump_ms_) >= 3000U)) {
+      last_peer_dump_ms_ = now_ms;
+      runtime_.log_peer_dump(now_ms);
+    }
     platform::drain_logs_uart(event_logger_);
   }
 }

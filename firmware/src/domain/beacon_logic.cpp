@@ -48,14 +48,21 @@ bool BeaconLogic::on_rx(uint32_t now_ms,
                         const uint8_t* payload,
                         size_t len,
                         int8_t rssi_dbm,
-                        NodeTable& table) {
+                        NodeTable& table,
+                        uint64_t* out_node_id,
+                        uint16_t* out_seq) {
   protocol::GeoBeaconFields fields{};
   const protocol::DecodeError err =
       protocol::decode_geo_beacon(protocol::ConstByteSpan{payload, len}, &fields);
   if (err != protocol::DecodeError::Ok) {
     return false;
   }
-
+  if (out_node_id) {
+    *out_node_id = fields.node_id;
+  }
+  if (out_seq) {
+    *out_seq = fields.seq;
+  }
   return table.upsert_remote(fields.node_id,
                              fields.pos_valid != 0,
                              fields.lat_e7,

@@ -1,6 +1,7 @@
 #include "domain/node_table.h"
 
 #include <algorithm>
+#include <cstdio>
 
 namespace naviga {
 namespace domain {
@@ -250,6 +251,38 @@ size_t NodeTable::get_page(uint32_t now_ms,
   }
 
   return offset;
+}
+
+size_t NodeTable::get_peer_dump_line(uint32_t now_ms, size_t peer_index, char* buf, size_t cap) const {
+  if (!buf || cap == 0) {
+    return 0;
+  }
+  std::array<size_t, kMaxNodes> indices{};
+  const size_t total = build_ordered_indices(indices);
+  size_t peer_count = 0;
+  size_t first_peer_offset = 0;
+  if (self_index_ >= 0 && total > 0) {
+    first_peer_offset = 1;
+    peer_count = total - 1;
+  } else {
+    peer_count = total;
+  }
+  if (peer_index >= peer_count) {
+    return 0;
+  }
+  const NodeEntry& entry = entries_[indices[first_peer_offset + peer_index]];
+  const bool grey = is_grey(entry, now_ms);
+  const uint32_t age_ms = now_ms >= entry.last_seen_ms ? (now_ms - entry.last_seen_ms) : 0;
+  const uint16_t age_s = clamp_u16(age_ms / 1000);
+  const int len = std::snprintf(buf, cap,
+                                "peer shortId=%u ageS=%u grey=%u seq=%u rssi=%d posAgeS=%u",
+                                static_cast<unsigned>(entry.short_id),
+                                static_cast<unsigned>(age_s),
+                                grey ? 1u : 0u,
+                                static_cast<unsigned>(entry.last_seq),
+                                static_cast<int>(entry.last_rx_rssi),
+                                static_cast<unsigned>(entry.pos_valid ? entry.pos_age_s : 0));
+  return len > 0 && static_cast<size_t>(len) < cap ? static_cast<size_t>(len) : 0;
 }
 
 uint16_t NodeTable::create_snapshot(uint32_t now_ms) {

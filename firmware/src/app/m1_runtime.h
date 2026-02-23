@@ -43,6 +43,10 @@ class M1Runtime {
   uint16_t geo_seq() const;
   bool ble_connected() const;
 
+  /** Optional instrumentation: when set, TX/RX and peer dump are logged. */
+  void set_instrumentation_logger(void (*log_line_fn)(const char* line, void* ctx), void* ctx);
+  void log_peer_dump(uint32_t now_ms);
+
  private:
   void handle_tx(uint32_t now_ms);
   void handle_rx(uint32_t now_ms);
@@ -74,6 +78,9 @@ class M1Runtime {
   RadioSmokeStats stats_{};
   uint8_t pending_payload_[protocol::kGeoBeaconSize] = {};
   size_t pending_len_ = 0;
+
+  void (*instrumentation_log_fn_)(const char* line, void* ctx) = nullptr;
+  void* instrumentation_ctx_ = nullptr;
 };
 
 } // namespace naviga
