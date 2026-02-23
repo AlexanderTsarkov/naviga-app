@@ -16,6 +16,9 @@ class ProvisioningAdapter {
   /** Call once after radio modem begin(); result_enum = 0=Ok, 1=Repaired, 2=RepairFailed. */
   void set_radio_boot_info(int result_enum, const char* message);
 
+  /** Optional: enable "debug on/off" in shell to toggle instrumentation (e.g. packet/peer logs). */
+  void set_instrumentation_flag(bool* flag);
+
   /** Read one line (non-blocking), handle via shell, print response; at most one line per call. */
   void tick(uint32_t now_ms);
 

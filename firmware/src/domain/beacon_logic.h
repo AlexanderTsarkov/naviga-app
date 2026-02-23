@@ -26,7 +26,9 @@ class BeaconLogic {
              const uint8_t* payload,
              size_t len,
              int8_t rssi_dbm,
-             NodeTable& table);
+             NodeTable& table,
+             uint64_t* out_node_id = nullptr,
+             uint16_t* out_seq = nullptr);
 
   uint16_t seq() const {
     return seq_;

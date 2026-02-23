@@ -53,6 +53,9 @@ class NodeTable {
                   uint8_t* out_buffer,
                   size_t out_capacity) const;
 
+  /** Format one peer for instrumentation dump; peer_index 0-based (0 = first non-self). Returns length or 0. */
+  size_t get_peer_dump_line(uint32_t now_ms, size_t peer_index, char* buf, size_t cap) const;
+
   uint16_t create_snapshot(uint32_t now_ms);
   size_t get_snapshot_page(uint16_t snapshot_id,
                            size_t page_index,

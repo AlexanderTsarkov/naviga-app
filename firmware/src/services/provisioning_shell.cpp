@@ -75,7 +75,25 @@ bool ProvisioningShell::handle_line(const char* line,
 
   if (std::strcmp(t0, "help") == 0) {
     std::snprintf(out_response, out_response_size,
-                  "help|status|get role|get radio|set role <0-2>|set radio <0>|reset|reboot");
+                  "help|status|get role|get radio|set role <0-2>|set radio <0>|reset|reboot|debug on|off");
+    return true;
+  }
+  if (std::strcmp(t0, "debug") == 0) {
+    if (!instrumentation_flag_) {
+      std::snprintf(out_response, out_response_size, "ERR: instrumentation not available");
+      return true;
+    }
+    if (std::strcmp(t1, "on") == 0) {
+      *instrumentation_flag_ = true;
+      std::snprintf(out_response, out_response_size, "OK; instrumentation on");
+      return true;
+    }
+    if (std::strcmp(t1, "off") == 0) {
+      *instrumentation_flag_ = false;
+      std::snprintf(out_response, out_response_size, "OK; instrumentation off");
+      return true;
+    }
+    std::snprintf(out_response, out_response_size, "ERR: debug on|off");
     return true;
   }
   if (std::strcmp(t0, "status") == 0) {

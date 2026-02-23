@@ -13,6 +13,10 @@ void ProvisioningAdapter::set_radio_boot_info(int result_enum, const char* messa
   shell_.set_radio_boot_info(result_enum, message);
 }
 
+void ProvisioningAdapter::set_instrumentation_flag(bool* flag) {
+  shell_.set_instrumentation_flag(flag);
+}
+
 void ProvisioningAdapter::tick(uint32_t /*now_ms*/) {
   if (!Serial || Serial.available() <= 0) return;
   while (Serial.available() > 0 && line_len_ < ProvisioningShell::kLineMax - 1) {
