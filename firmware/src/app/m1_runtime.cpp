@@ -144,11 +144,13 @@ void M1Runtime::log_peer_dump(uint32_t now_ms) {
 void M1Runtime::handle_tx(uint32_t now_ms) {
   if (!send_policy_.has_pending()) {
     size_t out_len = 0;
+    domain::BeaconSubtype tx_subtype = domain::BeaconSubtype::CORE;
     if (!beacon_logic_.build_tx(now_ms, self_fields_, pending_payload_, sizeof(pending_payload_),
-                                &out_len)) {
+                                &out_len, &tx_subtype)) {
       return;
     }
     pending_len_ = out_len;
+    last_tx_subtype_ = tx_subtype;
     send_policy_.on_payload_built(now_ms);
   }
 
@@ -160,6 +162,12 @@ void M1Runtime::handle_tx(uint32_t now_ms) {
     const ChannelSenseResult result = channel_sense_->sense(kSenseTimeoutMs);
     if (result.state == ChannelSenseState::BUSY || result.state == ChannelSenseState::ERROR) {
       send_policy_.on_channel_busy(now_ms);
+      if (instrumentation_log_fn_ && instrumentation_ctx_) {
+        char line[64];
+        std::snprintf(line, sizeof(line), "pkt drop reason=CHANNEL_BUSY t_ms=%lu",
+                      static_cast<unsigned long>(now_ms));
+        instrumentation_log_fn_(line, instrumentation_ctx_);
+      }
       log_event(now_ms, domain::LogEventId::RADIO_TX_ERR, domain::LogLevel::kWarn, &kGeoBeaconMsgType,
                 1);
       return;
@@ -174,15 +182,23 @@ void M1Runtime::handle_tx(uint32_t now_ms) {
     stats_.tx_count++;
     stats_.last_tx_ms = now_ms;
     if (instrumentation_log_fn_ && instrumentation_ctx_) {
-      char line[64];
-      std::snprintf(line, sizeof(line), "pkt tx kind=BEACON seq=%u t_ms=%lu",
-                    static_cast<unsigned>(stats_.last_seq),
+      const char* sub = (last_tx_subtype_ == domain::BeaconSubtype::CORE) ? "CORE" : "ALIVE";
+      char line[72];
+      std::snprintf(line, sizeof(line), "pkt tx subtype=%s seq=%u t_ms=%lu",
+                    sub, static_cast<unsigned>(stats_.last_seq),
                     static_cast<unsigned long>(now_ms));
       instrumentation_log_fn_(line, instrumentation_ctx_);
     }
     log_event(now_ms, domain::LogEventId::RADIO_TX_OK, domain::LogLevel::kInfo, &kGeoBeaconMsgType, 1);
     pending_len_ = 0;
   } else {
+    if (instrumentation_log_fn_ && instrumentation_ctx_) {
+      const char* sub = (last_tx_subtype_ == domain::BeaconSubtype::CORE) ? "CORE" : "ALIVE";
+      char line[72];
+      std::snprintf(line, sizeof(line), "pkt drop subtype=%s reason=SEND_FAIL t_ms=%lu",
+                    sub, static_cast<unsigned long>(now_ms));
+      instrumentation_log_fn_(line, instrumentation_ctx_);
+    }
     log_event(now_ms, domain::LogEventId::RADIO_TX_ERR, domain::LogLevel::kWarn, &kGeoBeaconMsgType, 1);
   }
 }
@@ -206,12 +222,15 @@ void M1Runtime::handle_rx(uint32_t now_ms) {
     }
     uint64_t rx_node_id = 0;
     uint16_t rx_seq = 0;
+    bool rx_pos_valid = false;
     const bool updated = beacon_logic_.on_rx(now_ms, payload, out_len, stats_.last_rssi_dbm,
-                                             node_table_, &rx_node_id, &rx_seq);
+                                             node_table_, &rx_node_id, &rx_seq, &rx_pos_valid);
     if (instrumentation_log_fn_ && instrumentation_ctx_) {
+      const char* sub = rx_pos_valid ? "CORE" : "ALIVE";
       const uint16_t from_short = domain::NodeTable::compute_short_id(rx_node_id);
-      char line[80];
-      std::snprintf(line, sizeof(line), "pkt rx kind=BEACON seq=%u from=%u rssi=%d t_ms=%lu",
+      char line[88];
+      std::snprintf(line, sizeof(line), "pkt rx subtype=%s seq=%u from=%u rssi=%d t_ms=%lu",
+                    sub,
                     static_cast<unsigned>(rx_seq),
                     static_cast<unsigned>(from_short),
                     static_cast<int>(stats_.last_rssi_dbm),

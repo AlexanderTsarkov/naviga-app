@@ -17,7 +17,8 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
                            const protocol::GeoBeaconFields& self_fields,
                            uint8_t* out,
                            size_t out_cap,
-                           size_t* out_len) {
+                           size_t* out_len,
+                           BeaconSubtype* out_subtype) {
   if (!out || !out_len) {
     return false;
   }
@@ -28,6 +29,13 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
   if (!time_for_min && !time_for_silence) {
     *out_len = 0;
     return false;
+  }
+
+  const BeaconSubtype subtype = time_for_silence
+      ? BeaconSubtype::ALIVE
+      : (self_fields.pos_valid != 0 ? BeaconSubtype::CORE : BeaconSubtype::ALIVE);
+  if (out_subtype) {
+    *out_subtype = subtype;
   }
 
   protocol::GeoBeaconFields fields = self_fields;
@@ -50,7 +58,8 @@ bool BeaconLogic::on_rx(uint32_t now_ms,
                         int8_t rssi_dbm,
                         NodeTable& table,
                         uint64_t* out_node_id,
-                        uint16_t* out_seq) {
+                        uint16_t* out_seq,
+                        bool* out_pos_valid) {
   protocol::GeoBeaconFields fields{};
   const protocol::DecodeError err =
       protocol::decode_geo_beacon(protocol::ConstByteSpan{payload, len}, &fields);
@@ -62,6 +71,9 @@ bool BeaconLogic::on_rx(uint32_t now_ms,
   }
   if (out_seq) {
     *out_seq = fields.seq;
+  }
+  if (out_pos_valid) {
+    *out_pos_valid = (fields.pos_valid != 0);
   }
   return table.upsert_remote(fields.node_id,
                              fields.pos_valid != 0,
