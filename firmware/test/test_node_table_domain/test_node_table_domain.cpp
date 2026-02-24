@@ -187,8 +187,8 @@ void test_collision_flagging() {
       break;
     }
   }
-  TEST_ASSERT_NOT_EQUAL_UINT64(0, id_a);
-  TEST_ASSERT_NOT_EQUAL_UINT64(0, id_b);
+  TEST_ASSERT_TRUE(id_a != 0);
+  TEST_ASSERT_TRUE(id_b != 0);
 
   TEST_ASSERT_TRUE(table.upsert_remote(id_a, false, 0, 0, 0, -50, 1, 100));
   TEST_ASSERT_TRUE(table.upsert_remote(id_b, false, 0, 0, 0, -50, 2, 200));
@@ -224,6 +224,103 @@ void test_snapshot_consistency() {
   TEST_ASSERT_EQUAL_UINT16(1, record.last_seen_age_s);
 }
 
+/* RX semantics v0 (#280): duplicate same seq → refresh lastRxAt/link metrics only; position unchanged. */
+void test_rx_semantics_duplicate_same_seq_position_unchanged() {
+  NodeTable table;
+  table.set_expected_interval_s(10);
+  table.init_self(0x1111111111111111ULL, 100);
+  const uint64_t remote_id = 0x2222222222222222ULL;
+  TEST_ASSERT_TRUE(table.upsert_remote(remote_id, true, 123, -456, 7, -30, 42, 2000));
+
+  /* Duplicate: same seq 42, different position and rssi; MUST NOT overwrite position. */
+  TEST_ASSERT_TRUE(table.upsert_remote(remote_id, true, 999, 888, 0, -50, 42, 3000));
+
+  uint8_t buffer[NodeTable::kRecordBytes * 4] = {};
+  const size_t bytes = table.get_page(3000, 0, 10, buffer, sizeof(buffer));
+  RecordView record{};
+  TEST_ASSERT_TRUE(find_record(buffer, bytes, remote_id, &record));
+  TEST_ASSERT_EQUAL_INT32(123, record.lat_e7);
+  TEST_ASSERT_EQUAL_INT32(-456, record.lon_e7);
+  TEST_ASSERT_EQUAL_UINT16(42, record.last_seq);
+  /* lastRxAt / link metrics updated: rssi from duplicate packet. */
+  TEST_ASSERT_EQUAL_INT8(-50, record.last_rx_rssi);
+}
+
+/* RX semantics v0: out-of-order older seq → do not overwrite position; update lastRxAt + rssi. */
+void test_rx_semantics_ooo_older_seq_position_unchanged() {
+  NodeTable table;
+  table.set_expected_interval_s(10);
+  table.init_self(0x1111111111111111ULL, 0);
+  const uint64_t remote_id = 0x3333333333333333ULL;
+  TEST_ASSERT_TRUE(table.upsert_remote(remote_id, true, 10, 20, 5, -40, 10, 1000));
+
+  /* Older seq 9: MUST NOT overwrite position. */
+  TEST_ASSERT_TRUE(table.upsert_remote(remote_id, true, 99, 88, 0, -60, 9, 2000));
+
+  uint8_t buffer[NodeTable::kRecordBytes * 4] = {};
+  const size_t bytes = table.get_page(2000, 0, 10, buffer, sizeof(buffer));
+  RecordView record{};
+  TEST_ASSERT_TRUE(find_record(buffer, bytes, remote_id, &record));
+  TEST_ASSERT_EQUAL_INT32(10, record.lat_e7);
+  TEST_ASSERT_EQUAL_INT32(20, record.lon_e7);
+  TEST_ASSERT_EQUAL_UINT16(10, record.last_seq);
+  TEST_ASSERT_EQUAL_INT8(-60, record.last_rx_rssi);
+}
+
+/* RX semantics v0: newer seq → full update (position + last_seq + lastRxAt). */
+void test_rx_semantics_newer_seq_updates_position() {
+  NodeTable table;
+  table.set_expected_interval_s(10);
+  table.init_self(0x1111111111111111ULL, 0);
+  const uint64_t remote_id = 0x4444444444444444ULL;
+  TEST_ASSERT_TRUE(table.upsert_remote(remote_id, true, 1, 2, 0, -40, 5, 1000));
+  TEST_ASSERT_TRUE(table.upsert_remote(remote_id, true, 3, 4, 1, -41, 6, 2000));
+
+  uint8_t buffer[NodeTable::kRecordBytes * 4] = {};
+  const size_t bytes = table.get_page(2000, 0, 10, buffer, sizeof(buffer));
+  RecordView record{};
+  TEST_ASSERT_TRUE(find_record(buffer, bytes, remote_id, &record));
+  TEST_ASSERT_EQUAL_INT32(3, record.lat_e7);
+  TEST_ASSERT_EQUAL_INT32(4, record.lon_e7);
+  TEST_ASSERT_EQUAL_UINT16(6, record.last_seq);
+}
+
+/* RX semantics v0: seq16 wrap — incoming 0 when last 65535 is newer; position must update. */
+void test_rx_semantics_seq16_wrap_newer() {
+  NodeTable table;
+  table.set_expected_interval_s(10);
+  table.init_self(0x1111111111111111ULL, 0);
+  const uint64_t remote_id = 0x5555555555555555ULL;
+  TEST_ASSERT_TRUE(table.upsert_remote(remote_id, true, 100, 200, 0, -40, 65535, 1000));
+  TEST_ASSERT_TRUE(table.upsert_remote(remote_id, true, 300, 400, 0, -42, 0, 2000));
+
+  uint8_t buffer[NodeTable::kRecordBytes * 4] = {};
+  const size_t bytes = table.get_page(2000, 0, 10, buffer, sizeof(buffer));
+  RecordView record{};
+  TEST_ASSERT_TRUE(find_record(buffer, bytes, remote_id, &record));
+  TEST_ASSERT_EQUAL_INT32(300, record.lat_e7);
+  TEST_ASSERT_EQUAL_INT32(400, record.lon_e7);
+  TEST_ASSERT_EQUAL_UINT16(0, record.last_seq);
+}
+
+/* RX semantics v0: seq16 wrap — incoming 65535 when last 0 is older; position must not update. */
+void test_rx_semantics_seq16_wrap_older() {
+  NodeTable table;
+  table.set_expected_interval_s(10);
+  table.init_self(0x1111111111111111ULL, 0);
+  const uint64_t remote_id = 0x6666666666666666ULL;
+  TEST_ASSERT_TRUE(table.upsert_remote(remote_id, true, 10, 20, 0, -40, 0, 1000));
+  TEST_ASSERT_TRUE(table.upsert_remote(remote_id, true, 99, 88, 0, -50, 65535, 2000));
+
+  uint8_t buffer[NodeTable::kRecordBytes * 4] = {};
+  const size_t bytes = table.get_page(2000, 0, 10, buffer, sizeof(buffer));
+  RecordView record{};
+  TEST_ASSERT_TRUE(find_record(buffer, bytes, remote_id, &record));
+  TEST_ASSERT_EQUAL_INT32(10, record.lat_e7);
+  TEST_ASSERT_EQUAL_INT32(20, record.lon_e7);
+  TEST_ASSERT_EQUAL_UINT16(0, record.last_seq);
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_self_init_and_serialization);
@@ -232,5 +329,10 @@ int main(int argc, char** argv) {
   RUN_TEST(test_eviction_oldest_grey);
   RUN_TEST(test_collision_flagging);
   RUN_TEST(test_snapshot_consistency);
+  RUN_TEST(test_rx_semantics_duplicate_same_seq_position_unchanged);
+  RUN_TEST(test_rx_semantics_ooo_older_seq_position_unchanged);
+  RUN_TEST(test_rx_semantics_newer_seq_updates_position);
+  RUN_TEST(test_rx_semantics_seq16_wrap_newer);
+  RUN_TEST(test_rx_semantics_seq16_wrap_older);
   return UNITY_END();
 }
