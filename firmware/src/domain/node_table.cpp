@@ -11,6 +11,18 @@ namespace {
 constexpr uint16_t kCrc16Init = 0xFFFF;
 constexpr uint16_t kCrc16Poly = 0x1021;
 
+/** RX semantics v0: seq16 ordering with wrap. Per rx_semantics_v0 §1. */
+enum class Seq16Order { Same, Newer, Older };
+
+Seq16Order seq16_order(uint16_t incoming, uint16_t last) {
+  const uint16_t delta = static_cast<uint16_t>(incoming - last);
+  if (delta == 0) {
+    return Seq16Order::Same;
+  }
+  /* Forward in ring (0..32767) = newer; backward (32768..65535) = older. */
+  return (delta <= 32767u) ? Seq16Order::Newer : Seq16Order::Older;
+}
+
 void write_u16_le(uint8_t* out, uint16_t value) {
   out[0] = static_cast<uint8_t>(value & 0xFF);
   out[1] = static_cast<uint8_t>((value >> 8) & 0xFF);
@@ -147,13 +159,29 @@ bool NodeTable::upsert_remote(uint64_t node_id,
   if (existing >= 0) {
     NodeEntry& entry = entries_[static_cast<size_t>(existing)];
     if (!entry.is_self) {
-      entry.pos_valid = pos_valid;
-      entry.lat_e7 = pos_valid ? lat_e7 : 0;
-      entry.lon_e7 = pos_valid ? lon_e7 : 0;
-      entry.pos_age_s = pos_valid ? pos_age_s : 0;
-      entry.last_rx_rssi = last_rx_rssi;
-      entry.last_seq = last_seq;
-      entry.last_seen_ms = now_ms;
+      const Seq16Order order = seq16_order(last_seq, entry.last_seq);
+      switch (order) {
+        case Seq16Order::Newer:
+          /* Accepted packet: full update (position/telemetry + lastRxAt + link metrics). */
+          entry.pos_valid = pos_valid;
+          entry.lat_e7 = pos_valid ? lat_e7 : 0;
+          entry.lon_e7 = pos_valid ? lon_e7 : 0;
+          entry.pos_age_s = pos_valid ? pos_age_s : 0;
+          entry.last_rx_rssi = last_rx_rssi;
+          entry.last_seq = last_seq;
+          entry.last_seen_ms = now_ms;
+          break;
+        case Seq16Order::Same:
+          /* Duplicate: refresh lastRxAt and link metrics only; MUST NOT overwrite position/telemetry. */
+          entry.last_seen_ms = now_ms;
+          entry.last_rx_rssi = last_rx_rssi;
+          break;
+        case Seq16Order::Older:
+          /* Out-of-order: do not overwrite position/telemetry; update lastRxAt + link metrics only. */
+          entry.last_seen_ms = now_ms;
+          entry.last_rx_rssi = last_rx_rssi;
+          break;
+      }
     }
     return true;
   }
