@@ -26,6 +26,8 @@ class SelfUpdatePolicy {
   void set_max_silence_ms(uint32_t max_silence_ms);
   /** Role-derived: min time (ms) between position updates (minInterval); used for distance gating. */
   void set_min_time_ms(uint32_t min_time_ms);
+  /** Role-derived: min displacement (m) before next position commit; Person 25, Dog 15, Infra 100. */
+  void set_min_distance_m(double min_distance_m);
   SelfUpdateDecision evaluate(uint32_t now_ms, const GnssSnapshot& snapshot);
   void commit(uint32_t now_ms, const GnssSnapshot& snapshot);
 
@@ -36,6 +38,7 @@ class SelfUpdatePolicy {
   int32_t last_lon_e7_ = 0;
   uint32_t max_silence_ms_ = 72000;
   uint32_t min_time_ms_ = 18000;
+  double min_distance_m_ = 25.0;
 };
 
 } // namespace naviga

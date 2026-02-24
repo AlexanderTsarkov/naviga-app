@@ -33,12 +33,15 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
     return false;
   }
 
-  // CORE = position-bearing; ALIVE = liveness only. Per field_cadence_v0: at maxSilence send CORE
-  // if fix, ALIVE if no fix. At min_interval: send CORE only if allow_core (position just updated
-  // per minDisplacement); else ALIVE so we don't send position-bearing until moved.
-  const bool send_position = time_for_silence
-      ? (self_fields.pos_valid != 0)
-      : (allow_core_at_min_interval && self_fields.pos_valid != 0);
+  // Per field_cadence_v0: at min_interval without position commit → no send (silence OK).
+  // Alive only at maxSilence when no fix; Core only with valid fix.
+  if (time_for_min && !allow_core_at_min_interval) {
+    *out_len = 0;
+    return false;
+  }
+
+  // We send: (min_interval + allow_core → CORE with fix) or (maxSilence → CORE if fix, ALIVE if no fix).
+  const bool send_position = (self_fields.pos_valid != 0);
   const PacketLogType ptype = send_position ? PacketLogType::CORE : PacketLogType::ALIVE;
   if (out_type) {
     *out_type = ptype;
@@ -49,7 +52,7 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
 
   protocol::GeoBeaconFields fields = self_fields;
   if (!send_position) {
-    fields.pos_valid = 0;  // encode as ALIVE (no position)
+    fields.pos_valid = 0;  // encode as ALIVE (maxSilence no-fix path only)
   }
   fields.seq = static_cast<uint16_t>(seq_ + 1u);
   const size_t written = protocol::encode_geo_beacon(fields, protocol::ByteSpan{out, out_cap});

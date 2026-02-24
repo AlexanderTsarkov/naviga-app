@@ -217,22 +217,27 @@ void AppServices::init() {
   const uint32_t new_previous_role = role_changed ? ptrs.current_role_id : ptrs.previous_role_id;
   const uint32_t new_previous_radio = radio_changed ? ptrs.current_radio_profile_id : ptrs.previous_radio_profile_id;
 
-  // Single source for cadence and channel: role_id → interval_s, maxSilence10s; radio_profile_id → channel (V1-A: no registry lookup).
-  // Per role_profiles_policy_v0: Person 18s/9*10s, Dog 9s/3*10s, Infra 360s/255*10s.
+  // Single source for cadence and channel: role_id → interval_s, maxSilence10s, minDisplacementM; radio → channel (V1-A).
+  // Per role_profiles_policy_v0: Person 18s/9*10s/25m, Dog 9s/3*10s/15m, Infra 360s/255*10s/100m.
   uint16_t effective_interval_s;
   uint8_t effective_max_silence_10s;
+  double effective_min_distance_m;
   if (effective_role_id == 0) {
     effective_interval_s = 18;
     effective_max_silence_10s = 9;
+    effective_min_distance_m = 25.0;
   } else if (effective_role_id == 1) {
     effective_interval_s = 9;
     effective_max_silence_10s = 3;
+    effective_min_distance_m = 15.0;
   } else if (effective_role_id == 2) {
     effective_interval_s = 360;
     effective_max_silence_10s = 255;
+    effective_min_distance_m = 100.0;
   } else {
     effective_interval_s = 18;
     effective_max_silence_10s = 9;
+    effective_min_distance_m = 25.0;
   }
   const uint8_t effective_channel = (effective_radio_id == 0) ? 1 : 1;  // V1-A: only profile 0 → channel 1
   const uint32_t min_interval_ms = static_cast<uint32_t>(effective_interval_s) * 1000U;
@@ -262,6 +267,7 @@ void AppServices::init() {
 
   self_policy.set_max_silence_ms(max_silence_ms);
   self_policy.set_min_time_ms(min_interval_ms);
+  self_policy.set_min_distance_m(effective_min_distance_m);
 
   // --- Phase C: Start comms — wire runtime; tick() runs Alive/Beacon cadence ---
   format_short_id_hex(short_id_, short_id_hex_, sizeof(short_id_hex_));

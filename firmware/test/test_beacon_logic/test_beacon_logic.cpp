@@ -87,8 +87,8 @@ void test_tx_max_silence_triggers_send() {
   TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::ALIVE), static_cast<int>(ptype));
 }
 
-// minDisplacement gating: at min_interval without position update send ALIVE (allow_core=false).
-void test_tx_min_interval_no_update_sends_alive() {
+// minDisplacement gating: at min_interval without position update → NO_SEND (Alive only at maxSilence no-fix).
+void test_tx_min_interval_no_update_no_send() {
   BeaconLogic logic;
   logic.set_min_interval_ms(5000);
   logic.set_max_silence_ms(60000);
@@ -101,15 +101,9 @@ void test_tx_min_interval_no_update_sends_alive() {
   fields.pos_age_s = 0;
 
   uint8_t buffer[32] = {};
-  size_t out_len = 0;
-  PacketLogType ptype = PacketLogType::CORE;
-  TEST_ASSERT_TRUE(logic.build_tx(5000, fields, buffer, sizeof(buffer), &out_len, &ptype, nullptr, false));
-  TEST_ASSERT_EQUAL_UINT32(24, out_len);
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::ALIVE), static_cast<int>(ptype));
-  GeoBeaconFields decoded{};
-  TEST_ASSERT_EQUAL(naviga::protocol::DecodeError::Ok,
-                    naviga::protocol::decode_geo_beacon(naviga::protocol::ConstByteSpan{buffer, out_len}, &decoded));
-  TEST_ASSERT_EQUAL_UINT8(0, decoded.pos_valid);
+  size_t out_len = 1;
+  TEST_ASSERT_FALSE(logic.build_tx(5000, fields, buffer, sizeof(buffer), &out_len, nullptr, nullptr, false));
+  TEST_ASSERT_EQUAL_UINT32(0, out_len);
 }
 
 void test_tx_payload_correctness() {
@@ -185,7 +179,7 @@ int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_tx_cadence);
   RUN_TEST(test_tx_max_silence_triggers_send);
-  RUN_TEST(test_tx_min_interval_no_update_sends_alive);
+  RUN_TEST(test_tx_min_interval_no_update_no_send);
   RUN_TEST(test_tx_payload_correctness);
   RUN_TEST(test_rx_success_updates_node_table);
   RUN_TEST(test_rx_invalid_payload_no_change);

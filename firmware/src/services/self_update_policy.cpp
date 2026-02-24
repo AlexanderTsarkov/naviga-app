@@ -4,12 +4,6 @@
 
 namespace naviga {
 
-namespace {
-
-constexpr double kMinDistanceM = 25.0;
-
-} // namespace
-
 void SelfUpdatePolicy::init() {
   has_commit_ = false;
   last_committed_ms_ = 0;
@@ -23,6 +17,10 @@ void SelfUpdatePolicy::set_max_silence_ms(uint32_t max_silence_ms) {
 
 void SelfUpdatePolicy::set_min_time_ms(uint32_t min_time_ms) {
   min_time_ms_ = min_time_ms;
+}
+
+void SelfUpdatePolicy::set_min_distance_m(double min_distance_m) {
+  min_distance_m_ = min_distance_m;
 }
 
 SelfUpdateDecision SelfUpdatePolicy::evaluate(uint32_t now_ms, const GnssSnapshot& snapshot) {
@@ -42,7 +40,7 @@ SelfUpdateDecision SelfUpdatePolicy::evaluate(uint32_t now_ms, const GnssSnapsho
     return {SelfUpdateReason::MAX_SILENCE, distance_m, dt_ms};
   }
 
-  if (dt_ms >= min_time_ms_ && distance_m >= kMinDistanceM) {
+  if (dt_ms >= min_time_ms_ && distance_m >= min_distance_m_) {
     return {SelfUpdateReason::DISTANCE, distance_m, dt_ms};
   }
 

@@ -4,21 +4,23 @@
 **Date:** 2026-02-23  
 **Branch/PR:** `fw/281-wire-role-cadence`
 
-## TX gating (implemented in this PR)
+## TX gating (implemented in this PR, per field_cadence_v0)
 
-- **minInterval:** TX at most every min_interval_s (role: 18s / 9s / 360s).
-- **maxSilence:** Must send within max_silence; **CORE if GNSS fix, ALIVE if no fix** (field_cadence_v0).
-- **minDistance:** Position is committed only on FIRST_FIX, or (dt ≥ min_time and displacement ≥ 25 m), or MAX_SILENCE. At min_interval we send **CORE only when position was just committed**; otherwise **ALIVE** (no position) so we don’t send position-bearing until moved.
+- **minInterval:** Send at most every min_interval_s (role: 18s / 9s / 360s). **Only when position was just committed** (allow_core); otherwise **no send** (NO_SEND). Alive does **not** fill min_interval when Core is gated by minDistance.
+- **maxSilence:** Must send within max_silence. **CORE if GNSS fix, ALIVE only when no fix** (liveness).
+- **minDistance (minDisplacementM):** From **role profile**: Person 25 m, Dog 15 m, Infra 100 m. Position committed on FIRST_FIX, or (dt ≥ min_time and displacement ≥ min_distance_m), or MAX_SILENCE. After first Core, no send until moved or maxSilence; then maxSilence forces Core (if fix) or Alive (if no fix).
 
 ## Expected behaviour (per role_profiles_policy_v0)
 
-| Role   | minInterval | maxSilence10s | Expected CORE tx interval (approx) |
-|--------|-------------|---------------|------------------------------------|
-| 0 Person | 18 s      | 9 (90 s)      | ~18 s                              |
-| 1 Dog    | 9 s       | 3 (30 s)      | ~9 s                               |
-| 2 Infra  | 360 s     | 255           | ~360 s                             |
+| Role   | minInterval | minDisplacementM | maxSilence10s | Expected CORE tx interval (approx) |
+|--------|-------------|------------------|---------------|------------------------------------|
+| 0 Person | 18 s      | 25               | 9 (90 s)      | ~18 s (when moved ≥25 m)            |
+| 1 Dog    | 9 s       | 15               | 3 (30 s)      | ~9 s (when moved ≥15 m)             |
+| 2 Infra  | 360 s     | 100              | 255           | ~360 s (when moved ≥100 m)         |
 
 ## Capture procedure (stable-start rule)
+
+**Capture only after PR #287 is updated with NO_SEND + role minDistance and build is from branch `fw/281-wire-role-cadence`.**
 
 1. Flash two devices with PR build (`fw/281-wire-role-cadence`).
 2. Provision:
