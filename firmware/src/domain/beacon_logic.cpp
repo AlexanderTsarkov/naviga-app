@@ -19,7 +19,8 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
                            size_t out_cap,
                            size_t* out_len,
                            PacketLogType* out_type,
-                           uint16_t* out_core_seq) {
+                           uint16_t* out_core_seq,
+                           bool allow_core_at_min_interval) {
   if (!out || !out_len) {
     return false;
   }
@@ -32,9 +33,13 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
     return false;
   }
 
-  const PacketLogType ptype = time_for_silence
-      ? PacketLogType::ALIVE
-      : (self_fields.pos_valid != 0 ? PacketLogType::CORE : PacketLogType::ALIVE);
+  // CORE = position-bearing; ALIVE = liveness only. Per field_cadence_v0: at maxSilence send CORE
+  // if fix, ALIVE if no fix. At min_interval: send CORE only if allow_core (position just updated
+  // per minDisplacement); else ALIVE so we don't send position-bearing until moved.
+  const bool send_position = time_for_silence
+      ? (self_fields.pos_valid != 0)
+      : (allow_core_at_min_interval && self_fields.pos_valid != 0);
+  const PacketLogType ptype = send_position ? PacketLogType::CORE : PacketLogType::ALIVE;
   if (out_type) {
     *out_type = ptype;
   }
@@ -43,6 +48,9 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
   }
 
   protocol::GeoBeaconFields fields = self_fields;
+  if (!send_position) {
+    fields.pos_valid = 0;  // encode as ALIVE (no position)
+  }
   fields.seq = static_cast<uint16_t>(seq_ + 1u);
   const size_t written = protocol::encode_geo_beacon(fields, protocol::ByteSpan{out, out_cap});
   if (written == 0) {

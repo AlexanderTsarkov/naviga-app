@@ -4,6 +4,12 @@
 **Date:** 2026-02-23  
 **Branch/PR:** `fw/281-wire-role-cadence`
 
+## TX gating (implemented in this PR)
+
+- **minInterval:** TX at most every min_interval_s (role: 18s / 9s / 360s).
+- **maxSilence:** Must send within max_silence; **CORE if GNSS fix, ALIVE if no fix** (field_cadence_v0).
+- **minDistance:** Position is committed only on FIRST_FIX, or (dt ≥ min_time and displacement ≥ 25 m), or MAX_SILENCE. At min_interval we send **CORE only when position was just committed**; otherwise **ALIVE** (no position) so we don’t send position-bearing until moved.
+
 ## Expected behaviour (per role_profiles_policy_v0)
 
 | Role   | minInterval | maxSilence10s | Expected CORE tx interval (approx) |

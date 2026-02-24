@@ -38,6 +38,9 @@ class M1Runtime {
                          GNSSFixState fix_state,
                          uint32_t now_ms);
 
+  /** Set true when SelfUpdatePolicy committed (position update); used for minDisplacement gating. */
+  void set_allow_core_send(bool allow);
+
   void tick(uint32_t now_ms);
 
   const RadioSmokeStats& stats() const;
@@ -82,6 +85,7 @@ class M1Runtime {
   size_t pending_len_ = 0;
   domain::PacketLogType last_tx_type_ = domain::PacketLogType::CORE;
   uint16_t last_tx_core_seq_ = 0;
+  bool allow_core_send_ = false;
 
   void (*instrumentation_log_fn_)(const char* line, void* ctx) = nullptr;
   void* instrumentation_ctx_ = nullptr;

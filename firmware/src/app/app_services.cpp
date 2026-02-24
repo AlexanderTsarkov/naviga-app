@@ -369,6 +369,7 @@ void AppServices::tick(uint32_t now_ms) {
                                  pos_age_s,
                                  snapshot.fix_state,
                                  now_ms);
+      runtime_.set_allow_core_send(true);  // minDisplacement: allow CORE at next TX
       uint8_t payload[8] = {};
       write_i32_le(payload, snapshot.lat_e7);
       write_i32_le(payload + 4, snapshot.lon_e7);
