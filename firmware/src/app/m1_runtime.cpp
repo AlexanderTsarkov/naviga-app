@@ -36,6 +36,8 @@ void M1Runtime::init(uint64_t self_id,
                      bool radio_ready,
                      bool rssi_available,
                      uint16_t expected_interval_s,
+                     uint32_t min_interval_ms,
+                     uint32_t max_silence_ms,
                      domain::Logger* event_logger,
                      IChannelSense* channel_sense) {
   radio_ = radio;
@@ -51,6 +53,9 @@ void M1Runtime::init(uint64_t self_id,
 
   node_table_.set_expected_interval_s(expected_interval_s);
   node_table_.init_self(self_id, now_ms);
+
+  beacon_logic_.set_min_interval_ms(min_interval_ms);
+  beacon_logic_.set_max_silence_ms(max_silence_ms);
 
   self_fields_ = {};
   self_fields_.node_id = self_id;

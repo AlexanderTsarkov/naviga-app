@@ -11,6 +11,7 @@
 
 using naviga::domain::BeaconLogic;
 using naviga::domain::NodeTable;
+using naviga::domain::PacketLogType;
 using naviga::protocol::GeoBeaconFields;
 
 namespace {
@@ -54,6 +55,30 @@ void test_tx_cadence() {
 
   TEST_ASSERT_TRUE(logic.build_tx(1000, fields, buffer, sizeof(buffer), &out_len));
   TEST_ASSERT_EQUAL_UINT32(24, out_len);
+}
+
+// Role-derived cadence (#281): max_silence_ms forces TX when min_interval is not yet reached.
+void test_tx_max_silence_triggers_send() {
+  BeaconLogic logic;
+  logic.set_min_interval_ms(60000);   // 60s — not reached in this test
+  logic.set_max_silence_ms(10000);    // 10s — must send alive by then
+
+  GeoBeaconFields fields{};
+  fields.node_id = 1;
+  fields.pos_valid = 1;
+  fields.lat_e7 = 0;
+  fields.lon_e7 = 0;
+  fields.pos_age_s = 0;
+
+  uint8_t buffer[32] = {};
+  size_t out_len = 0;
+  PacketLogType ptype = PacketLogType::CORE;
+  TEST_ASSERT_FALSE(logic.build_tx(5000, fields, buffer, sizeof(buffer), &out_len, &ptype));
+  TEST_ASSERT_EQUAL_UINT32(0, out_len);
+
+  TEST_ASSERT_TRUE(logic.build_tx(10000, fields, buffer, sizeof(buffer), &out_len, &ptype));
+  TEST_ASSERT_EQUAL_UINT32(24, out_len);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::ALIVE), static_cast<int>(ptype));
 }
 
 void test_tx_payload_correctness() {
@@ -128,6 +153,7 @@ void test_rx_invalid_payload_no_change() {
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_tx_cadence);
+  RUN_TEST(test_tx_max_silence_triggers_send);
   RUN_TEST(test_tx_payload_correctness);
   RUN_TEST(test_rx_success_updates_node_table);
   RUN_TEST(test_rx_invalid_payload_no_change);

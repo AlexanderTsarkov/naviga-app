@@ -26,6 +26,8 @@ class M1Runtime {
             bool radio_ready,
             bool rssi_available,
             uint16_t expected_interval_s,
+            uint32_t min_interval_ms,
+            uint32_t max_silence_ms,
             domain::Logger* event_logger,
             IChannelSense* channel_sense);
 

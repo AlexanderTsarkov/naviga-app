@@ -217,13 +217,26 @@ void AppServices::init() {
   const uint32_t new_previous_role = role_changed ? ptrs.current_role_id : ptrs.previous_role_id;
   const uint32_t new_previous_radio = radio_changed ? ptrs.current_radio_profile_id : ptrs.previous_radio_profile_id;
 
-  // Single source for cadence and channel: role_id → interval_s, radio_profile_id → channel (V1-A: no registry lookup).
+  // Single source for cadence and channel: role_id → interval_s, maxSilence10s; radio_profile_id → channel (V1-A: no registry lookup).
+  // Per role_profiles_policy_v0: Person 18s/9*10s, Dog 9s/3*10s, Infra 360s/255*10s.
   uint16_t effective_interval_s;
-  if (effective_role_id == 0) effective_interval_s = 18;
-  else if (effective_role_id == 1) effective_interval_s = 9;
-  else if (effective_role_id == 2) effective_interval_s = 360;
-  else effective_interval_s = 18;
+  uint8_t effective_max_silence_10s;
+  if (effective_role_id == 0) {
+    effective_interval_s = 18;
+    effective_max_silence_10s = 9;
+  } else if (effective_role_id == 1) {
+    effective_interval_s = 9;
+    effective_max_silence_10s = 3;
+  } else if (effective_role_id == 2) {
+    effective_interval_s = 360;
+    effective_max_silence_10s = 255;
+  } else {
+    effective_interval_s = 18;
+    effective_max_silence_10s = 9;
+  }
   const uint8_t effective_channel = (effective_radio_id == 0) ? 1 : 1;  // V1-A: only profile 0 → channel 1
+  const uint32_t min_interval_ms = static_cast<uint32_t>(effective_interval_s) * 1000U;
+  const uint32_t max_silence_ms = static_cast<uint32_t>(effective_max_silence_10s) * 10U * 1000U;
 
   save_pointers(effective_role_id, effective_radio_id, new_previous_role, new_previous_radio);
   {
@@ -238,13 +251,17 @@ void AppServices::init() {
   }
   {
     char buf[80] = {0};
-    std::snprintf(buf, sizeof(buf), "Applied: interval_s=%u channel=%u (role=%lu radio=%lu)",
+    std::snprintf(buf, sizeof(buf), "Applied: interval_s=%u maxSilence10s=%u channel=%u (role=%lu radio=%lu)",
                   static_cast<unsigned>(effective_interval_s),
+                  static_cast<unsigned>(effective_max_silence_10s),
                   static_cast<unsigned>(effective_channel),
                   static_cast<unsigned long>(effective_role_id),
                   static_cast<unsigned long>(effective_radio_id));
     log_line(buf);
   }
+
+  self_policy.set_max_silence_ms(max_silence_ms);
+  self_policy.set_min_time_ms(min_interval_ms);
 
   // --- Phase C: Start comms — wire runtime; tick() runs Alive/Beacon cadence ---
   format_short_id_hex(short_id_, short_id_hex_, sizeof(short_id_hex_));
@@ -283,7 +300,8 @@ void AppServices::init() {
   device_info.capabilities = 0;
 
   runtime_.init(full_id, short_id_, uptime_ms(), device_info, radio, radio_ready,
-                radio->rssi_available(), effective_interval_s, &event_logger_, nullptr);
+                radio->rssi_available(), effective_interval_s, min_interval_ms, max_silence_ms,
+                &event_logger_, nullptr);
   provisioning_->set_instrumentation_flag(&instrumentation_enabled_);
   runtime_.set_instrumentation_logger(app_instrumentation_log, this);
 }
