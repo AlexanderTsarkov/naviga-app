@@ -50,19 +50,22 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
     *out_core_seq = 0;  // no tail on-air yet; core_seq only for TAIL1/TAIL2
   }
 
-  protocol::GeoBeaconFields fields = self_fields;
-  if (!send_position) {
-    fields.pos_valid = 0;  // encode as ALIVE (maxSilence no-fix path only)
+  const uint16_t next_seq = static_cast<uint16_t>(seq_ + 1u);
+  size_t written = 0;
+  if (send_position) {
+    protocol::GeoBeaconFields fields = self_fields;
+    fields.seq = next_seq;
+    written = protocol::encode_core(fields, protocol::ByteSpan{out, out_cap});
+  } else {
+    written = protocol::encode_alive(self_fields.node_id, next_seq, protocol::ByteSpan{out, out_cap});
   }
-  fields.seq = static_cast<uint16_t>(seq_ + 1u);
-  const size_t written = protocol::encode_geo_beacon(fields, protocol::ByteSpan{out, out_cap});
   if (written == 0) {
     *out_len = 0;
     return false;
   }
 
   *out_len = written;
-  seq_ = fields.seq;
+  seq_ = next_seq;
   last_tx_ms_ = now_ms;
   return true;
 }
@@ -79,7 +82,7 @@ bool BeaconLogic::on_rx(uint32_t now_ms,
                         uint16_t* out_core_seq) {
   protocol::GeoBeaconFields fields{};
   const protocol::DecodeError err =
-      protocol::decode_geo_beacon(protocol::ConstByteSpan{payload, len}, &fields);
+      protocol::decode_beacon(protocol::ConstByteSpan{payload, len}, &fields);
   if (err != protocol::DecodeError::Ok) {
     return false;
   }
