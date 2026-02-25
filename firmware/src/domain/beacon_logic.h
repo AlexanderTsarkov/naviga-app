@@ -24,13 +24,17 @@ class BeaconLogic {
   void set_min_interval_ms(uint32_t min_interval_ms);
   void set_max_silence_ms(uint32_t max_silence_ms);
 
+  /** \a allow_core_at_min_interval: when false and trigger is min_interval, do not send (NO_SEND).
+   * Set true when position was just updated (SelfUpdatePolicy committed); per minDisplacement gating.
+   * Alive is only used at maxSilence when no fix (field_cadence_v0). */
   bool build_tx(uint32_t now_ms,
                 const protocol::GeoBeaconFields& self_fields,
                 uint8_t* out,
                 size_t out_cap,
                 size_t* out_len,
                 PacketLogType* out_type = nullptr,
-                uint16_t* out_core_seq = nullptr);
+                uint16_t* out_core_seq = nullptr,
+                bool allow_core_at_min_interval = true);
 
   bool on_rx(uint32_t now_ms,
              const uint8_t* payload,

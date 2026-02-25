@@ -36,6 +36,8 @@ void M1Runtime::init(uint64_t self_id,
                      bool radio_ready,
                      bool rssi_available,
                      uint16_t expected_interval_s,
+                     uint32_t min_interval_ms,
+                     uint32_t max_silence_ms,
                      domain::Logger* event_logger,
                      IChannelSense* channel_sense) {
   radio_ = radio;
@@ -51,6 +53,9 @@ void M1Runtime::init(uint64_t self_id,
 
   node_table_.set_expected_interval_s(expected_interval_s);
   node_table_.init_self(self_id, now_ms);
+
+  beacon_logic_.set_min_interval_ms(min_interval_ms);
+  beacon_logic_.set_max_silence_ms(max_silence_ms);
 
   self_fields_ = {};
   self_fields_.node_id = self_id;
@@ -107,6 +112,10 @@ void M1Runtime::set_self_position(bool pos_valid,
   log_event(now_ms, domain::LogEventId::NODETABLE_UPDATE, domain::LogLevel::kInfo);
 }
 
+void M1Runtime::set_allow_core_send(bool allow) {
+  allow_core_send_ = allow;
+}
+
 void M1Runtime::tick(uint32_t now_ms) {
   if (!radio_ || !radio_ready_) {
     update_ble(now_ms);
@@ -161,12 +170,13 @@ void M1Runtime::handle_tx(uint32_t now_ms) {
     domain::PacketLogType tx_type = domain::PacketLogType::CORE;
     uint16_t tx_core_seq = 0;
     if (!beacon_logic_.build_tx(now_ms, self_fields_, pending_payload_, sizeof(pending_payload_),
-                                &out_len, &tx_type, &tx_core_seq)) {
+                                &out_len, &tx_type, &tx_core_seq, allow_core_send_)) {
       return;
     }
     pending_len_ = out_len;
     last_tx_type_ = tx_type;
     last_tx_core_seq_ = tx_core_seq;
+    allow_core_send_ = false;  // consumed; next CORE only after next position update
     send_policy_.on_payload_built(now_ms);
   }
 
