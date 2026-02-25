@@ -21,6 +21,9 @@ class ProvisioningShell {
   /** Optional: when set, "debug on" / "debug off" toggle *flag (e.g. instrumentation logging). */
   void set_instrumentation_flag(bool* flag) { instrumentation_flag_ = flag; }
 
+  /** Optional: when set, "gnss off|nofix|fix <lat_e7> <lon_e7>|move <dlat_e7> <dlon_e7>" control scenario override (#288). */
+  void set_gnss_override(class GnssScenarioOverride* ptr) { gnss_override_ = ptr; }
+
   /**
    * Parse and execute one command line. Fills out_response with reply text (null-terminated).
    * If the command is "reboot", sets *reboot_requested = true (caller must perform restart).
@@ -37,6 +40,7 @@ class ProvisioningShell {
   int radio_boot_result_ = 0;
   char radio_boot_message_[48] = {};
   bool* instrumentation_flag_ = nullptr;
+  class GnssScenarioOverride* gnss_override_ = nullptr;
 };
 
 }  // namespace naviga

@@ -4,6 +4,7 @@
 
 #include "app/m1_runtime.h"
 #include "domain/logger.h"
+#include "services/gnss_scenario_override.h"
 #include "services/oled_status.h"
 #include "services/radio_smoke_service.h"
 
@@ -25,6 +26,7 @@ class AppServices {
   uint32_t last_heartbeat_ms_ = 0;
   uint32_t last_summary_ms_ = 0;
   uint32_t last_peer_dump_ms_ = 0;
+  uint32_t last_gnss_override_log_ms_ = 0;
   bool fix_logged_ = false;
   bool instrumentation_enabled_ = false;
   RadioRole role_ = RadioRole::RESP;
@@ -36,6 +38,7 @@ class AppServices {
   M1Runtime runtime_;
   OledStatus oled_;
   ProvisioningAdapter* provisioning_ = nullptr;
+  GnssScenarioOverride gnss_override_;
 };
 
 }  // namespace naviga

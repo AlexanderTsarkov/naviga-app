@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <cstring>
 
+#include "services/gnss_scenario_override.h"
+
 #ifdef ESP32
 #include <esp_system.h>
 #endif
@@ -15,6 +17,10 @@ void ProvisioningAdapter::set_radio_boot_info(int result_enum, const char* messa
 
 void ProvisioningAdapter::set_instrumentation_flag(bool* flag) {
   shell_.set_instrumentation_flag(flag);
+}
+
+void ProvisioningAdapter::set_gnss_override(GnssScenarioOverride* ptr) {
+  shell_.set_gnss_override(ptr);
 }
 
 void ProvisioningAdapter::tick(uint32_t /*now_ms*/) {

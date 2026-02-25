@@ -19,6 +19,9 @@ class ProvisioningAdapter {
   /** Optional: enable "debug on/off" in shell to toggle instrumentation (e.g. packet/peer logs). */
   void set_instrumentation_flag(bool* flag);
 
+  /** Optional: enable "gnss off|nofix|fix|move" scenario override in shell (#288). */
+  void set_gnss_override(class GnssScenarioOverride* ptr);
+
   /** Read one line (non-blocking), handle via shell, print response; at most one line per call. */
   void tick(uint32_t now_ms);
 
