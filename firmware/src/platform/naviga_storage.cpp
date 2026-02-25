@@ -11,6 +11,13 @@ constexpr char kKeyCurrentRole[] = "role_cur";
 constexpr char kKeyCurrentRadio[] = "prof_cur";
 constexpr char kKeyPreviousRole[] = "role_prev";
 constexpr char kKeyPreviousRadio[] = "prof_prev";
+constexpr char kKeyProfileIntervalSec[] = "role_interval_s";
+constexpr char kKeyProfileSilence10s[] = "role_silence_10s";
+constexpr char kKeyProfileDistM[] = "role_dist_m";
+
+constexpr uint16_t kDefaultMinIntervalSec = 18;
+constexpr uint8_t kDefaultMaxSilence10s = 9;
+constexpr float kDefaultMinDisplacementM = 25.0f;
 
 }  // namespace
 
@@ -59,6 +66,59 @@ bool save_pointers(uint32_t current_role_id,
   return true;
 }
 
+bool load_current_role_profile_record(RoleProfileRecord* out, bool* valid) {
+  if (!out || !valid) return false;
+  *out = RoleProfileRecord{};
+  *valid = false;
+
+  Preferences prefs;
+  if (!prefs.begin(kNamespace, true)) {
+    out->min_interval_sec = kDefaultMinIntervalSec;
+    out->max_silence_10s = kDefaultMaxSilence10s;
+    out->min_displacement_m = kDefaultMinDisplacementM;
+    return false;
+  }
+
+  if (!prefs.isKey(kKeyProfileIntervalSec) || !prefs.isKey(kKeyProfileSilence10s) ||
+      !prefs.isKey(kKeyProfileDistM)) {
+    out->min_interval_sec = kDefaultMinIntervalSec;
+    out->max_silence_10s = kDefaultMaxSilence10s;
+    out->min_displacement_m = kDefaultMinDisplacementM;
+    prefs.end();
+    return true;
+  }
+
+  out->min_interval_sec = static_cast<uint16_t>(prefs.getUInt(kKeyProfileIntervalSec, kDefaultMinIntervalSec));
+  out->max_silence_10s = static_cast<uint8_t>(prefs.getUInt(kKeyProfileSilence10s, kDefaultMaxSilence10s));
+  out->min_displacement_m = prefs.getFloat(kKeyProfileDistM, kDefaultMinDisplacementM);
+
+  const bool interval_ok = out->min_interval_sec >= 1 && out->min_interval_sec <= 3600;
+  const bool silence_ok = out->max_silence_10s >= 1 && out->max_silence_10s <= 255;
+  const bool dist_ok = out->min_displacement_m >= 0.0f && out->min_displacement_m <= 1000.0f;
+  const bool invariant = (static_cast<uint32_t>(out->max_silence_10s) * 10U) >= (3U * out->min_interval_sec);
+
+  if (!interval_ok || !silence_ok || !dist_ok || !invariant) {
+    out->min_interval_sec = kDefaultMinIntervalSec;
+    out->max_silence_10s = kDefaultMaxSilence10s;
+    out->min_displacement_m = kDefaultMinDisplacementM;
+  } else {
+    *valid = true;
+  }
+
+  prefs.end();
+  return true;
+}
+
+bool save_current_role_profile_record(const RoleProfileRecord& record) {
+  Preferences prefs;
+  if (!prefs.begin(kNamespace, false)) return false;
+  prefs.putUInt(kKeyProfileIntervalSec, record.min_interval_sec);
+  prefs.putUInt(kKeyProfileSilence10s, record.max_silence_10s);
+  prefs.putFloat(kKeyProfileDistM, record.min_displacement_m);
+  prefs.end();
+  return true;
+}
+
 bool factory_reset_pointers() {
   Preferences prefs;
   if (!prefs.begin(kNamespace, false)) {
@@ -69,6 +129,12 @@ bool factory_reset_pointers() {
   prefs.remove(kKeyCurrentRadio);
   prefs.remove(kKeyPreviousRole);
   prefs.remove(kKeyPreviousRadio);
+
+  RoleProfileRecord def;
+  get_ootb_role_profile(0, &def);
+  prefs.putUInt(kKeyProfileIntervalSec, def.min_interval_sec);
+  prefs.putUInt(kKeyProfileSilence10s, def.max_silence_10s);
+  prefs.putFloat(kKeyProfileDistM, def.min_displacement_m);
 
   prefs.end();
   return true;

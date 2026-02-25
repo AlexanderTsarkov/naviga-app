@@ -197,8 +197,7 @@ void AppServices::init() {
                                     radio->last_boot_config_message());
 
   // --- Phase B: Provision role + radio profile (boot_pipeline_v0) ---
-  // Defaults per role_profiles_policy_v0 / radio_profiles_policy_v0. Id 0 = Person (18s), Dog (9), Infra (360). Radio 0 = channel 1.
-  // TODO(F6/F7): Replace hardcoded ID validity with registry/table lookup.
+  // Cadence params from current role profile record in flash (#289); pointers for role/radio id (display, consistency).
   constexpr uint32_t kDefaultRoleId = 0;
   constexpr uint32_t kDefaultRadioProfileId = 0;
   PersistedPointers ptrs{};
@@ -212,34 +211,23 @@ void AppServices::init() {
     if (effective_role_id > 2) { effective_role_id = kDefaultRoleId; use_persisted = false; }
     if (effective_radio_id != 0) { effective_radio_id = kDefaultRadioProfileId; use_persisted = false; }
   }
-  // When effective differs from persisted current (e.g. invalid id → default), set previous = last persisted current.
   const bool role_changed = loaded && ptrs.has_current_role && (effective_role_id != ptrs.current_role_id);
   const bool radio_changed = loaded && ptrs.has_current_radio && (effective_radio_id != ptrs.current_radio_profile_id);
   const uint32_t new_previous_role = role_changed ? ptrs.current_role_id : ptrs.previous_role_id;
   const uint32_t new_previous_radio = radio_changed ? ptrs.current_radio_profile_id : ptrs.previous_radio_profile_id;
 
-  // Single source for cadence and channel: role_id → interval_s, maxSilence10s, minDisplacementM; radio → channel (V1-A).
-  // Per role_profiles_policy_v0: Person 18s/9*10s/25m, Dog 9s/3*10s/15m, Infra 360s/255*10s/100m.
-  uint16_t effective_interval_s;
-  uint8_t effective_max_silence_10s;
-  double effective_min_distance_m;
-  if (effective_role_id == 0) {
-    effective_interval_s = 18;
-    effective_max_silence_10s = 9;
-    effective_min_distance_m = 25.0;
-  } else if (effective_role_id == 1) {
-    effective_interval_s = 9;
-    effective_max_silence_10s = 3;
-    effective_min_distance_m = 15.0;
-  } else if (effective_role_id == 2) {
-    effective_interval_s = 360;
-    effective_max_silence_10s = 255;
-    effective_min_distance_m = 100.0;
-  } else {
-    effective_interval_s = 18;
-    effective_max_silence_10s = 9;
-    effective_min_distance_m = 25.0;
+  // Cadence from current profile record in flash (registry); fallback to default when missing/invalid (#289).
+  RoleProfileRecord profile_record{};
+  bool profile_valid = false;
+  (void)load_current_role_profile_record(&profile_record, &profile_valid);
+  if (!profile_valid) {
+    get_ootb_role_profile(effective_role_id, &profile_record);
+    (void)save_current_role_profile_record(profile_record);
   }
+  const uint16_t effective_interval_s = profile_record.min_interval_sec;
+  const uint8_t effective_max_silence_10s = profile_record.max_silence_10s;
+  const double effective_min_distance_m = static_cast<double>(profile_record.min_displacement_m);
+
   const uint8_t effective_channel = (effective_radio_id == 0) ? 1 : 1;  // V1-A: only profile 0 → channel 1
   const uint32_t min_interval_ms = static_cast<uint32_t>(effective_interval_s) * 1000U;
   const uint32_t max_silence_ms = static_cast<uint32_t>(effective_max_silence_10s) * 10U * 1000U;
@@ -257,7 +245,7 @@ void AppServices::init() {
   }
   {
     char buf[80] = {0};
-    std::snprintf(buf, sizeof(buf), "Applied: interval_s=%u maxSilence10s=%u channel=%u (role=%lu radio=%lu)",
+    std::snprintf(buf, sizeof(buf), "Applied: interval_s=%u maxSilence10s=%u channel=%u (role=%lu radio=%lu) cadence=registry",
                   static_cast<unsigned>(effective_interval_s),
                   static_cast<unsigned>(effective_max_silence_10s),
                   static_cast<unsigned>(effective_channel),

@@ -76,7 +76,7 @@ bool ProvisioningShell::handle_line(const char* line,
 
   if (std::strcmp(t0, "help") == 0) {
     std::snprintf(out_response, out_response_size,
-                  "help|status|get role|get radio|set role <0-2>|set radio <0>|reset|reboot|debug on|off|gnss off|nofix|fix <lat_e7> <lon_e7>|move <dlat_e7> <dlon_e7>");
+                  "help|status|get role|radio|profile|set role <0-2>|set radio <0>|profile interval|silence|distance <val>|reset|reboot|debug on|off|gnss ...");
     return true;
   }
   if (std::strcmp(t0, "debug") == 0) {
@@ -113,8 +113,20 @@ bool ProvisioningShell::handle_line(const char* line,
     return true;
   }
   if (std::strcmp(t0, "get") == 0) {
-    if (!t1[0] || (std::strcmp(t1, "role") != 0 && std::strcmp(t1, "radio") != 0)) {
-      std::snprintf(out_response, out_response_size, "ERR: get role|radio");
+    if (!t1[0] || (std::strcmp(t1, "role") != 0 && std::strcmp(t1, "radio") != 0 && std::strcmp(t1, "profile") != 0)) {
+      std::snprintf(out_response, out_response_size, "ERR: get role|radio|profile");
+      return true;
+    }
+    if (std::strcmp(t1, "profile") == 0) {
+      RoleProfileRecord rec{};
+      bool valid = false;
+      load_current_role_profile_record(&rec, &valid);
+      std::snprintf(out_response, out_response_size,
+                    "interval_s=%u silence_10s=%u dist_m=%.1f valid=%d",
+                    static_cast<unsigned>(rec.min_interval_sec),
+                    static_cast<unsigned>(rec.max_silence_10s),
+                    static_cast<double>(rec.min_displacement_m),
+                    valid ? 1 : 0);
       return true;
     }
     PersistedPointers ptrs{};
@@ -148,6 +160,12 @@ bool ProvisioningShell::handle_line(const char* line,
         std::snprintf(out_response, out_response_size, "ERR: save failed");
         return true;
       }
+      RoleProfileRecord ootb{};
+      get_ootb_role_profile(static_cast<uint32_t>(id), &ootb);
+      if (!save_current_role_profile_record(ootb)) {
+        std::snprintf(out_response, out_response_size, "ERR: profile record save failed");
+        return true;
+      }
       std::snprintf(out_response, out_response_size, "OK; reboot to apply");
       return true;
     }
@@ -168,6 +186,69 @@ bool ProvisioningShell::handle_line(const char* line,
       return true;
     }
     std::snprintf(out_response, out_response_size, "ERR: set role|radio <id>");
+    return true;
+  }
+  if (std::strcmp(t0, "profile") == 0) {
+    if (std::strcmp(t1, "interval") == 0 && t2[0]) {
+      const unsigned long v = std::strtoul(t2, nullptr, 10);
+      if (v < 1 || v > 3600) {
+        std::snprintf(out_response, out_response_size, "ERR: interval 1-3600");
+        return true;
+      }
+      RoleProfileRecord rec{};
+      bool valid = false;
+      load_current_role_profile_record(&rec, &valid);
+      rec.min_interval_sec = static_cast<uint16_t>(v);
+      if ((static_cast<uint32_t>(rec.max_silence_10s) * 10U) < (3U * rec.min_interval_sec)) {
+        std::snprintf(out_response, out_response_size, "ERR: maxSilence must be >= 3*minInterval");
+        return true;
+      }
+      if (!save_current_role_profile_record(rec)) {
+        std::snprintf(out_response, out_response_size, "ERR: profile save failed");
+        return true;
+      }
+      std::snprintf(out_response, out_response_size, "OK; interval_s=%u; reboot to apply", static_cast<unsigned>(rec.min_interval_sec));
+      return true;
+    }
+    if (std::strcmp(t1, "silence") == 0 && t2[0]) {
+      const unsigned long v = std::strtoul(t2, nullptr, 10);
+      if (v < 1 || v > 255) {
+        std::snprintf(out_response, out_response_size, "ERR: silence 1-255 (10s steps)");
+        return true;
+      }
+      RoleProfileRecord rec{};
+      bool valid = false;
+      load_current_role_profile_record(&rec, &valid);
+      rec.max_silence_10s = static_cast<uint8_t>(v);
+      if ((static_cast<uint32_t>(rec.max_silence_10s) * 10U) < (3U * rec.min_interval_sec)) {
+        std::snprintf(out_response, out_response_size, "ERR: maxSilence must be >= 3*minInterval");
+        return true;
+      }
+      if (!save_current_role_profile_record(rec)) {
+        std::snprintf(out_response, out_response_size, "ERR: profile save failed");
+        return true;
+      }
+      std::snprintf(out_response, out_response_size, "OK; silence_10s=%u; reboot to apply", static_cast<unsigned>(rec.max_silence_10s));
+      return true;
+    }
+    if (std::strcmp(t1, "distance") == 0 && t2[0]) {
+      const float v = std::strtof(t2, nullptr);
+      if (v < 0.0f || v > 1000.0f) {
+        std::snprintf(out_response, out_response_size, "ERR: distance 0-1000 (m)");
+        return true;
+      }
+      RoleProfileRecord rec{};
+      bool valid = false;
+      load_current_role_profile_record(&rec, &valid);
+      rec.min_displacement_m = v;
+      if (!save_current_role_profile_record(rec)) {
+        std::snprintf(out_response, out_response_size, "ERR: profile save failed");
+        return true;
+      }
+      std::snprintf(out_response, out_response_size, "OK; dist_m=%.1f; reboot to apply", static_cast<double>(rec.min_displacement_m));
+      return true;
+    }
+    std::snprintf(out_response, out_response_size, "ERR: profile interval|silence|distance <val>");
     return true;
   }
   if (std::strcmp(t0, "reset") == 0) {
