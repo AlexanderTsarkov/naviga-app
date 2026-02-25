@@ -16,6 +16,7 @@
 #include "platform/log_export_uart.h"
 #include "platform/naviga_storage.h"
 #include "platform/timebase.h"
+#include "services/gnss_scenario_override.h"
 #include "services/gnss_stub_service.h"
 #include "services/gnss_ublox_service.h"
 #include "services/self_update_policy.h"
@@ -309,6 +310,7 @@ void AppServices::init() {
                 radio->rssi_available(), effective_interval_s, min_interval_ms, max_silence_ms,
                 &event_logger_, nullptr);
   provisioning_->set_instrumentation_flag(&instrumentation_enabled_);
+  provisioning_->set_gnss_override(&gnss_override_);
   runtime_.set_instrumentation_logger(app_instrumentation_log, this);
 }
 
@@ -353,11 +355,25 @@ void AppServices::tick(uint32_t now_ms) {
   }
 #endif
 
-  if (gnss_provider_.tick(now_ms)) {
-    GnssSnapshot snapshot{};
-    if (!gnss_provider_.get_snapshot(&snapshot)) {
-      return;
+  bool have_snapshot = false;
+  GnssSnapshot snapshot{};
+  if (gnss_override_.get_snapshot_if_active(&snapshot, now_ms)) {
+    have_snapshot = true;
+    if (last_gnss_override_log_ms_ == 0 || (now_ms - last_gnss_override_log_ms_) >= 5000U) {
+      last_gnss_override_log_ms_ = now_ms;
+      char buf[80] = {0};
+      if (snapshot.pos_valid) {
+        std::snprintf(buf, sizeof(buf), "GNSS override: FIX lat_e7=%ld lon_e7=%ld",
+                      static_cast<long>(snapshot.lat_e7), static_cast<long>(snapshot.lon_e7));
+      } else {
+        std::snprintf(buf, sizeof(buf), "GNSS override: NO_FIX");
+      }
+      log_line(buf);
     }
+  } else if (gnss_provider_.tick(now_ms) && gnss_provider_.get_snapshot(&snapshot)) {
+    have_snapshot = true;
+  }
+  if (have_snapshot) {
     if (snapshot.pos_valid && !fix_logged_) {
       log_line("GNSS: FIX acquired");
       fix_logged_ = true;
@@ -410,6 +426,9 @@ void AppServices::tick(uint32_t now_ms) {
     } else if (!snapshot.pos_valid) {
       runtime_.set_self_position(false, 0, 0, 0, GNSSFixState::NO_FIX, now_ms);
     }
+  } else if (gnss_override_.enabled()) {
+    // Override active but get_snapshot_if_active returned false (shouldn't happen)
+    runtime_.set_self_position(false, 0, 0, 0, GNSSFixState::NO_FIX, now_ms);
   }
 
   runtime_.tick(now_ms);

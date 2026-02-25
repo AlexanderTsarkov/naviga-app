@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "platform/naviga_storage.h"
+#include "services/gnss_scenario_override.h"
 
 namespace naviga {
 
@@ -75,7 +76,7 @@ bool ProvisioningShell::handle_line(const char* line,
 
   if (std::strcmp(t0, "help") == 0) {
     std::snprintf(out_response, out_response_size,
-                  "help|status|get role|get radio|set role <0-2>|set radio <0>|reset|reboot|debug on|off");
+                  "help|status|get role|get radio|set role <0-2>|set radio <0>|reset|reboot|debug on|off|gnss off|nofix|fix <lat_e7> <lon_e7>|move <dlat_e7> <dlon_e7>");
     return true;
   }
   if (std::strcmp(t0, "debug") == 0) {
@@ -180,6 +181,43 @@ bool ProvisioningShell::handle_line(const char* line,
   if (std::strcmp(t0, "reboot") == 0) {
     std::snprintf(out_response, out_response_size, "rebooting...");
     if (reboot_requested) *reboot_requested = true;
+    return true;
+  }
+  if (std::strcmp(t0, "gnss") == 0) {
+    if (!gnss_override_) {
+      std::snprintf(out_response, out_response_size, "ERR: gnss override not available");
+      return true;
+    }
+    if (std::strcmp(t1, "off") == 0) {
+      gnss_override_->set_off();
+      std::snprintf(out_response, out_response_size, "OK; gnss override off (use real GNSS)");
+      return true;
+    }
+    if (std::strcmp(t1, "nofix") == 0) {
+      gnss_override_->set_nofix();
+      std::snprintf(out_response, out_response_size, "OK; gnss override NO_FIX");
+      return true;
+    }
+    if (std::strcmp(t1, "fix") == 0 && t2[0]) {
+      char* end = nullptr;
+      const long lat_e7 = std::strtol(t2, &end, 10);
+      const long lon_e7 = end && *end ? std::strtol(end, nullptr, 10) : 0;
+      gnss_override_->set_fix(static_cast<int32_t>(lat_e7), static_cast<int32_t>(lon_e7));
+      std::snprintf(out_response, out_response_size, "OK; gnss override FIX lat_e7=%ld lon_e7=%ld",
+                    static_cast<long>(lat_e7), static_cast<long>(lon_e7));
+      return true;
+    }
+    if (std::strcmp(t1, "move") == 0 && t2[0]) {
+      char* end = nullptr;
+      const long dlat_e7 = std::strtol(t2, &end, 10);
+      const long dlon_e7 = end && *end ? std::strtol(end, nullptr, 10) : 0;
+      gnss_override_->move(static_cast<int32_t>(dlat_e7), static_cast<int32_t>(dlon_e7));
+      std::snprintf(out_response, out_response_size, "OK; gnss override move dlat_e7=%ld dlon_e7=%ld",
+                    static_cast<long>(dlat_e7), static_cast<long>(dlon_e7));
+      return true;
+    }
+    std::snprintf(out_response, out_response_size,
+                  "ERR: gnss off|nofix|fix <lat_e7> <lon_e7>|move <dlat_e7> <dlon_e7>");
     return true;
   }
   std::snprintf(out_response, out_response_size, "ERR: unknown command (type help)");
