@@ -62,8 +62,8 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 | Type | Purpose | MUST fields | Optional fields | Notes |
 |------|---------|-------------|-----------------|--------|
 | **BeaconCore** | Minimal sample: WHO + WHERE + freshness. Strict cadence; MUST deliver. | payloadVersion(1), nodeId48(6), seq16(2), lat_u24(3), lon_u24(3) | — | Smallest possible; **15 B fixed** (+ 2B frame header = 17 B on-air). lat/lon MUST be valid coordinates; Core MUST NOT be transmitted without valid fix (§3.1). |
-| **BeaconTail-1** | Attached-to-Core extension; qualifies one Core sample. Optional, loss-tolerant. | payloadVersion(1), nodeId(6), core_seq16(2) | posFlags(1), sats(1), fix_quality(1), hdop_x10(2), speed_cms(2), heading_deg(1) | Receiver applies only if **core_seq16 == lastCoreSeq**; else ignore. MUST NOT update position. Full contract: [tail1_packet_encoding_v0.md](tail1_packet_encoding_v0.md). |
-| **BeaconTail-2** | Uncoupled slow state; no CoreRef. Optional, loss-tolerant. | payloadVersion(1), nodeId(6) | maxSilence10s(1), batteryPercent(1), temp_x10(2 signed), rssi_dbm(1 signed), hwProfileId(2), fwVersionId(2), uptimeSec(4) | No CoreRef; apply unconditionally. MUST NOT update position. Two scheduling classes: Operational and Informative. Full contract: [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md). |
+| **BeaconTail-1** | Attached-to-Core extension; qualifies one Core sample. Optional, loss-tolerant. | payloadVersion(1), nodeId48(6), core_seq16(2) | posFlags(1), sats(1) | Receiver applies only if **core_seq16 == lastCoreSeq**; else ignore. MUST NOT update position. Full contract: [tail1_packet_encoding_v0.md](tail1_packet_encoding_v0.md). |
+| **BeaconTail-2** | Uncoupled slow state; no CoreRef. Optional, loss-tolerant. | payloadVersion(1), nodeId48(6) | maxSilence10s(1), batteryPercent(1), hwProfileId(2), fwVersionId(2), uptimeSec(4) | No CoreRef; apply unconditionally. MUST NOT update position. Two scheduling classes: Operational and Informative. Full contract: [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md). |
 
 - **Byte order:** Little-endian for all multi-byte integers.
 - **Frame header:** Every on-air frame is preceded by a 2-byte header (7+3+6 bit layout) defined in [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0). `msg_type` values: BeaconCore = `0x01`, BeaconTail-1 = `0x03`, BeaconTail-2 = `0x04`. The header is **not part of this contract**; payload byte offsets below start at byte 0 of the payload body.
@@ -114,19 +114,19 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 **Summary:**
 - `msg_type = 0x03`, `payloadVersion = 0x00`
 - **Minimum (MUST):** `payloadVersion(1) | nodeId48(6) | core_seq16(2)` = **9 bytes**
-- **Optional:** `posFlags(1)`, `sats(1)`, `fix_quality(1)`, `hdop_x10(2)`, `speed_cms(2)`, `heading_deg(1)` — up to **17 bytes**
+- **Optional:** `posFlags(1)`, `sats(1)` — up to **11 bytes**
 - **RX rule (normative):** Apply payload **only if** `core_seq16 == last_core_seq16[N]` for that node; otherwise **MUST** ignore. See [rx_semantics_v0](../policy/rx_semantics_v0.md) §2 and §4.
 - **Invariants:** Tail-1 MUST NOT update position. Tail-1 is optional and loss-tolerant; product MUST function with zero Tail-1 packets received.
 
 ### 4.3 BeaconTail-2
 
-**Dedicated contract:** [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md) — full byte layout, field definitions, units, ranges (including signedness of `temp_x10` and `rssi_dbm`), sentinel values, and normative RX rules. Canonized in [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307).
+**Dedicated contract:** [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md) — full byte layout, field definitions, sentinel values, and normative RX rules. Canonized in [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307).
 
 **Summary:**
 - `msg_type = 0x04`, `payloadVersion = 0x00`
 - **Minimum (MUST):** `payloadVersion(1) | nodeId48(6)` = **7 bytes**
-- **Optional (in order):** `maxSilence10s(1)`, `batteryPercent(1)`, `temp_x10(2, int16 LE signed)`, `rssi_dbm(1, int8 signed)`, `hwProfileId(2)`, `fwVersionId(2)`, `uptimeSec(4)` — up to **20 bytes**
-- **Sentinel values:** `batteryPercent=0xFF`, `temp_x10=0x8000`, `rssi_dbm=0x80`, `hwProfileId=0xFFFF`, `fwVersionId=0xFFFF`, `uptimeSec=0xFFFFFFFF` = not present
+- **Optional (in order):** `maxSilence10s(1)`, `batteryPercent(1)`, `hwProfileId(2)`, `fwVersionId(2)`, `uptimeSec(4)` — up to **17 bytes**
+- **Sentinel values:** `batteryPercent=0xFF`, `hwProfileId=0xFFFF`, `fwVersionId=0xFFFF`, `uptimeSec=0xFFFFFFFF` = not present
 - **RX rule:** No CoreRef; apply unconditionally when version and length valid. See [rx_semantics_v0](../policy/rx_semantics_v0.md) §2.
 - **Scheduling:** `maxSilence10s` is Informative — MUST NOT be included on every operational Tail-2 send unless value changed. See [field_cadence_v0](../policy/field_cadence_v0.md) §2.2.
 - **Invariants:** Tail-2 MUST NOT update position. Tail-2 is optional and loss-tolerant; product MUST function with zero Tail-2 packets received.
@@ -159,8 +159,6 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 
 **Full hex:** `00 FF EE DD CC BB AA 01 00 01 08`
 
-For full examples including GNSS quality fields, see [tail1_packet_encoding_v0.md §6](tail1_packet_encoding_v0.md).
-
 ### 5.3 BeaconTail-2 (8 B): with maxSilence10s
 
 | Field | Value | Bytes (hex) |
@@ -171,7 +169,7 @@ For full examples including GNSS quality fields, see [tail1_packet_encoding_v0.m
 
 **Full hex:** `00 FF EE DD CC BB AA 09`
 
-### 5.4 BeaconTail-2 (12 B): with health fields
+### 5.4 BeaconTail-2 (9 B): with battery
 
 | Field | Value | Bytes (hex) |
 |-------|--------|-------------|
@@ -179,10 +177,8 @@ For full examples including GNSS quality fields, see [tail1_packet_encoding_v0.m
 | nodeId | 0x0000_AABB_CCDD_EEFF | FF EE DD CC BB AA |
 | maxSilence10s | 6 (60 s) | 06 |
 | batteryPercent | 85 | 55 |
-| temp_x10 | 235 (= 23.5 °C, int16 LE signed) | EB 00 |
-| rssi_dbm | −85 dBm (int8 signed) | AB |
 
-**Full hex:** `00 FF EE DD CC BB AA 06 55 EB 00 AB`
+**Full hex:** `00 FF EE DD CC BB AA 06 55`
 
 For full examples including device identity fields, see [tail2_packet_encoding_v0.md §6](tail2_packet_encoding_v0.md).
 

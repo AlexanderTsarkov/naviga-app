@@ -4,7 +4,7 @@
 
 **Work Area:** Product Specs WIP · **Parent:** [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) · **Tail productization:** [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307) · **Beacon encoding hub:** [beacon_payload_encoding_v0.md](beacon_payload_encoding_v0.md) · **NodeID policy:** [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298) · **Packet header framing:** [#304](https://github.com/AlexanderTsarkov/naviga-app/issues/304)
 
-This contract defines the **v0 BeaconTail-2 payload**: byte layout, field semantics, units, ranges, and RX rules. BeaconTail-2 carries **slow-state / diagnostic** data (battery, temperature, device identity) that is **not** tied to a specific Core sample. It is **optional, loss-tolerant**, and **never required for correctness**.
+This contract defines the **v0 BeaconTail-2 payload**: byte layout, field semantics, units, ranges, and RX rules. BeaconTail-2 carries **slow-state / diagnostic** data (liveness hint, battery, device identity) that is **not** tied to a specific Core sample. It is **optional, loss-tolerant**, and **never required for correctness**.
 
 ---
 
@@ -38,7 +38,7 @@ Every on-air BeaconTail-2 frame is preceded by a **2-byte frame header** defined
 
 ## 3) Byte layout (v0)
 
-**Byte order:** Little-endian for all multi-byte integers. **Signed fields:** `temp_x10` is signed (int16 LE); `rssi_dbm` is signed (int8). **Version tag:** First byte = `payloadVersion`; v0 = `0x00`. Unknown version → discard. The 2-byte frame header precedes this payload; payload byte offsets below start at byte 0 of the payload body (after the header).
+**Byte order:** Little-endian for all multi-byte integers. **Version tag:** First byte = `payloadVersion`; v0 = `0x00`. Unknown version → discard. The 2-byte frame header precedes this payload; payload byte offsets below start at byte 0 of the payload body (after the header).
 
 ### 3.1 Minimum payload (MUST)
 
@@ -49,33 +49,19 @@ Every on-air BeaconTail-2 frame is preceded by a **2-byte frame header** defined
 
 **Minimum size:** **7 bytes** (payload only). On-air with 2-byte header: **9 bytes**.
 
-### 3.2 Optional: liveness hint (v0)
+### 3.2 Optional fields (v0)
+
+Appended in order after the minimum payload. Fields may be omitted from the end.
 
 | Offset | Field | Type | Bytes | Encoding |
 |--------|-------|------|-------|----------|
 | 7 | `maxSilence10s` | uint8 | 1 | **Informative.** Max silence in 10-second steps; clamp ≤ 90 (= 15 min). `0x00` = not specified. **MUST NOT** be included on every operational Tail-2 send unless value changed. See [field_cadence_v0.md §2.2](../policy/field_cadence_v0.md). |
-
-With liveness hint: **8 bytes** payload; **10 bytes** on-air.
-
-### 3.3 Optional: health fields (v0)
-
-| Offset | Field | Type | Bytes | Encoding |
-|--------|-------|------|-------|----------|
 | 8 | `batteryPercent` | uint8 | 1 | Battery level 0–100 %. `0xFF` = not present. |
-| 9 | `temp_x10` | int16 LE | 2 | Temperature × 10 °C, **signed**. Range: −3276.7 °C to +3276.7 °C (practical: −40 °C to +85 °C). `0x8000` = not present (sentinel). Example: 23.5 °C → `235` (`0x00EB`); −10.0 °C → `−100` (`0xFF9C`). |
-| 11 | `rssi_dbm` | int8 | 1 | Self-measured RSSI at TX time, **signed**, in dBm. Range: −128 to +127. `0x80` (= −128) = not present (sentinel). Example: −85 dBm → `0xAB`. |
+| 9 | `hwProfileId` | uint16 LE | 2 | Hardware profile identifier. `0xFFFF` = not present. |
+| 11 | `fwVersionId` | uint16 LE | 2 | Firmware version identifier. `0xFFFF` = not present. |
+| 13 | `uptimeSec` | uint32 LE | 4 | Node uptime in seconds since last boot. `0xFFFFFFFF` = not present. |
 
-### 3.4 Optional: device identity fields (v0)
-
-| Offset | Field | Type | Bytes | Encoding |
-|--------|-------|------|-------|----------|
-| 12 | `hwProfileId` | uint16 LE | 2 | Hardware profile identifier. `0xFFFF` = not present. |
-| 14 | `fwVersionId` | uint16 LE | 2 | Firmware version identifier. `0xFFFF` = not present. |
-| 16 | `uptimeSec` | uint32 LE | 4 | Node uptime in seconds since last boot. `0xFFFFFFFF` = not present. |
-
-**Maximum size (all optional present):** 1+6+1+1+2+1+2+2+4 = **20 bytes** payload; **22 bytes** on-air. Fits within LongDist budget (24 B).
-
-> **Note on field ordering:** Fields MUST be included in the order defined above. Fields may be omitted from the end of the payload, but MUST NOT be reordered or skipped in the middle. If a field in the middle is not present, use its sentinel value and include it; do not skip to a later field.
+**Maximum size (all optional present):** 1+6+1+1+2+2+4 = **17 bytes** payload; **19 bytes** on-air. Fits within LongDist budget (24 B).
 
 ---
 
@@ -99,8 +85,6 @@ Tail-2 MUST NOT update `lat`, `lon`, `alt`, or any position-derived field, regar
 | Field | Sentinel | Meaning |
 |-------|----------|---------|
 | `batteryPercent` | `0xFF` | Not present; do not overwrite stored value |
-| `temp_x10` | `0x8000` | Not present; do not overwrite stored value |
-| `rssi_dbm` | `0x80` (= −128) | Not present; do not overwrite stored value |
 | `hwProfileId` | `0xFFFF` | Not present; do not overwrite stored value |
 | `fwVersionId` | `0xFFFF` | Not present; do not overwrite stored value |
 | `uptimeSec` | `0xFFFFFFFF` | Not present; do not overwrite stored value |
@@ -144,7 +128,7 @@ Tail-2 MUST NOT update `lat`, `lon`, `alt`, or any position-derived field, regar
 
 **Full hex (8 bytes):** `00 FF EE DD CC BB AA 09`
 
-### 6.3 BeaconTail-2 (12 B): operational with health
+### 6.3 BeaconTail-2 (9 B): with battery
 
 | Field | Value | Bytes (hex) |
 |-------|-------|-------------|
@@ -152,12 +136,10 @@ Tail-2 MUST NOT update `lat`, `lon`, `alt`, or any position-derived field, regar
 | nodeId | 0x0000_AABB_CCDD_EEFF | `FF EE DD CC BB AA` |
 | maxSilence10s | 6 (= 60 s) | `06` |
 | batteryPercent | 85 | `55` |
-| temp_x10 | 235 (= 23.5 °C) | `EB 00` |
-| rssi_dbm | −85 dBm | `AB` |
 
-**Full hex (12 bytes):** `00 FF EE DD CC BB AA 06 55 EB 00 AB`
+**Full hex (9 bytes):** `00 FF EE DD CC BB AA 06 55`
 
-### 6.4 BeaconTail-2 (20 B): full payload
+### 6.4 BeaconTail-2 (17 B): full payload
 
 | Field | Value | Bytes (hex) |
 |-------|-------|-------------|
@@ -165,13 +147,11 @@ Tail-2 MUST NOT update `lat`, `lon`, `alt`, or any position-derived field, regar
 | nodeId | 0x0000_AABB_CCDD_EEFF | `FF EE DD CC BB AA` |
 | maxSilence10s | 6 | `06` |
 | batteryPercent | 72 | `48` |
-| temp_x10 | −100 (= −10.0 °C) | `9C FF` |
-| rssi_dbm | −90 dBm | `A6` |
 | hwProfileId | 0x0001 | `01 00` |
 | fwVersionId | 0x0042 | `42 00` |
 | uptimeSec | 3600 | `10 0E 00 00` |
 
-**Full hex (20 bytes):** `00 FF EE DD CC BB AA 06 48 9C FF A6 01 00 42 00 10 0E 00 00`
+**Full hex (17 bytes):** `00 FF EE DD CC BB AA 06 48 01 00 42 00 10 0E 00 00`
 
 ---
 

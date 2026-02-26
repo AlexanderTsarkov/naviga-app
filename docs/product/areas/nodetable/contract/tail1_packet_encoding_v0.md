@@ -61,19 +61,6 @@ Appended in order after the minimum payload. Fields may be omitted from the end.
 
 With both optional fields: **11 bytes** payload; **13 bytes** on-air.
 
-### 3.3 Optional: GNSS quality fields (v0)
-
-Appended after position quality fields. All optional; may be omitted from the end.
-
-| Offset | Field | Type | Bytes | Encoding |
-|--------|-------|------|-------|----------|
-| 11 | `fix_quality` | uint8 | 1 | GNSS fix quality: `0x00` = no fix / not present; `0x01` = 2D fix; `0x02` = 3D fix; `0x03` = DGPS/SBAS; `0xFF` = not present (sentinel). |
-| 12 | `hdop_x10` | uint16 LE | 2 | HDOP × 10, unsigned. Range [0, 65534]; `0xFFFF` = not present. Example: HDOP 2.5 → `25` (`0x0019`). |
-| 14 | `speed_cms` | uint16 LE | 2 | Ground speed in cm/s, unsigned. Range [0, 65534]; `0xFFFF` = not present. Example: 1.5 m/s → `150`. |
-| 16 | `heading_deg` | uint8 | 1 | Heading mapped to 0–255 where `round(heading_degrees / 360.0 × 255)`. `0xFF` is ambiguous (≈ 359°); treat as valid. Not-present sentinel: omit field entirely. |
-
-With all optional fields: **17 bytes** payload; **19 bytes** on-air. Fits within LongDist budget (24 B).
-
 ---
 
 ## 4) RX rules (normative)
@@ -83,7 +70,7 @@ With all optional fields: **17 bytes** payload; **19 bytes** on-air. Fits within
 On receiving a BeaconTail-1 for node `N`:
 
 1. **Match check:** Compare `core_seq16` in the Tail-1 against `last_core_seq16` stored in NodeTable for node `N`.
-2. **Apply on match:** If `core_seq16 == last_core_seq16[N]` → apply Tail-1 fields to the sample record for that node (update posFlags, sats, fix_quality, hdop_x10, speed_cms, heading_deg as present).
+2. **Apply on match:** If `core_seq16 == last_core_seq16[N]` → apply Tail-1 fields to the sample record for that node (update posFlags, sats as present).
 3. **Ignore on mismatch:** If `core_seq16 != last_core_seq16[N]` (stale, reordered, or orphaned Tail-1) → **drop silently**. MUST NOT overwrite any NodeTable field.
 4. **No node yet:** If no BeaconCore has ever been received from node `N` → drop silently (no `last_core_seq16` to match against).
 
@@ -137,26 +124,10 @@ Even when Tail-1 payload is **not** applied (core_seq16 mismatch), the receiver 
 
 **Full hex (11 bytes):** `00 FF EE DD CC BB AA 01 00 01 08`
 
-### 6.3 BeaconTail-1 (17 B): full optional set
-
-| Field | Value | Bytes (hex) |
-|-------|-------|-------------|
-| payloadVersion | 0 | `00` |
-| nodeId | 0x0000_AABB_CCDD_EEFF | `FF EE DD CC BB AA` |
-| core_seq16 | 5 | `05 00` |
-| posFlags | 0x03 (valid + DGPS) | `03` |
-| sats | 12 | `0C` |
-| fix_quality | 0x02 (3D fix) | `02` |
-| hdop_x10 | 12 (HDOP 1.2) | `0C 00` |
-| speed_cms | 250 (2.5 m/s) | `FA 00` |
-| heading_deg | 64 (≈ 90°) | `40` |
-
-**Full hex (17 bytes):** `00 FF EE DD CC BB AA 05 00 03 0C 02 0C 00 FA 00 40`
-
-### 6.4 RX rule: ignore on mismatch
+### 6.3 RX rule: ignore on mismatch
 
 Node `N` has `last_core_seq16 = 7`. Incoming Tail-1 carries `core_seq16 = 5`.
-→ `5 != 7` → drop silently. No NodeTable fields updated (except optionally lastRxAt and link metrics).
+→ `5 ≠ 7` → drop silently. No NodeTable fields updated (except optionally lastRxAt and link metrics).
 
 ---
 
