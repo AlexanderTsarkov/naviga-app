@@ -54,7 +54,7 @@ void test_tx_cadence() {
   TEST_ASSERT_EQUAL_UINT32(0, out_len);
 
   TEST_ASSERT_TRUE(logic.build_tx(1000, fields, buffer, sizeof(buffer), &out_len));
-  TEST_ASSERT_EQUAL_UINT32(24, out_len);
+  TEST_ASSERT_EQUAL_UINT32(22, out_len);
 }
 
 // Role-derived cadence (#281): max_silence_ms forces TX when min_interval is not yet reached.
@@ -78,7 +78,7 @@ void test_tx_max_silence_triggers_send() {
   TEST_ASSERT_EQUAL_UINT32(0, out_len);
 
   TEST_ASSERT_TRUE(logic.build_tx(10000, fields, buffer, sizeof(buffer), &out_len, &ptype));
-  TEST_ASSERT_EQUAL_UINT32(24, out_len);
+  TEST_ASSERT_EQUAL_UINT32(22, out_len);
   TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));  // fix → CORE
 
   // No fix at max_silence → ALIVE
@@ -111,16 +111,17 @@ void test_tx_payload_correctness() {
   logic.set_min_interval_ms(1);
 
   GeoBeaconFields fields{};
-  fields.node_id = 0xAABBCCDDEEFF0011ULL;
+  // NodeID48: upper 16 bits must be 0x0000 for round-trip equality.
+  fields.node_id = 0x0000CCDDEEFF0011ULL;
   fields.pos_valid = 1;
   fields.lat_e7 = 123;
   fields.lon_e7 = -456;
   fields.pos_age_s = 7;
 
-  uint8_t buffer[24] = {};
+  uint8_t buffer[22] = {};
   size_t out_len = 0;
   TEST_ASSERT_TRUE(logic.build_tx(10, fields, buffer, sizeof(buffer), &out_len));
-  TEST_ASSERT_EQUAL_UINT32(24, out_len);
+  TEST_ASSERT_EQUAL_UINT32(22, out_len);
 
   GeoBeaconFields decoded{};
   const auto err =
@@ -144,17 +145,18 @@ void test_rx_success_updates_node_table() {
   table.set_expected_interval_s(10);
 
   GeoBeaconFields fields{};
-  fields.node_id = 0x0102030405060708ULL;
+  // NodeID48: upper 16 bits = 0x0000.
+  fields.node_id = 0x0000030405060708ULL;
   fields.pos_valid = 1;
   fields.lat_e7 = 100;
   fields.lon_e7 = 200;
   fields.pos_age_s = 5;
   fields.seq = 42;
 
-  uint8_t payload[24] = {};
+  uint8_t payload[22] = {};
   const size_t written = naviga::protocol::encode_geo_beacon(fields,
                                                              naviga::protocol::ByteSpan{payload, sizeof(payload)});
-  TEST_ASSERT_EQUAL_UINT32(24, written);
+  TEST_ASSERT_EQUAL_UINT32(22, written);
 
   TEST_ASSERT_TRUE(logic.on_rx(1000, payload, written, -55, table));
   TEST_ASSERT_EQUAL_UINT32(1, table.size());

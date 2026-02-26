@@ -64,11 +64,13 @@ void test_e2e_beacon_to_ble_bridge() {
 
   NodeTable table_b;
   table_b.set_expected_interval_s(10);
-  const uint64_t node_b_id = 0xB0B0B0B0B0B0B0B0ULL;
+  // NodeID48: upper 16 bits = 0x0000 (domain invariant).
+  const uint64_t node_b_id = 0x0000B0B0B0B0B0B0ULL;
   table_b.init_self(node_b_id, 1000);
 
   GeoBeaconFields fields{};
-  fields.node_id = 0x0102030405060708ULL;
+  // NodeID48: upper 16 bits = 0x0000 so round-trip through codec is lossless.
+  fields.node_id = 0x0000030405060708ULL;
   fields.pos_valid = 1;
   fields.lat_e7 = 123456;
   fields.lon_e7 = -654321;
