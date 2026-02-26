@@ -1,11 +1,20 @@
 # NodeID Audit — S02
 
-**Status:** Research / WIP (not canon).
+**Status:** Research / WIP (not canon). **Historical — partially superseded.**
 **Iteration:** S02__2026-03__docs_promotion_and_arch_audit
 **Work Area:** Docs (audit)
 **Date:** 2026-02-26
 **Non-goal:** No code changes, no semantic changes, no mesh/JOIN changes.
 **OOTB policy:** OOTB docs referenced only as examples/indicators; canon = contracts/policy/spec under `docs/product/areas/`.
+
+> **⚠ Historical note (added 2026-02-26, sweep #309):**
+> This audit was written when the on-air NodeID was still described as `uint64 LE / 8 bytes` in some docs.
+> That representation has since been superseded:
+> - **[#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298) / PR #299 / PR #300** — canonized **nodeId48 = 6-byte LE MAC48** as the on-air NodeID.
+> - Current canon: `beacon_payload_encoding_v0.md` §4.1 (nodeId48, 6 B LE); `alive_packet_encoding_v0.md` §3.1; `tail1/tail2_packet_encoding_v0.md`.
+>
+> Rows in §1 and §2 that reference `uint64 LE / 8 bytes` for the **on-air** layout reflect the **pre-#298 state** and are retained for historical traceability only.
+> The domain-layer `node_id (uint64_t)` in firmware remains uint64 internally; only the on-air wire encoding changed to 6 bytes.
 
 ---
 
@@ -15,11 +24,11 @@
 
 | Concept | Name in docs | Name in code | Size | Where defined |
 |---------|-------------|-------------|------|---------------|
-| Primary node key | `nodeId` / `node_id` | `node_id` (uint64_t) | 8 bytes | `beacon_payload_encoding_v0.md §4.1`; `alive_packet_encoding_v0.md §3.1`; `firmware/src/domain/node_table.h` |
+| Primary node key | `nodeId` / `node_id` | `node_id` (uint64_t) | **On-air: 6 B (nodeId48 LE)** — see #298. Domain: uint64_t (lower 48 bits). | `beacon_payload_encoding_v0.md §4.1`; `alive_packet_encoding_v0.md §3.1`; `firmware/src/domain/node_table.h` |
 | Display / short key | `ShortId` / `short_id` | `short_id` (uint16_t) | 2 bytes | `nodetable_fields_inventory_v0.md` row "ShortId"; `firmware/src/domain/node_table.h` |
 | Mesh session key | `short_id` (0..63) | — (not implemented) | 6 bits | `naviga_mesh_protocol_concept_v1_4.md §3.2` |
 | Hardware source | ESP32 eFuse MAC | `esp_efuse_mac_get_default` | 6 bytes raw | `firmware/src/platform/esp_device_id_provider.cpp` |
-| Wire encoding of nodeId | uint64 LE | `write_u64_le` | 8 bytes | `firmware/protocol/geo_beacon_codec.cpp`; `firmware/src/domain/node_table.cpp` |
+| Wire encoding of nodeId | ~~uint64 LE~~ → **uint48 LE (6 B)** — updated per #298 / PR #300 | `write_u64_le` (pre-#298); current codec uses 6-byte write | ~~8 bytes~~ → **6 bytes** | `firmware/protocol/geo_beacon_codec.cpp` (updated in PR #300); `firmware/src/domain/node_table.cpp` |
 
 ---
 
@@ -87,7 +96,7 @@ These are **two distinct concepts sharing the same name** — a naming collision
 
 | Artefact | File | Section / line |
 |----------|------|---------------|
-| `nodeId` on-air layout (uint64 LE, bytes 1–8 of payload) | `docs/product/areas/nodetable/contract/beacon_payload_encoding_v0.md` | §4.1 BeaconCore; §4.2 Tail-1; §4.3 Tail-2 |
+| `nodeId` on-air layout — **nodeId48 (uint48 LE, bytes 1–6 of payload)** _(was uint64 LE 8 B pre-#298; updated per #298/PR#299/PR#300)_ | `docs/product/areas/nodetable/contract/beacon_payload_encoding_v0.md` | §4.1 BeaconCore; §4.2 Tail-1; §4.3 Tail-2 |
 | `nodeId` in Alive packet | `docs/product/areas/nodetable/contract/alive_packet_encoding_v0.md` | §3.1 Minimum payload |
 | `nodeId` semantics (DeviceId, primary key) | `docs/product/areas/nodetable/contract/beacon_payload_encoding_v0.md` | §4.1 row "nodeId" |
 | `ShortId` definition (derived, display only) | `docs/product/areas/nodetable/policy/nodetable_fields_inventory_v0.md` | Row "ShortId" |
