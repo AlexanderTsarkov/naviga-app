@@ -47,8 +47,8 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 | Type | Purpose | MUST fields | Optional fields | Notes |
 |------|---------|-------------|-----------------|--------|
 | **BeaconCore** | Minimal sample: WHO + WHERE + freshness. Strict cadence; MUST deliver. | payloadVersion(1), nodeId48(6), seq16(2), lat_u24(3), lon_u24(3) | — | Smallest possible; **15 B fixed** (+ 2B frame header = 17 B on-air). lat/lon MUST be valid coordinates; Core MUST NOT be transmitted without valid fix (§3.1). |
-| **BeaconTail-1** | Attached-to-Core extension; qualifies one Core sample. | version(1), nodeId(6), core_seq16(2) | posFlags(1), sats(1); then attached fields (hwProfileId, fwVersionId, uptimeSec, etc.) | Receiver applies only if **core_seq16 == lastCoreSeq**; else ignore. See [field_cadence_v0](../policy/field_cadence_v0.md) §2. |
-| **BeaconTail-2** | Uncoupled slow state; no CoreRef. | version(1), nodeId(6); operational send may omit maxSilence10s | maxSilence10s(1), batteryPercent, hwProfileId, fwVersionId, uptimeSec (optional tail) | Two scheduling classes: Operational (on change + at forced Core) and Informative (on change + default 10 min). See field_cadence §2.1. |
+| **BeaconTail-1** | Attached-to-Core extension; qualifies one Core sample. | payloadVersion(1), nodeId(6), core_seq16(2) | posFlags(1), sats(1); then attached fields (hwProfileId, fwVersionId, uptimeSec, etc.) | Receiver applies only if **core_seq16 == lastCoreSeq**; else ignore. See [field_cadence_v0](../policy/field_cadence_v0.md) §2. |
+| **BeaconTail-2** | Uncoupled slow state; no CoreRef. | payloadVersion(1), nodeId(6); operational send may omit maxSilence10s | maxSilence10s(1), batteryPercent, hwProfileId, fwVersionId, uptimeSec (optional tail) | Two scheduling classes: Operational (on change + at forced Core) and Informative (on change + default 10 min). See field_cadence §2.1. |
 
 - **Byte order:** Little-endian for all multi-byte integers.
 - **Layer separation:** `msg_type` lives in the **frame header** (separate from payload; not part of this contract). `payloadVersion` is the **first byte of the payload** and determines the **entire payload layout** for that `msg_type`. Unknown `payloadVersion` → discard (per §7).
@@ -76,6 +76,10 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 | seq16 | uint16 LE | 2 | Freshness counter; monotonic per node (wrap-around). |
 | lat_u24 | uint24 LE | 3 | Latitude packed24: `round((lat_deg + 90.0) / 180.0 × 16777215)`. Range [0, 16777215]. Valid coordinates only; Core MUST NOT be sent without valid fix — when no fix, send Alive packet (§3.1). |
 | lon_u24 | uint24 LE | 3 | Longitude packed24: `round((lon_deg + 180.0) / 360.0 × 16777215)`. Range [0, 16777215]. Valid coordinates only; same transmit rule as lat_u24. |
+
+**Encode (sender) — clamp rule:**
+- Before encoding, clamp: `lat_deg ∈ [−90, +90]`, `lon_deg ∈ [−180, +180]`.
+- If the input coordinates are invalid, NaN, or the node has no valid GNSS fix: **MUST NOT send BeaconCore**; send Alive packet instead (§3.1).
 
 **Decode (receiver):**
 - `lat_deg = lat_u24 / 16777215.0 × 180.0 − 90.0`
