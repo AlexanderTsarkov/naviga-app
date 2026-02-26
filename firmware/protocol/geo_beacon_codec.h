@@ -33,7 +33,7 @@ struct ConstByteSpan {
   size_t size;
 };
 
-constexpr size_t kGeoBeaconSize = 24;
+constexpr size_t kGeoBeaconSize = 22;
 constexpr uint8_t kGeoBeaconMsgType = 0x01;
 constexpr uint8_t kGeoBeaconVersion = 1;
 

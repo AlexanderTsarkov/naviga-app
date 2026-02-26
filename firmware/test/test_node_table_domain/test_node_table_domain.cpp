@@ -321,6 +321,33 @@ void test_rx_semantics_seq16_wrap_older() {
   TEST_ASSERT_EQUAL_UINT16(0, record.last_seq);
 }
 
+// Canonical ShortId: CRC16-CCITT-FALSE over 6-byte LE of NodeID48.
+// Golden value: node_id=0x0000AABBCCDDEEFF → 6-byte LE: FF EE DD CC BB AA → CRC=0xBA4F
+void test_short_id_canonical_golden() {
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  TEST_ASSERT_EQUAL_UINT16(0xBA4F, NodeTable::compute_short_id(node_id));
+}
+
+// Reserved-values fix: CRC==0x0000 → short_id = 0x0001.
+// node_id=0x00000000FFFF produces CRC=0x0000.
+void test_short_id_reserved_zero_fix() {
+  const uint64_t node_id = 0x000000000000FFFFULL;
+  TEST_ASSERT_EQUAL_UINT16(0x0001, NodeTable::compute_short_id(node_id));
+}
+
+// Reserved-values fix: CRC==0xFFFF → short_id = 0xFFFE.
+// node_id=0x000000000000DA0E produces CRC=0xFFFF.
+void test_short_id_reserved_ffff_fix() {
+  const uint64_t node_id = 0x000000000000DA0EULL;
+  TEST_ASSERT_EQUAL_UINT16(0xFFFE, NodeTable::compute_short_id(node_id));
+}
+
+// Non-reserved value is unchanged.
+void test_short_id_non_reserved_unchanged() {
+  const uint64_t node_id = 1ULL;
+  TEST_ASSERT_EQUAL_UINT16(0x4BB0, NodeTable::compute_short_id(node_id));
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_self_init_and_serialization);
@@ -334,5 +361,9 @@ int main(int argc, char** argv) {
   RUN_TEST(test_rx_semantics_newer_seq_updates_position);
   RUN_TEST(test_rx_semantics_seq16_wrap_newer);
   RUN_TEST(test_rx_semantics_seq16_wrap_older);
+  RUN_TEST(test_short_id_canonical_golden);
+  RUN_TEST(test_short_id_reserved_zero_fix);
+  RUN_TEST(test_short_id_reserved_ffff_fix);
+  RUN_TEST(test_short_id_non_reserved_unchanged);
   return UNITY_END();
 }
