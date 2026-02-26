@@ -48,7 +48,7 @@ Source: fields from [link-telemetry-minset](../contract/link-telemetry-minset-v0
 | Field | Tier | Default cadence | Source | Rationale |
 |-------|------|-----------------|--------|------------|
 | **nodeId** | A | Every beacon tick | Encoding | WHO; identity is required. |
-| **positionLat** / **positionLon** (and position-valid semantics) | A | Every beacon tick when position valid | Encoding, NodeTable | WHERE; core for map. |
+| **positionLat** / **positionLon** (`lat_u24` / `lon_u24`, packed24) | A | Every beacon tick when position valid | [beacon_payload_encoding_v0 §4.1](../contract/beacon_payload_encoding_v0.md) | WHERE; core for map. On-air: 3 bytes each (packed24 absolute WGS84). `pos_valid`/`pos_age_s` are NOT in BeaconCore — see Tail-1 (§4.2). |
 | **freshness marker** (seq16) | A | Every beacon tick | [beacon_payload_encoding_v0](../contract/beacon_payload_encoding_v0.md) §4.1 | Ordering and staleness; required for Core. seq16 (uint16, 2 B, LE) is canonical. |
 | **posFlags** | B | Every Tail-1 (when position valid or every Tail-1) | Encoding §4.2, [position_quality_v0](position_quality_v0.md) | Position quality attached to Core sample. |
 | **sats** | B | Every Tail-1 (when position valid or every Tail-1) | Encoding §4.2, [position_quality_v0](position_quality_v0.md) | Position quality attached to Core sample. |
