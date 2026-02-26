@@ -13,18 +13,12 @@ using naviga::domain::BeaconLogic;
 using naviga::domain::NodeTable;
 using naviga::domain::PacketLogType;
 using naviga::protocol::GeoBeaconFields;
+using naviga::protocol::kGeoBeaconSize;
 
 namespace {
 
 uint16_t read_u16_le(const uint8_t* data) {
   return static_cast<uint16_t>(data[0] | (static_cast<uint16_t>(data[1]) << 8));
-}
-
-uint32_t read_u32_le(const uint8_t* data) {
-  return static_cast<uint32_t>(data[0]) |
-         (static_cast<uint32_t>(data[1]) << 8) |
-         (static_cast<uint32_t>(data[2]) << 16) |
-         (static_cast<uint32_t>(data[3]) << 24);
 }
 
 uint64_t read_u64_le(const uint8_t* data) {
@@ -42,11 +36,10 @@ void test_tx_cadence() {
   logic.set_min_interval_ms(1000);
 
   GeoBeaconFields fields{};
-  fields.node_id = 0x1122334455667788ULL;
+  fields.node_id = 0x0000334455667788ULL;
   fields.pos_valid = 1;
-  fields.lat_e7 = 10;
-  fields.lon_e7 = 20;
-  fields.pos_age_s = 3;
+  fields.lat_deg = 55.7558;
+  fields.lon_deg = 37.6173;
 
   uint8_t buffer[32] = {};
   size_t out_len = 0;
@@ -54,7 +47,7 @@ void test_tx_cadence() {
   TEST_ASSERT_EQUAL_UINT32(0, out_len);
 
   TEST_ASSERT_TRUE(logic.build_tx(1000, fields, buffer, sizeof(buffer), &out_len));
-  TEST_ASSERT_EQUAL_UINT32(22, out_len);
+  TEST_ASSERT_EQUAL_UINT32(kGeoBeaconSize, out_len);
 }
 
 // Role-derived cadence (#281): max_silence_ms forces TX when min_interval is not yet reached.
@@ -67,9 +60,8 @@ void test_tx_max_silence_triggers_send() {
   GeoBeaconFields fields{};
   fields.node_id = 1;
   fields.pos_valid = 1;
-  fields.lat_e7 = 0;
-  fields.lon_e7 = 0;
-  fields.pos_age_s = 0;
+  fields.lat_deg = 0.0;
+  fields.lon_deg = 0.0;
 
   uint8_t buffer[32] = {};
   size_t out_len = 0;
@@ -78,7 +70,7 @@ void test_tx_max_silence_triggers_send() {
   TEST_ASSERT_EQUAL_UINT32(0, out_len);
 
   TEST_ASSERT_TRUE(logic.build_tx(10000, fields, buffer, sizeof(buffer), &out_len, &ptype));
-  TEST_ASSERT_EQUAL_UINT32(22, out_len);
+  TEST_ASSERT_EQUAL_UINT32(kGeoBeaconSize, out_len);
   TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));  // fix → CORE
 
   // No fix at max_silence → ALIVE
@@ -87,7 +79,7 @@ void test_tx_max_silence_triggers_send() {
   TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::ALIVE), static_cast<int>(ptype));
 }
 
-// minDisplacement gating: at min_interval without position update → NO_SEND (Alive only at maxSilence no-fix).
+// minDisplacement gating: at min_interval without position update → NO_SEND.
 void test_tx_min_interval_no_update_no_send() {
   BeaconLogic logic;
   logic.set_min_interval_ms(5000);
@@ -96,9 +88,8 @@ void test_tx_min_interval_no_update_no_send() {
   GeoBeaconFields fields{};
   fields.node_id = 1;
   fields.pos_valid = 1;
-  fields.lat_e7 = 100;
-  fields.lon_e7 = 200;
-  fields.pos_age_s = 0;
+  fields.lat_deg = 0.0001;
+  fields.lon_deg = 0.0002;
 
   uint8_t buffer[32] = {};
   size_t out_len = 1;
@@ -111,27 +102,26 @@ void test_tx_payload_correctness() {
   logic.set_min_interval_ms(1);
 
   GeoBeaconFields fields{};
-  // NodeID48: upper 16 bits must be 0x0000 for round-trip equality.
+  // NodeID48: upper 16 bits = 0x0000 for round-trip equality.
   fields.node_id = 0x0000CCDDEEFF0011ULL;
   fields.pos_valid = 1;
-  fields.lat_e7 = 123;
-  fields.lon_e7 = -456;
-  fields.pos_age_s = 7;
+  fields.lat_deg = 55.7558;
+  fields.lon_deg = 37.6173;
 
-  uint8_t buffer[22] = {};
+  uint8_t buffer[kGeoBeaconSize] = {};
   size_t out_len = 0;
   TEST_ASSERT_TRUE(logic.build_tx(10, fields, buffer, sizeof(buffer), &out_len));
-  TEST_ASSERT_EQUAL_UINT32(22, out_len);
+  TEST_ASSERT_EQUAL_UINT32(kGeoBeaconSize, out_len);
 
   GeoBeaconFields decoded{};
   const auto err =
       naviga::protocol::decode_geo_beacon(naviga::protocol::ConstByteSpan{buffer, out_len}, &decoded);
   TEST_ASSERT_EQUAL(naviga::protocol::DecodeError::Ok, err);
   TEST_ASSERT_EQUAL_UINT64(fields.node_id, decoded.node_id);
-  TEST_ASSERT_EQUAL_UINT8(fields.pos_valid, decoded.pos_valid);
-  TEST_ASSERT_EQUAL_INT32(fields.lat_e7, decoded.lat_e7);
-  TEST_ASSERT_EQUAL_INT32(fields.lon_e7, decoded.lon_e7);
-  TEST_ASSERT_EQUAL_UINT16(fields.pos_age_s, decoded.pos_age_s);
+  TEST_ASSERT_EQUAL_UINT8(1, decoded.pos_valid);
+  // Packed24 precision tolerance: ~0.00003 degrees
+  TEST_ASSERT_TRUE(decoded.lat_deg > 55.7557 && decoded.lat_deg < 55.7559);
+  TEST_ASSERT_TRUE(decoded.lon_deg > 37.6172 && decoded.lon_deg < 37.6174);
   TEST_ASSERT_EQUAL_UINT16(1, decoded.seq);
 
   TEST_ASSERT_TRUE(logic.build_tx(20, fields, buffer, sizeof(buffer), &out_len));
@@ -148,15 +138,14 @@ void test_rx_success_updates_node_table() {
   // NodeID48: upper 16 bits = 0x0000.
   fields.node_id = 0x0000030405060708ULL;
   fields.pos_valid = 1;
-  fields.lat_e7 = 100;
-  fields.lon_e7 = 200;
-  fields.pos_age_s = 5;
+  fields.lat_deg = 55.7558;
+  fields.lon_deg = 37.6173;
   fields.seq = 42;
 
-  uint8_t payload[22] = {};
+  uint8_t payload[kGeoBeaconSize] = {};
   const size_t written = naviga::protocol::encode_geo_beacon(fields,
                                                              naviga::protocol::ByteSpan{payload, sizeof(payload)});
-  TEST_ASSERT_EQUAL_UINT32(22, written);
+  TEST_ASSERT_EQUAL_UINT32(kGeoBeaconSize, written);
 
   TEST_ASSERT_TRUE(logic.on_rx(1000, payload, written, -55, table));
   TEST_ASSERT_EQUAL_UINT32(1, table.size());
