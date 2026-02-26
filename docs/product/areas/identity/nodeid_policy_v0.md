@@ -68,7 +68,7 @@ This document is the **single source of truth** for NodeID wire format, hardware
 
 **ShortId is display-only.** It MUST NOT be used as a protocol key, dedup key, or routing identifier in any packet or protocol logic.
 
-**Reserved values:** If CRC16 produces `0x0000` or `0xFFFF`, apply a deterministic substitution: XOR the result with `0x0001`. Document this substitution in the implementation.
+**Reserved values (normative):** If and only if `crc == 0x0000` or `crc == 0xFFFF`, compute `short_id = crc XOR 0x0001` exactly once. Otherwise `short_id = crc`. This guarantees: `0x0000 → 0x0001`; `0xFFFF → 0xFFFE`; no other values are modified.
 
 **Collision handling:** When two different NodeIds produce the same ShortId, set `short_id_collision = true` on both entries. Display format: `ABCD` (no collision) or `ABCD*` / `ABCD-2` (collision). Show full NodeId hex on user request.
 
