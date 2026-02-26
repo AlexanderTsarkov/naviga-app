@@ -2,7 +2,7 @@
 
 **Status:** Canon (contract).
 
-**Work Area:** Product Specs WIP · **Parent:** [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) · **Issue:** [#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173) · **NodeID policy:** [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298) · **Geo encoding productization:** [#301](https://github.com/AlexanderTsarkov/naviga-app/issues/301) · **Packet header framing:** [#304](https://github.com/AlexanderTsarkov/naviga-app/issues/304)
+**Work Area:** Product Specs WIP · **Parent:** [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) · **Issue:** [#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173) · **NodeID policy:** [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298) · **Geo encoding productization:** [#301](https://github.com/AlexanderTsarkov/naviga-app/issues/301) · **Packet header framing:** [#304](https://github.com/AlexanderTsarkov/naviga-app/issues/304) · **Tail productization:** [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307)
 
 This contract defines the **v0 beacon payload**: byte layout, size budgets, and their coupling to RadioProfile classes (Default / LongDist / Fast). It implements the encoding deferred by [link-telemetry-minset-v0.md](link-telemetry-minset-v0.md). **Core/Tail split** (which fields are Core vs Tail) is driven by [field_cadence_v0](../policy/field_cadence_v0.md) policy. Semantic truth is this contract and the minset; no reference to OOTB or UI as normative.
 
@@ -62,8 +62,8 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 | Type | Purpose | MUST fields | Optional fields | Notes |
 |------|---------|-------------|-----------------|--------|
 | **BeaconCore** | Minimal sample: WHO + WHERE + freshness. Strict cadence; MUST deliver. | payloadVersion(1), nodeId48(6), seq16(2), lat_u24(3), lon_u24(3) | — | Smallest possible; **15 B fixed** (+ 2B frame header = 17 B on-air). lat/lon MUST be valid coordinates; Core MUST NOT be transmitted without valid fix (§3.1). |
-| **BeaconTail-1** | Attached-to-Core extension; qualifies one Core sample. | payloadVersion(1), nodeId(6), core_seq16(2) | posFlags(1), sats(1); then attached fields (hwProfileId, fwVersionId, uptimeSec, etc.) | Receiver applies only if **core_seq16 == lastCoreSeq**; else ignore. See [field_cadence_v0](../policy/field_cadence_v0.md) §2. |
-| **BeaconTail-2** | Uncoupled slow state; no CoreRef. | payloadVersion(1), nodeId(6); operational send may omit maxSilence10s | maxSilence10s(1), batteryPercent, hwProfileId, fwVersionId, uptimeSec (optional tail) | Two scheduling classes: Operational (on change + at forced Core) and Informative (on change + default 10 min). See field_cadence §2.1. |
+| **BeaconTail-1** | Attached-to-Core extension; qualifies one Core sample. Optional, loss-tolerant. | payloadVersion(1), nodeId(6), core_seq16(2) | posFlags(1), sats(1), fix_quality(1), hdop_x10(2), speed_cms(2), heading_deg(1) | Receiver applies only if **core_seq16 == lastCoreSeq**; else ignore. MUST NOT update position. Full contract: [tail1_packet_encoding_v0.md](tail1_packet_encoding_v0.md). |
+| **BeaconTail-2** | Uncoupled slow state; no CoreRef. Optional, loss-tolerant. | payloadVersion(1), nodeId(6) | maxSilence10s(1), batteryPercent(1), temp_x10(2 signed), rssi_dbm(1 signed), hwProfileId(2), fwVersionId(2), uptimeSec(4) | No CoreRef; apply unconditionally. MUST NOT update position. Two scheduling classes: Operational and Informative. Full contract: [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md). |
 
 - **Byte order:** Little-endian for all multi-byte integers.
 - **Frame header:** Every on-air frame is preceded by a 2-byte header (7+3+6 bit layout) defined in [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0). `msg_type` values: BeaconCore = `0x01`, BeaconTail-1 = `0x03`, BeaconTail-2 = `0x04`. The header is **not part of this contract**; payload byte offsets below start at byte 0 of the payload body.
@@ -109,36 +109,27 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 
 ### 4.2 BeaconTail-1
 
-**MUST (minimum):** payloadVersion(1) | nodeId(6) | core_seq16(2). **Optional (in order):** posFlags(1), sats(1); then other attached fields (order TBD; same sentinel conventions). **posFlags** and **sats** are the canonical position-quality fields for Tail-1 (sample-attached); derivation of PositionQuality state is in [position_quality_v0.md](../policy/position_quality_v0.md). Receiver **MUST** apply payload only if **core_seq16** equals the last Core seq16 received from that node; otherwise **MUST** ignore. See [field_cadence_v0.md](../policy/field_cadence_v0.md) §2.
+**Dedicated contract:** [tail1_packet_encoding_v0.md](tail1_packet_encoding_v0.md) — full byte layout, field definitions, units, ranges, and normative RX rules. Canonized in [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307).
 
-| Field | Type | Bytes | Encoding |
-|-------|------|-------|----------|
-| payloadVersion | uint8 | 1 | 0x00 = v0 |
-| nodeId | uint48 | 6 | NodeID48 (6-byte LE MAC48); see [nodeid_policy_v0](../../../identity/nodeid_policy_v0.md). |
-| core_seq16 | uint16 | 2 | seq16 of the Core sample this Tail-1 qualifies. Little-endian. |
-| posFlags | uint8 | 1 | Position-quality flags for this sample; 0 = not present/unknown. Does not indicate no-fix; Tail-1 never revokes Core position. Optional. See [rx_semantics_v0](../policy/rx_semantics_v0.md) §4. |
-| sats | uint8 | 1 | Satellite count when position valid; 0 = not present. Optional. |
-| (optional attached fields) | — | TBD | hwProfileId, fwVersionId, uptimeSec, etc.; sentinel conventions as elsewhere. |
-
-**Minimum size:** **9 bytes.** With posFlags+sats: 11 bytes.
+**Summary:**
+- `msg_type = 0x03`, `payloadVersion = 0x00`
+- **Minimum (MUST):** `payloadVersion(1) | nodeId48(6) | core_seq16(2)` = **9 bytes**
+- **Optional:** `posFlags(1)`, `sats(1)`, `fix_quality(1)`, `hdop_x10(2)`, `speed_cms(2)`, `heading_deg(1)` — up to **17 bytes**
+- **RX rule (normative):** Apply payload **only if** `core_seq16 == last_core_seq16[N]` for that node; otherwise **MUST** ignore. See [rx_semantics_v0](../policy/rx_semantics_v0.md) §2 and §4.
+- **Invariants:** Tail-1 MUST NOT update position. Tail-1 is optional and loss-tolerant; product MUST function with zero Tail-1 packets received.
 
 ### 4.3 BeaconTail-2
 
-**MUST (minimal):** payloadVersion(1) | nodeId(6). **Optional (in defined order):** maxSilence10s(1), batteryPercent(1), hwProfileId(2), fwVersionId(2), uptimeSec(4); sentinel values 0xFF, 0xFFFF, 0xFFFFFFFF = not present. Fields may be omitted from the end.
+**Dedicated contract:** [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md) — full byte layout, field definitions, units, ranges (including signedness of `temp_x10` and `rssi_dbm`), sentinel values, and normative RX rules. Canonized in [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307).
 
-**Normative:** **maxSilence10s** is **Tail-2 Informative**. It **MUST NOT** be included on every operational Tail-2 send unless its value changed. Operational Tail-2 sends (on change + at forced Core) may carry only version + nodeId + operational fields; informative fields are sent at informative cadence or on change (see [field_cadence_v0.md](../policy/field_cadence_v0.md) §2.1).
-
-| Field | Type | Bytes | Encoding |
-|-------|------|-------|----------|
-| payloadVersion | uint8 | 1 | 0x00 = v0 |
-| nodeId | uint48 | 6 | NodeID48 (6-byte LE MAC48); see [nodeid_policy_v0](../../../identity/nodeid_policy_v0.md). |
-| maxSilence10s | uint8 | 1 | Informative. Max silence in 10s steps; clamp ≤ 90 (15 min). 0 = not specified. Omit unless changed or at informative cadence. |
-| batteryPercent | uint8 | 1 | 0–100; 0xFF = not present |
-| hwProfileId | uint16 | 2 | 0xFFFF = not present |
-| fwVersionId | uint16 | 2 | 0xFFFF = not present |
-| uptimeSec | uint32 | 4 | 0xFFFFFFFF = not present |
-
-**Minimum size:** **7 bytes** (version + nodeId only). With maxSilence10s: **8 bytes.** Maximum (all optional present): 1+6+1+1+2+2+4 = **17 bytes.**
+**Summary:**
+- `msg_type = 0x04`, `payloadVersion = 0x00`
+- **Minimum (MUST):** `payloadVersion(1) | nodeId48(6)` = **7 bytes**
+- **Optional (in order):** `maxSilence10s(1)`, `batteryPercent(1)`, `temp_x10(2, int16 LE signed)`, `rssi_dbm(1, int8 signed)`, `hwProfileId(2)`, `fwVersionId(2)`, `uptimeSec(4)` — up to **20 bytes**
+- **Sentinel values:** `batteryPercent=0xFF`, `temp_x10=0x8000`, `rssi_dbm=0x80`, `hwProfileId=0xFFFF`, `fwVersionId=0xFFFF`, `uptimeSec=0xFFFFFFFF` = not present
+- **RX rule:** No CoreRef; apply unconditionally when version and length valid. See [rx_semantics_v0](../policy/rx_semantics_v0.md) §2.
+- **Scheduling:** `maxSilence10s` is Informative — MUST NOT be included on every operational Tail-2 send unless value changed. See [field_cadence_v0](../policy/field_cadence_v0.md) §2.2.
+- **Invariants:** Tail-2 MUST NOT update position. Tail-2 is optional and loss-tolerant; product MUST function with zero Tail-2 packets received.
 
 ---
 
@@ -168,7 +159,9 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 
 **Full hex:** `00 FF EE DD CC BB AA 01 00 01 08`
 
-### 5.3 BeaconTail-2 (8 B): minimal
+For full examples including GNSS quality fields, see [tail1_packet_encoding_v0.md §6](tail1_packet_encoding_v0.md).
+
+### 5.3 BeaconTail-2 (8 B): with maxSilence10s
 
 | Field | Value | Bytes (hex) |
 |-------|--------|-------------|
@@ -178,7 +171,7 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 
 **Full hex:** `00 FF EE DD CC BB AA 09`
 
-### 5.4 BeaconTail-2 (9 B): with battery
+### 5.4 BeaconTail-2 (12 B): with health fields
 
 | Field | Value | Bytes (hex) |
 |-------|--------|-------------|
@@ -186,8 +179,12 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 | nodeId | 0x0000_AABB_CCDD_EEFF | FF EE DD CC BB AA |
 | maxSilence10s | 6 (60 s) | 06 |
 | batteryPercent | 85 | 55 |
+| temp_x10 | 235 (= 23.5 °C, int16 LE signed) | EB 00 |
+| rssi_dbm | −85 dBm (int8 signed) | AB |
 
-**Full hex:** `00 FF EE DD CC BB AA 06 55`
+**Full hex:** `00 FF EE DD CC BB AA 06 55 EB 00 AB`
+
+For full examples including device identity fields, see [tail2_packet_encoding_v0.md §6](tail2_packet_encoding_v0.md).
 
 ---
 
@@ -217,11 +214,15 @@ Payload size (in bytes) **MUST NOT** exceed the budget for the **RadioProfile cl
 
 ## 8) Related
 
+- **BeaconTail-1 contract (full layout + RX rules):** [tail1_packet_encoding_v0.md](tail1_packet_encoding_v0.md) — [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307)
+- **BeaconTail-2 contract (full layout + RX rules):** [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md) — [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307)
 - **Alive packet (no-fix liveness):** [alive_packet_encoding_v0.md](alive_packet_encoding_v0.md) — Alive packet encoding; position-bearing vs alive-bearing in §3.1 above.
 - **Field cadence (Core/Tail semantics):** [../policy/field_cadence_v0.md](../policy/field_cadence_v0.md) — §2 Beacon split definitions; receiver rule for Tail-1.
+- **RX semantics (CoreRef-lite, Tail apply rules):** [../policy/rx_semantics_v0.md](../policy/rx_semantics_v0.md) — §2 Tail-1/Tail-2 acceptance; §4 no revocation of Core.
 - **Minset (field semantics):** [link-telemetry-minset-v0.md](link-telemetry-minset-v0.md) — [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158)
 - **RadioProfiles & ChannelPlan:** [../../../radio/policy/registry_radio_profiles_v0.md](../../../radio/policy/registry_radio_profiles_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)
 - **NodeTable hub:** [../index.md](../index.md) — [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 - **NodeID policy (wire format, source, ShortId):** [../../../identity/nodeid_policy_v0.md](../../../identity/nodeid_policy_v0.md) — [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298)
 - **Geo encoding productization (packed24 decision):** [#301](https://github.com/AlexanderTsarkov/naviga-app/issues/301)
 - **Packet header framing (2B 7+3+6, msg_type registry):** [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0) — [#304](https://github.com/AlexanderTsarkov/naviga-app/issues/304)
+- **Tail productization:** [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307)
