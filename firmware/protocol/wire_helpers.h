@@ -1,7 +1,6 @@
 #pragma once
 
 // Internal wire encoding/decoding helpers shared by protocol codecs.
-// This header is included only from .cpp files; not part of the public API.
 
 #include <cstdint>
 

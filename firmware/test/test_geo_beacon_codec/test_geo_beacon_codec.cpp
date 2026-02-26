@@ -7,7 +7,6 @@
 #include "../../protocol/geo_beacon_codec.h"
 #include "../../protocol/geo_beacon_codec.cpp"
 #include "../../protocol/alive_codec.h"
-#include "../../protocol/alive_codec.cpp"
 
 using naviga::protocol::AliveDecodeError;
 using naviga::protocol::AliveFields;

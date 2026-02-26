@@ -9,7 +9,6 @@
 #include "../../protocol/geo_beacon_codec.h"
 #include "../../protocol/geo_beacon_codec.cpp"
 #include "../../protocol/alive_codec.h"
-#include "../../protocol/alive_codec.cpp"
 
 using naviga::domain::BeaconLogic;
 using naviga::domain::NodeTable;
