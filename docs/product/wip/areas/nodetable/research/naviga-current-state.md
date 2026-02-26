@@ -1,5 +1,7 @@
 # Research: Naviga NodeTable — current state
 
+> **⚠️ Historical snapshot.** This doc describes the state at the time of the S02 audit. On-air encoding has since been updated: NodeID48 (6-byte LE, [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298)) and BeaconCore packed24 v0 ([#301](https://github.com/AlexanderTsarkov/naviga-app/issues/301)). References to `pos_valid`/`pos_age_s` as on-air fields in BeaconCore are **legacy**; they are domain/BLE-snapshot fields only. Canon: [`beacon_payload_encoding_v0.md §4.1`](../../../../areas/nodetable/contract/beacon_payload_encoding_v0.md).
+
 Filled from repo code for Issue #147. Describes where NodeTable is defined, updated, read, and how fields flow firmware → BLE → mobile.
 
 ---

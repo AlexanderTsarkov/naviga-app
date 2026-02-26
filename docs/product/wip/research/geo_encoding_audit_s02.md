@@ -1,21 +1,29 @@
 # Geo Encoding Audit — S02
 
-**Status:** Research / WIP (not canon).
+**Status:** Research / WIP (not canon). **Superseded by decisions in [#301](https://github.com/AlexanderTsarkov/naviga-app/issues/301) and [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298).**
 **Iteration:** S02__2026-03__docs_promotion_and_arch_audit
 **Work Area:** Docs (audit)
 **Date:** 2026-02-26
 **Non-goal:** No code changes, no semantic changes, no mesh/JOIN changes.
 **OOTB policy:** OOTB docs referenced only as examples/indicators; canon = contracts/policy/spec under `docs/product/areas/`.
 
+> **⚠️ Decision of record:** The gaps and options described in this audit have been resolved. See:
+> - [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298) — NodeID48 (6-byte LE on-air); PR #299 (docs) and PR #300 (code) merged.
+> - [#301](https://github.com/AlexanderTsarkov/naviga-app/issues/301) — BeaconCore packed24 v0: `payloadVersion(1) | nodeId48(6) | seq16(2) | lat_u24(3) | lon_u24(3)` = 15 bytes payload.
+>
+> The layouts described in §1.1–§1.3 below are **historical / as-implemented at audit time** and are **non-canon**. The current canon is in [`beacon_payload_encoding_v0.md §4.1`](../../areas/nodetable/contract/beacon_payload_encoding_v0.md).
+
 ---
 
 ## 1. As-Is Summary
 
-### 1.1 Current on-air geo encoding (implemented)
+### 1.1 On-air geo encoding — as-implemented at audit time (historical)
+
+> **Note:** This section describes the codec at audit time (2026-02-26). The canon target is packed24 v0 per [#301](https://github.com/AlexanderTsarkov/naviga-app/issues/301).
 
 The only implemented on-air geo encoding is in `firmware/protocol/geo_beacon_codec.cpp`. It uses **absolute WGS84 coordinates encoded as int32 × 1e7**, with no delta or sector compression.
 
-**BeaconCore payload (19 bytes, fixed):**
+**BeaconCore payload (19 bytes, fixed — historical):**
 
 | Byte offset | Field | Type | Size | Encoding |
 |-------------|-------|------|------|----------|
@@ -41,7 +49,7 @@ No position fields. Alive = no-fix liveness signal only.
 
 ---
 
-### 1.2 Canon contract geo encoding (`beacon_payload_encoding_v0.md`)
+### 1.2 Canon contract geo encoding at audit time (`beacon_payload_encoding_v0.md`) — historical
 
 The canon contract defines the same absolute WGS84 × 1e7 encoding but with a slightly different field order:
 
@@ -66,11 +74,13 @@ The canon contract defines the same absolute WGS84 × 1e7 encoding but with a sl
 
 ---
 
-### 1.3 Firmware codec geo encoding (`geo_beacon_codec.cpp`)
+### 1.3 Firmware codec geo encoding (`geo_beacon_codec.cpp`) — **legacy / as-implemented at audit time**
+
+> **Note:** This section describes the codec layout **at the time of the audit (2026-02-26)**. Since then: PR #300 reduced nodeId to 6 bytes (NodeID48); PR-B for #301 will replace this layout with packed24 v0. This section is retained for historical context only.
 
 The firmware codec (`firmware/protocol/geo_beacon_codec.cpp`) encodes the same fields but with a **different byte layout**:
 
-**Codec layout (24 bytes):**
+**Codec layout (24 bytes, legacy — as-implemented at audit time):**
 
 | Byte offset | Field | Type | Size | Notes |
 |-------------|-------|------|------|-------|
@@ -202,6 +212,8 @@ Add a note to `beacon_payload_encoding_v0.md` or a new WIP doc explicitly statin
 ---
 
 ## 5. Recommendation for Next PRs
+
+> **Status (updated):** Decisions have been made. See [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298) (NodeID48) and [#301](https://github.com/AlexanderTsarkov/naviga-app/issues/301) (packed24). The recommendations below are retained for historical context; they have been superseded.
 
 ### PR 1 (docs-only, recommended immediately)
 
