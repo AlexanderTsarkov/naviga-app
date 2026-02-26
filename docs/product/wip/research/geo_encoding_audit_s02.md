@@ -181,6 +181,8 @@ The concept also mentions `bridge_hop_pos` (position of the current relay hop) a
 
 ## 4. Candidate Options
 
+> **Historical note (added [#304](https://github.com/AlexanderTsarkov/naviga-app/issues/304)):** Options B and C below referenced a "3-byte OOTB frame header (msg_type | ver | flags)". That 3-byte draft was never implemented and is superseded by the canonical **2-byte 7+3+6 header** defined in [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0). The `ver` and `flags` fields are retired. Options below are preserved as historical record; the chosen path was Option B (canon 15-byte BeaconCore packed24 v0, per #301/#303) with the 2-byte header (per #304).
+
 ### Option A: Align canon contract with firmware codec (docs-only)
 
 Update `beacon_payload_encoding_v0.md` to match the actual 24-byte codec layout, adding `pos_valid` and `pos_age_s` to BeaconCore, and clarifying the frame header bytes (`msg_type`, `ver`, `reserved`).

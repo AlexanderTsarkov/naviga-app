@@ -26,46 +26,92 @@
 
 ## 3. Radio frame format (v0)
 
-**ADR-like note:** Рамку фрейма и версионирование фиксируем сейчас; точный состав полей payload будет уточнён после решений по NodeTable ([#12](https://github.com/AlexanderTsarkov/naviga-app/issues/12)). Расширения допускаются только в отведённой области.
+**Decision:** [#304](https://github.com/AlexanderTsarkov/naviga-app/issues/304) — 2-byte frame header (7+3+6 bit layout) precedes every payload. Supersedes the earlier 3-byte header sketch (`msg_type | ver | flags`) which was never implemented.
+
+> **Historical note:** An earlier draft of this section described a 3-byte header (`msg_type | ver | flags`). That draft was never implemented on-air. The canonical header is the 2-byte layout defined below. The `ver` and `flags` fields from the draft are retired; forward-compat is handled via the `reserved` bits and `payloadVersion` inside the payload.
 
 ### 3.1. Header (every frame)
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| **msg_type** | u8 | Тип сообщения; неизвестный → пакет отбрасывается/игнорируется. |
-| **ver** | u8 | Версия формата payload для данного msg_type (MAJOR в старших битах, MINOR в младших — или один байт как MAJOR; схема TBD, но правило ниже обязательно). |
-| **flags** | u8 | Битовая маска; использование TBD. |
+Every on-air frame = **[header: 2 bytes][payload: 0–63 bytes]**.
 
-**Rules:**
+#### Bit layout (16-bit LE word)
 
-- **Unknown msg_type** → drop/ignore.
-- **Unsupported MAJOR ver** для известного msg_type → drop/ignore.
-- **MINOR-compatible** добавления допускаются только в **optional extension area** в конце payload; парсер, не поддерживающий новое MINOR, должен корректно пропустить extension area (по длине или по маркеру).
-- **Seed:** может полностью игнорировать extension area (читать только core поля).
+```
+Bits [15:9]  msg_type    — 7 bits  (0x00–0x7F; 128 packet families)
+Bits [8:6]   reserved    — 3 bits  (MUST be 0b000 on send; receiver MUST ignore)
+Bits [5:0]   payload_len — 6 bits  (0–63; count of payload bytes that follow)
+```
 
-### 3.2. GEO_BEACON msg_type
+The 16-bit word is little-endian: `H = wire_byte_0 | (wire_byte_1 << 8)`.
 
-- **msg_type value:** **0x01** (GEO_BEACON). Зарезервировано: 0x00 — не используется; остальные — под будущие типы.
+#### Wire packing (encode)
 
-**GEO_BEACON v1 — Core (minimum mandatory fields):**
+```
+wire byte 0 = ((reserved & 0x3) << 6) | payload_len   // H & 0xFF  (low byte)
+wire byte 1 = (msg_type << 1) | (reserved >> 2)        // (H >> 8) & 0xFF  (high byte)
+```
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| **node_id** | uint64 | Уникальный идентификатор ноды; см. [NodeTable v0 — Node identity](../firmware/ootb_node_table_v0.md#1-node-identity). |
-| **pos_valid** | bool (1 bit) или byte | Флаг: координаты присутствуют/валидны. При false координаты могут быть нулевыми или отсутствовать (core не передаёт позицию при no-fix). |
-| **position** | lat/lon fixed-point (TBD) | Широта/долгота; формат и точность — TBD (coordinate encoding в OOTB plan). Передаются только при pos_valid == true. |
-| **pos_age_s** | uint16 (или timestamp/uptime delta) | **Required core freshness indicator:** возраст позиции в секундах (или дельта времени; точный выбор — TBD). Минимально достаточно одного из: pos_age_s или timestamp/uptime delta. |
-| **seq** | u8 или u16 | Номер последовательности для дедупликации; монотонно растёт (или циклический в пределах типа). |
+#### Decode formulas
 
-Детали порядка байт (endianness), точный бит pos_valid и размер position — финализируются вместе с NodeTable spec (#12). Выше — минимальный обязательный набор полей.
+```
+H           = wire_byte_0 | (wire_byte_1 << 8)
+msg_type    = (H >> 9) & 0x7F
+reserved    = (H >> 6) & 0x07
+payload_len = H & 0x3F
+```
 
-**Note (core scope):** Core остаётся минимальным: node_id + position (+ freshness indicator + seq). **remote_max_silence_s** не входит в core в v1 seed; планируется как поле расширения позже для per-node stale evaluation. До появления этого поля приёмники используют **локальную/глобальную настройку max_silence** из cadence settings для логики stale/grey (см. [NodeTable v0 § 4](../firmware/ootb_node_table_v0.md#4-ui-state-policy-seed-two-state--capacity--eviction)).
+#### Golden example
 
-**Extensions (TBD) area:**
+`msg_type = 0x01` (BEACON_CORE), `reserved = 0`, `payload_len = 15`:
 
-- После core полей допускается **optional extension block** для совместимых по MINOR добавлений.
-- Планируемый механизм: **TLV** (Type-Length-Value) или **length-delimited** блок байтов; парсер читает длину и пропускает неизвестные теги или весь блок. Окончательный выбор — TBD.
-- Кандидаты полей в extensions (не в core): battery_mv, sat_count, hdop/accuracy, last_rx_rssi, tx_power и т.п. Точный набор — после финализации NodeTable spec (#12).
+```
+H = (0x01 << 9) | 15 = 0x020F
+wire byte 0 = 0x020F & 0xFF       = 0x0F
+wire byte 1 = (0x020F >> 8) & 0xFF = 0x02
+Wire: [0x0F, 0x02]
+```
+
+#### Validity rules
+
+| Condition | Action |
+|-----------|--------|
+| `msg_type == 0x00` | Drop packet |
+| `msg_type` not in registry | Drop packet |
+| `reserved != 0b000` | Accept (ignore reserved bits; forward-compat) |
+| Actual received payload bytes ≠ `payload_len` | Drop packet |
+| `payloadVersion` unknown for known `msg_type` | Discard payload; do not update NodeTable |
+| Payload shorter than minimum for that `msg_type` | Drop packet |
+
+### 3.2. msg_type registry (v0)
+
+| `msg_type` | Name | Payload contract | Notes |
+|-----------|------|-----------------|-------|
+| `0x00` | (reserved) | — | MUST NOT be used; drop on receive |
+| `0x01` | `BEACON_CORE` | [beacon_payload_encoding_v0 §4.1](../product/areas/nodetable/contract/beacon_payload_encoding_v0.md) | Position-bearing; 15 B fixed payload |
+| `0x02` | `BEACON_ALIVE` | [alive_packet_encoding_v0 §3](../product/areas/nodetable/contract/alive_packet_encoding_v0.md) | Alive-bearing, non-position; 9–10 B payload |
+| `0x03` | `BEACON_TAIL1` | [beacon_payload_encoding_v0 §4.2](../product/areas/nodetable/contract/beacon_payload_encoding_v0.md) | Tail-1 operational; 9 B min payload |
+| `0x04` | `BEACON_TAIL2` | [beacon_payload_encoding_v0 §4.3](../product/areas/nodetable/contract/beacon_payload_encoding_v0.md) | Tail-2 slow state; 7 B min payload |
+| `0x05`–`0x7F` | (reserved) | — | Reserved for future types; drop on receive |
+
+### 3.3. Layer separation
+
+`msg_type` (in the 2-byte frame header) and `payloadVersion` (first byte of every payload) are **independent versioning axes**:
+
+- **`msg_type`** identifies the packet family. Dispatch happens at the framing layer before any payload parsing.
+- **`payloadVersion`** (uint8, first byte of payload) determines the entire payload layout for that `msg_type`. The payload byte offsets defined in the canon contracts are **not affected** by the frame header.
+
+Unknown `msg_type` → drop the entire frame. Unknown `payloadVersion` for a known `msg_type` → discard payload (do not update NodeTable state from that packet).
+
+### 3.4. On-air size summary
+
+| Packet | Header (B) | Payload min (B) | Total min on-air (B) | LongDist budget (B) |
+|--------|-----------|----------------|---------------------|---------------------|
+| BEACON_CORE | 2 | 15 | **17** | 24 ✓ |
+| BEACON_ALIVE | 2 | 9 | **11** | 24 ✓ |
+| BEACON_TAIL1 | 2 | 9 | **11** | 24 ✓ |
+| BEACON_TAIL2 | 2 | 7 | **9** | 24 ✓ |
+
+All packets fit within the LongDist budget (24 B) at minimum size. Tail-2 full payload (17 B) → 19 B on-air, also within LongDist.
 
 ---
 
