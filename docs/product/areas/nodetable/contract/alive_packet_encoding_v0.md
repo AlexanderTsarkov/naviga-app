@@ -2,9 +2,20 @@
 
 **Status:** Canon (contract).
 
-**Work Area:** Product Specs WIP · **Parent:** [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) · **NodeID policy:** [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298)
+**Work Area:** Product Specs WIP · **Parent:** [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) · **NodeID policy:** [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298) · **Packet header framing:** [#304](https://github.com/AlexanderTsarkov/naviga-app/issues/304)
 
 This contract defines the **v0 Alive packet**: a separate packet type used when the node has no valid GNSS fix. It is **alive-bearing, non-position-bearing**. Byte layout is minimal; semantics and when to send it are in [field_cadence_v0](../policy/field_cadence_v0.md) and [activity_state_v0](../policy/activity_state_v0.md). Receiver behaviour is in [rx_semantics_v0](../policy/rx_semantics_v0.md).
+
+---
+
+## 0) Frame header (framing layer — not part of this contract)
+
+Every on-air Alive frame is preceded by a **2-byte frame header** defined in [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0).
+
+- **`msg_type` for Alive:** `0x02` (`BEACON_ALIVE`). This is a **distinct** `msg_type` from BeaconCore (`0x01`). Alive is **not** encoded as "Core without a fix" — it is a separate packet family dispatched independently at the framing layer.
+- **`payload_len`** in the header = number of payload bytes (9 or 10; see §3 below). Does not include the 2-byte header.
+- **`payloadVersion`** is the **first byte of the payload** (byte 0 of the payload body). It is not a header field.
+- **On-air total size:** 2 (header) + 9 (min payload) = **11 bytes minimum**; 2 + 10 = **12 bytes with aliveStatus**. Both fit within LongDist budget (24 B).
 
 ---
 
@@ -19,12 +30,14 @@ This contract defines the **v0 Alive packet**: a separate packet type used when 
 ## 2) Packet type and naming
 
 - **Message type name:** **Alive** (or **BeaconAlive** in logs/docs when disambiguation is needed). This name explicitly distinguishes it from BeaconCore and BeaconTail-1/2.
+- **`msg_type` value:** `0x02` (`BEACON_ALIVE`) in the 2-byte frame header. See [ootb_radio_v0.md §3.2](../../../../protocols/ootb_radio_v0.md#32-msg_type-registry-v0) for the full registry.
+- **Not a subtype of Core:** Alive is a **distinct packet family** (`msg_type = 0x02`), not a variant of BeaconCore (`msg_type = 0x01`). A receiver dispatches Alive and Core independently at the framing layer; it does not infer packet type from payload length or `pos_valid` flags.
 
 ---
 
 ## 3) Byte layout (v0)
 
-**Byte order:** Little-endian for all multi-byte integers. **Version tag:** First byte = payload format version; v0 = `0x00`. Unknown version → discard (same rule as beacon).
+**Byte order:** Little-endian for all multi-byte integers. **Version tag:** First byte = `payloadVersion`; v0 = `0x00`. Unknown version → discard (same rule as beacon). The 2-byte frame header precedes this payload; payload byte offsets below start at byte 0 of the payload body (after the header).
 
 ### 3.1 Minimum payload (MUST)
 
@@ -34,8 +47,7 @@ This contract defines the **v0 Alive packet**: a separate packet type used when 
 | nodeId | uint48 | 6 | NodeID48 (6-byte LE MAC48); same semantics as BeaconCore. See [nodeid_policy_v0](../../../identity/nodeid_policy_v0.md). |
 | seq16 | uint16 | 2 | Freshness; monotonic per node. Alive uses the **same per-node seq16 counter** as BeaconCore and Tails (single counter across packet types during uptime). Same semantics for ordering/duplicate detection. |
 
-**Minimum size:** **9 bytes.**
-
+**Minimum size:** **9 bytes** (payload only). On-air with 2-byte header: **11 bytes**.
 
 ### 3.2 Optional: aliveStatus (v0)
 
@@ -43,7 +55,7 @@ This contract defines the **v0 Alive packet**: a separate packet type used when 
 |-------|------|-------|----------|
 | aliveStatus | uint8 | 1 | V1-A may use only **0x00 = alive_no_fix**. All other values **reserved** for future use; receiver MUST treat as 0x00 for liveness. |
 
-When present, payload is **10 bytes** (version + nodeId + seq16 + aliveStatus). Omission of aliveStatus is allowed; then payload is 9 bytes.
+When present, payload is **10 bytes** (version + nodeId + seq16 + aliveStatus). On-air with 2-byte header: **12 bytes**. Omission of aliveStatus is allowed; then payload is 9 bytes (11 bytes on-air).
 
 ---
 
@@ -79,3 +91,4 @@ When present, payload is **10 bytes** (version + nodeId + seq16 + aliveStatus). 
 - **Receiver rules:** [rx_semantics_v0](../policy/rx_semantics_v0.md) — accepted/duplicate/ooo; lastRxAt and Activity on Alive.
 - **NodeTable hub:** [../index.md](../index.md) — [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
 - **NodeID policy (wire format, source, ShortId):** [../../../identity/nodeid_policy_v0.md](../../../identity/nodeid_policy_v0.md) — [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298)
+- **Packet header framing (2B 7+3+6, msg_type=0x02 for Alive):** [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0) — [#304](https://github.com/AlexanderTsarkov/naviga-app/issues/304)
