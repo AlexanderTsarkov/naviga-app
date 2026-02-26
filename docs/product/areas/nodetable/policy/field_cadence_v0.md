@@ -107,7 +107,7 @@ Source: fields from [link-telemetry-minset](../contract/link-telemetry-minset-v0
 ## 8) Encoding decisions (closed)
 
 - **Freshness marker encoding:** **Decided.** seq16 (uint16, 2 bytes, little-endian) is canonical. Byte layout is in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §4.1 (BeaconCore) and §4.2 (Tail-1 core_seq16). Scope: single per-node counter across all packet types (Core, Tail-1/2, Alive) during uptime; see [rx_semantics_v0.md](rx_semantics_v0.md) §1.
-- **Beacon encoding:** Core/Tail split and byte layouts are in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §3–5 (Core 19 B, Tail-1 core_seq16 + optional posFlags/sats, Tail-2 maxSilence10s; Tail-2 scheduling per §2.2 above).
+- **Beacon encoding:** Core/Tail split and byte layouts are in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §3–5 (Core **15 B payload / 17 B on-air** with 2B header — nodeId48(6) + packed24 geo per #298/#301; Tail-1 core_seq16 + optional posFlags/sats; Tail-2 maxSilence10s + optional fields; Tail-2 scheduling per §2.2 above).
 
 ---
 
