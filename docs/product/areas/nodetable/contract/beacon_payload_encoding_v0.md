@@ -2,7 +2,7 @@
 
 **Status:** Canon (contract).
 
-**Work Area:** Product Specs WIP · **Parent:** [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) · **Issue:** [#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173) · **NodeID policy:** [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298)
+**Work Area:** Product Specs WIP · **Parent:** [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) · **Issue:** [#173](https://github.com/AlexanderTsarkov/naviga-app/issues/173) · **NodeID policy:** [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298) · **Geo encoding productization:** [#301](https://github.com/AlexanderTsarkov/naviga-app/issues/301)
 
 This contract defines the **v0 beacon payload**: byte layout, size budgets, and their coupling to RadioProfile classes (Default / LongDist / Fast). It implements the encoding deferred by [link-telemetry-minset-v0.md](link-telemetry-minset-v0.md). **Core/Tail split** (which fields are Core vs Tail) is driven by [field_cadence_v0](../policy/field_cadence_v0.md) policy. Semantic truth is this contract and the minset; no reference to OOTB or UI as normative.
 
@@ -46,12 +46,13 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 
 | Type | Purpose | MUST fields | Optional fields | Notes |
 |------|---------|-------------|-----------------|--------|
-| **BeaconCore** | Minimal sample: WHO + WHERE + freshness. Strict cadence; MUST deliver. | version(1), nodeId(6), seq16(2), positionLat(4), positionLon(4) | — | Smallest possible; **17 B fixed**. lat/lon MUST be valid coordinates; Core MUST NOT be transmitted without valid fix (§3.1). |
+| **BeaconCore** | Minimal sample: WHO + WHERE + freshness. Strict cadence; MUST deliver. | payloadVersion(1), nodeId48(6), seq16(2), lat_u24(3), lon_u24(3) | — | Smallest possible; **15 B fixed** (+ 2B frame header = 17 B on-air). lat/lon MUST be valid coordinates; Core MUST NOT be transmitted without valid fix (§3.1). |
 | **BeaconTail-1** | Attached-to-Core extension; qualifies one Core sample. | version(1), nodeId(6), core_seq16(2) | posFlags(1), sats(1); then attached fields (hwProfileId, fwVersionId, uptimeSec, etc.) | Receiver applies only if **core_seq16 == lastCoreSeq**; else ignore. See [field_cadence_v0](../policy/field_cadence_v0.md) §2. |
 | **BeaconTail-2** | Uncoupled slow state; no CoreRef. | version(1), nodeId(6); operational send may omit maxSilence10s | maxSilence10s(1), batteryPercent, hwProfileId, fwVersionId, uptimeSec (optional tail) | Two scheduling classes: Operational (on change + at forced Core) and Informative (on change + default 10 min). See field_cadence §2.1. |
 
 - **Byte order:** Little-endian for all multi-byte integers.
-- **Version tag:** First byte = payload format version. v0 = `0x00`. Unknown version → discard (per §7).
+- **Layer separation:** `msg_type` lives in the **frame header** (separate from payload; not part of this contract). `payloadVersion` is the **first byte of the payload** and determines the **entire payload layout** for that `msg_type`. Unknown `payloadVersion` → discard (per §7).
+- **Version tag:** `payloadVersion` = `0x00` for v0. This is a payload-layer version, not a header/frame version.
 
 ### 3.1 Position-bearing vs Alive-bearing
 
@@ -64,17 +65,27 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 
 ### 4.1 BeaconCore
 
-**Strict order:** payloadVersion(1) | nodeId(6) | seq16(2) | positionLat(4) | positionLon(4).
+**Decision:** [#301](https://github.com/AlexanderTsarkov/naviga-app/issues/301) — packed24 absolute coords, `payloadVersion=0x00`.
+
+**Strict order:** payloadVersion(1) | nodeId48(6) | seq16(2) | lat_u24(3) | lon_u24(3).
 
 | Field | Type | Bytes | Encoding |
 |-------|------|-------|----------|
-| payloadVersion | uint8 | 1 | 0x00 = v0 |
-| nodeId | uint48 | 6 | NodeID48 (6-byte LE MAC48); see [nodeid_policy_v0](../../../identity/nodeid_policy_v0.md). |
-| seq16 | uint16 | 2 | Freshness; monotonic per node. Little-endian. |
-| positionLat | int32 | 4 | Latitude × 1e7 (WGS84). Valid coordinates only; Core MUST NOT be sent without valid fix — when no fix, send Alive packet (§3.1). |
-| positionLon | int32 | 4 | Longitude × 1e7 (WGS84). Valid coordinates only; same transmit rule as positionLat. |
+| payloadVersion | uint8 | 1 | `0x00` = v0. Determines the **entire payload layout** for this `msg_type`. Unknown value → discard. |
+| nodeId48 | uint48 LE | 6 | NodeID48 (6-byte LE MAC48); see [nodeid_policy_v0](../../../identity/nodeid_policy_v0.md). |
+| seq16 | uint16 LE | 2 | Freshness counter; monotonic per node (wrap-around). |
+| lat_u24 | uint24 LE | 3 | Latitude packed24: `round((lat_deg + 90.0) / 180.0 × 16777215)`. Range [0, 16777215]. Valid coordinates only; Core MUST NOT be sent without valid fix — when no fix, send Alive packet (§3.1). |
+| lon_u24 | uint24 LE | 3 | Longitude packed24: `round((lon_deg + 180.0) / 360.0 × 16777215)`. Range [0, 16777215]. Valid coordinates only; same transmit rule as lat_u24. |
 
-**Size:** **17 bytes** (fixed). Fits within LongDist (24), Default (32), Fast (40).
+**Decode (receiver):**
+- `lat_deg = lat_u24 / 16777215.0 × 180.0 − 90.0`
+- `lon_deg = lon_u24 / 16777215.0 × 360.0 − 180.0`
+
+**Precision:** ≈ 1.1 m (lat), ≈ 2.4 m (lon at equator). Sufficient for V1-A OOTB use cases (map display, proximity).
+
+**`pos_valid` / `pos_age_s` are NOT part of BeaconCore.** Core is transmitted only when fix is valid (§3.1); the packet type itself encodes validity. Per-sample position quality (posFlags, sats) and age are carried by the optional Tail-1 packet (§4.2), which may be lost or omitted without breaking the product.
+
+**Size:** **15 bytes** (payload only). With 2-byte frame header: **17 bytes on-air**. Fits within LongDist (24), Default (32), Fast (40).
 
 ### 4.2 BeaconTail-1
 
@@ -113,17 +124,17 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 
 ## 5) Examples
 
-### 5.1 BeaconCore (17 B): with position
+### 5.1 BeaconCore (15 B): with position (packed24)
 
 | Field | Value | Bytes (hex) |
 |-------|--------|-------------|
-| payloadVersion | 0 | 00 |
-| nodeId | 0x0000_AABB_CCDD_EEFF | FF EE DD CC BB AA |
-| seq16 | 1 | 01 00 |
-| positionLat | 55.7558° × 1e7 = 557558000 | F0 A8 3B 21 |
-| positionLon | 37.6173° × 1e7 = 376173000 | C8 F1 6B 16 |
+| payloadVersion | 0x00 | `00` |
+| nodeId48 | 0x0000_AABB_CCDD_EEFF | `FF EE DD CC BB AA` |
+| seq16 | 1 | `01 00` |
+| lat_u24 | 55.7558° → `round((55.7558+90)/180×16777215)` = 13585424 = 0xCF4C10 | `10 4C CF` |
+| lon_u24 | 37.6173° → `round((37.6173+180)/360×16777215)` = 10141701 = 0x9AC005 | `05 C0 9A` |
 
-**Full hex:** `00 FF EE DD CC BB AA 01 00 F0 A8 3B 21 C8 F1 6B 16`
+**Full hex (15 bytes):** `00 FF EE DD CC BB AA 01 00 10 4C CF 05 C0 9A`
 
 ### 5.2 BeaconTail-1 (11 B): core_seq16 + posFlags + sats
 
@@ -178,8 +189,9 @@ Payload size (in bytes) **MUST NOT** exceed the budget for the **RadioProfile cl
 
 ## 7) Versioning / compat (v0 → v0.x)
 
-- **Unknown version byte:** If the first byte is not a known payload version (e.g. not 0x00 for v0), the receiver **MUST** discard the payload for NodeTable update purposes (do not overwrite node-owned fields from that packet). Optionally log or pass to debug; no normative interpretation.
-- **v0.x:** Reserved for backward-compatible extensions (e.g. new optional fields at end, or new version byte with same semantics for existing fields). Future doc will define v0.x if needed; until then, only 0x00 is valid.
+- **Layer separation:** `msg_type` (in the frame header) identifies the packet family (Core, Tail, Alive, …). `payloadVersion` (first byte of payload) determines the **entire payload layout** for that `msg_type`. These are independent versioning axes; do not conflate them.
+- **Unknown `payloadVersion`:** If the first payload byte is not a known version for the given `msg_type` (e.g. not `0x00` for BeaconCore v0), the receiver **MUST** discard the payload for NodeTable update purposes (do not overwrite node-owned fields from that packet). Optionally log or pass to debug; no normative interpretation.
+- **v0.x:** Reserved for backward-compatible extensions (e.g. new optional fields at end, or new version byte with same semantics for existing fields). Future doc will define v0.x if needed; until then, only `0x00` is valid.
 
 ---
 
@@ -191,3 +203,4 @@ Payload size (in bytes) **MUST NOT** exceed the budget for the **RadioProfile cl
 - **RadioProfiles & ChannelPlan:** [../../../radio/policy/registry_radio_profiles_v0.md](../../../radio/policy/registry_radio_profiles_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)
 - **NodeTable hub:** [../index.md](../index.md) — [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 - **NodeID policy (wire format, source, ShortId):** [../../../identity/nodeid_policy_v0.md](../../../identity/nodeid_policy_v0.md) — [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298)
+- **Geo encoding productization (packed24 decision):** [#301](https://github.com/AlexanderTsarkov/naviga-app/issues/301)
