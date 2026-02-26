@@ -51,7 +51,7 @@ void test_tx_cadence() {
 }
 
 // Role-derived cadence (#281): max_silence_ms forces TX when min_interval is not yet reached.
-// With fix: send CORE; without fix: send ALIVE (per field_cadence_v0).
+// With fix: send CORE. Without fix: silence (no Alive-via-Core until framing lands, #301).
 void test_tx_max_silence_triggers_send() {
   BeaconLogic logic;
   logic.set_min_interval_ms(60000);   // 60s — not reached in this test
@@ -72,11 +72,30 @@ void test_tx_max_silence_triggers_send() {
   TEST_ASSERT_TRUE(logic.build_tx(10000, fields, buffer, sizeof(buffer), &out_len, &ptype));
   TEST_ASSERT_EQUAL_UINT32(kGeoBeaconSize, out_len);
   TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));  // fix → CORE
+}
 
-  // No fix at max_silence → ALIVE
-  fields.pos_valid = 0;
-  TEST_ASSERT_TRUE(logic.build_tx(20000, fields, buffer, sizeof(buffer), &out_len, &ptype));
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::ALIVE), static_cast<int>(ptype));
+// P0 guard (#301): no-fix must never produce a BeaconCore packet (silence until Alive framing lands).
+void test_tx_no_fix_is_silenced() {
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(2000);
+
+  GeoBeaconFields fields{};
+  fields.node_id = 1;
+  fields.pos_valid = 0;  // no fix
+  fields.lat_deg = 0.0;
+  fields.lon_deg = 0.0;
+
+  uint8_t buffer[32] = {};
+  size_t out_len = 99;
+  // At min_interval: no send.
+  TEST_ASSERT_FALSE(logic.build_tx(1000, fields, buffer, sizeof(buffer), &out_len));
+  TEST_ASSERT_EQUAL_UINT32(0, out_len);
+
+  // At max_silence: still no send (no Alive-via-Core).
+  out_len = 99;
+  TEST_ASSERT_FALSE(logic.build_tx(2000, fields, buffer, sizeof(buffer), &out_len));
+  TEST_ASSERT_EQUAL_UINT32(0, out_len);
 }
 
 // minDisplacement gating: at min_interval without position update → NO_SEND.
@@ -170,6 +189,7 @@ int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_tx_cadence);
   RUN_TEST(test_tx_max_silence_triggers_send);
+  RUN_TEST(test_tx_no_fix_is_silenced);
   RUN_TEST(test_tx_min_interval_no_update_no_send);
   RUN_TEST(test_tx_payload_correctness);
   RUN_TEST(test_rx_success_updates_node_table);

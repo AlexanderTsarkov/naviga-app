@@ -90,6 +90,12 @@ size_t encode_geo_beacon(const GeoBeaconFields& fields, ByteSpan out) {
     return 0;
   }
 
+  // BeaconCore is position-bearing only. Caller must not invoke this codec
+  // without a valid fix; until Alive framing lands, no-fix traffic is silenced.
+  if (fields.pos_valid == 0) {
+    return 0;
+  }
+
   // BeaconCore packed24 v0 payload layout (15 bytes):
   //   [0]     payloadVersion = 0x00
   //   [1..6]  nodeId48 LE

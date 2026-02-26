@@ -160,6 +160,20 @@ void test_clamp_out_of_range_lon() {
   TEST_ASSERT_TRUE(deg_near(out.lon_deg, -180.0, kDegTol));
 }
 
+// ── pos_valid guard: no-fix must not produce a packet ─────────────────────
+void test_encode_no_fix_returns_zero() {
+  GeoBeaconFields in{};
+  in.node_id = 1;
+  in.pos_valid = 0;  // no fix
+  in.lat_deg = 55.7558;
+  in.lon_deg = 37.6173;
+  in.seq = 1;
+
+  uint8_t buf[kGeoBeaconSize] = {};
+  const size_t written = encode_geo_beacon(in, ByteSpan{buf, sizeof(buf)});
+  TEST_ASSERT_EQUAL_UINT32(0, written);
+}
+
 // ── Buffer size checks ─────────────────────────────────────────────────────
 void test_encode_short_buffer() {
   GeoBeaconFields in{};
@@ -219,6 +233,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_round_trip_extremes);
   RUN_TEST(test_clamp_out_of_range_lat);
   RUN_TEST(test_clamp_out_of_range_lon);
+  RUN_TEST(test_encode_no_fix_returns_zero);
   RUN_TEST(test_encode_short_buffer);
   RUN_TEST(test_decode_short_buffer);
   RUN_TEST(test_bad_payload_version);
