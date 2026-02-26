@@ -49,7 +49,7 @@ Source: fields from [link-telemetry-minset](../contract/link-telemetry-minset-v0
 |-------|------|-----------------|--------|------------|
 | **nodeId** | A | Every beacon tick | Encoding | WHO; identity is required. |
 | **positionLat** / **positionLon** (and position-valid semantics) | A | Every beacon tick when position valid | Encoding, NodeTable | WHERE; core for map. |
-| **freshness marker** (seq or equivalent) | A | Every beacon tick | TBD (decision point) | Ordering and staleness; required for Core. |
+| **freshness marker** (seq16) | A | Every beacon tick | [beacon_payload_encoding_v0](../contract/beacon_payload_encoding_v0.md) §4.1 | Ordering and staleness; required for Core. seq16 (uint16, 2 B, LE) is canonical. |
 | **posFlags** | B | Every Tail-1 (when position valid or every Tail-1) | Encoding §4.2, [position_quality_v0](position_quality_v0.md) | Position quality attached to Core sample. |
 | **sats** | B | Every Tail-1 (when position valid or every Tail-1) | Encoding §4.2, [position_quality_v0](position_quality_v0.md) | Position quality attached to Core sample. |
 | **hwProfileId** | B | Every N Core beacons OR every 60–120 s | Encoding, minset | Operational; capability lookup. |
@@ -104,9 +104,9 @@ Source: fields from [link-telemetry-minset](../contract/link-telemetry-minset-v0
 
 ---
 
-## 8) Open decisions (explicit)
+## 8) Encoding decisions (closed)
 
-- **Freshness marker encoding:** Tier A MUST include a freshness marker; **exact encoding (e.g. seq8 vs seq16, field order)** is **TBD** and will be decided in a follow-up (encoding doc or separate decision). Discoverable here so implementers do not invent ad hoc.
+- **Freshness marker encoding:** **Decided.** seq16 (uint16, 2 bytes, little-endian) is canonical. Byte layout is in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §4.1 (BeaconCore) and §4.2 (Tail-1 core_seq16). Scope: single per-node counter across all packet types (Core, Tail-1/2, Alive) during uptime; see [rx_semantics_v0.md](rx_semantics_v0.md) §1.
 - **Beacon encoding:** Core/Tail split and byte layouts are in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §3–5 (Core 19 B, Tail-1 core_seq16 + optional posFlags/sats, Tail-2 maxSilence10s; Tail-2 scheduling per §2.2 above).
 
 ---

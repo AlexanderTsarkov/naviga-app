@@ -15,7 +15,7 @@ This policy defines how the receiver interprets and applies incoming packets (Be
 | **Accepted packet** | A packet that passes version and nodeId checks and any payload checks the receiver applies; it is used to update NodeTable (at least lastRxAt and, where applicable, position/telemetry/link metrics). BeaconCore, BeaconTail-1, BeaconTail-2, and Alive can all be accepted. |
 | **Duplicate** | A packet that carries the same logical sample as one already applied (e.g. same nodeId and seq16 for Core or Alive). Receiver may refresh lastRxAt but MUST NOT treat it as a new sample for position/telemetry (no overwrite with same data). |
 | **Out-of-order (ooo)** | A packet whose seq16 (or core_seq16 for Tail-1) is older than the last accepted seq for that node. Receiver MUST NOT use it to overwrite newer position or telemetry ("no time travel"); MAY ignore for payload or accept only for lastRxAt within a small tolerance (implementation-defined). |
-| **seq16 wrap** | seq16 is a 16-bit counter; it wraps. Ordering and "newer vs older" MUST be defined in a way that respects wrap (e.g. modulo arithmetic or signed difference within a window). Exact wrap handling is implementation-defined but MUST be consistent for duplicate vs new vs ooo decisions. |
+| **seq16 wrap** | seq16 is a 16-bit counter; it wraps. Ordering is defined by modulo subtraction: `delta = (incoming − last) mod 2¹⁶`. If `delta = 0` → Duplicate. If `delta ∈ [1, 32767]` → Newer. If `delta ∈ [32768, 65535]` → Older (out-of-order). Implementations MUST use this rule consistently for all duplicate / new / ooo decisions. |
 
 **seq16 scope:** seq16 is a **single per-node counter** across all transmitted packet types during uptime (BeaconCore, Tail-1/2, Alive). Receivers **MUST** treat seq16 ordering and deduplication across packet types accordingly. The seen seq16 set (or ordering window) is **per-node global**, not per packet type.
 
@@ -55,7 +55,31 @@ This policy defines how the receiver interprets and applies incoming packets (Be
 
 ---
 
-## 5) Related
+## 5) Reboot behaviour (V1-A)
+
+### 5.1 TX side: seq16 resets to 0 on reboot
+
+In V1-A the sender's seq16 counter starts at 0 on every power-on / reboot (no persistence). The first outgoing packet carries seq16 = 1.
+
+### 5.2 Receiver-side tolerance
+
+A receiver that has `last_seq = N` for a node will, after that node reboots, receive packets starting at seq16 = 1. By the wrap rule (§1), values in `[N+1, N+32767] mod 2^16` are treated as Newer; values in `[N+32768, N+65535] mod 2^16` are treated as Older. This means:
+
+- If `N ≤ 32767`: all post-reboot packets (seq 1 … N+32767) are treated as Newer immediately. No dropped updates.
+- If `N > 32767`: post-reboot packets with seq in `[1, N−32768]` are treated as Older and will not overwrite position/telemetry until the counter advances past `N − 32767`.
+
+**Recommended receiver heuristic (V1-A):** If `lastRxAt` age for a node exceeds `maxSilence × 3` (i.e. the node has been silent for at least 3× its declared silence budget), the receiver **SHOULD** reset its stored `last_seq` for that node to the incoming seq16 and treat the packet as a fresh start. This handles the common case where a node reboots after a prolonged absence.
+
+### 5.3 Post-V1-A upgrade path
+
+The following strategies may be adopted in a future iteration; they are **out of scope for V1-A**:
+
+- **Persisted counter (recommended next step):** Store seq16 in NVS; restore on boot. First TX after reboot uses `restored_seq + 1`. Eliminates the tolerance problem entirely with no protocol change.
+- **Boot nonce / session epoch:** Add a `boot_nonce` field (e.g. 8-bit random or incrementing) to the packet. Dedup key becomes `(nodeId, boot_nonce, seq16)`. Requires a protocol change (new field in payload).
+
+---
+
+## 6) Related
 
 - **Beacon encoding:** [beacon_payload_encoding_v0](../contract/beacon_payload_encoding_v0.md) — Core/Tail layouts; §3.1 position-bearing vs alive-bearing.
 - **Alive encoding:** [alive_packet_encoding_v0](../contract/alive_packet_encoding_v0.md).
