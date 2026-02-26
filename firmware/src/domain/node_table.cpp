@@ -181,6 +181,11 @@ bool NodeTable::upsert_remote(uint64_t node_id,
           entry.last_rx_rssi = last_rx_rssi;
           entry.last_seq = last_seq;
           entry.last_seen_ms = now_ms;
+          // Track last Core seq16 for Tail-1 match check (only when pos_valid = Core packet).
+          if (pos_valid) {
+            entry.last_core_seq16 = last_seq;
+            entry.has_core_seq16  = true;
+          }
           break;
         case Seq16Order::Same:
           /* Duplicate: refresh lastRxAt and link metrics only; MUST NOT overwrite position/telemetry. */
@@ -221,8 +226,107 @@ bool NodeTable::upsert_remote(uint64_t node_id,
   entry.last_seq = last_seq;
   entry.last_seen_ms = now_ms;
   entry.in_use = true;
+  // Track last Core seq16 for Tail-1 match check.
+  if (pos_valid) {
+    entry.last_core_seq16 = last_seq;
+    entry.has_core_seq16  = true;
+  }
   size_++;
   recompute_collisions();
+  return true;
+}
+
+bool NodeTable::apply_tail1(uint64_t node_id,
+                            uint16_t core_seq16,
+                            bool has_pos_flags, uint8_t pos_flags,
+                            bool has_sats, uint8_t sats,
+                            int8_t rssi_dbm,
+                            uint32_t now_ms) {
+  const int idx = find_entry_index(node_id);
+  if (idx < 0) {
+    // No prior Core for this node — drop silently.
+    return false;
+  }
+  NodeEntry& entry = entries_[static_cast<size_t>(idx)];
+  if (!entry.has_core_seq16 || entry.last_core_seq16 != core_seq16) {
+    // core_seq16 mismatch (stale, reordered, or no Core yet) — drop silently.
+    // Still update link metrics per tail1_packet_encoding_v0 §4.4.
+    entry.last_seen_ms = now_ms;
+    entry.last_rx_rssi = rssi_dbm;
+    return false;
+  }
+  // Match: apply Tail-1 fields. MUST NOT touch position.
+  if (has_pos_flags) {
+    entry.has_pos_flags = true;
+    entry.pos_flags     = pos_flags;
+  }
+  if (has_sats) {
+    entry.has_sats = true;
+    entry.sats     = sats;
+  }
+  entry.last_seen_ms = now_ms;
+  entry.last_rx_rssi = rssi_dbm;
+  return true;
+}
+
+bool NodeTable::apply_tail2(uint64_t node_id,
+                            bool has_max_silence, uint8_t max_silence_10s,
+                            bool has_battery, uint8_t battery_percent,
+                            bool has_hw_profile, uint16_t hw_profile_id,
+                            bool has_fw_version, uint16_t fw_version_id,
+                            bool has_uptime, uint32_t uptime_sec,
+                            int8_t rssi_dbm,
+                            uint32_t now_ms) {
+  int idx = find_entry_index(node_id);
+  if (idx < 0) {
+    // Unknown node: create entry (Tail-2 may arrive before Core).
+    int free_idx = find_free_index();
+    if (free_idx < 0) {
+      if (!evict_oldest_grey(now_ms)) {
+        return false;
+      }
+      free_idx = find_free_index();
+      if (free_idx < 0) {
+        return false;
+      }
+    }
+    NodeEntry& new_entry = entries_[static_cast<size_t>(free_idx)];
+    new_entry = NodeEntry{};
+    new_entry.node_id      = node_id;
+    new_entry.short_id     = compute_short_id(node_id);
+    new_entry.is_self      = false;
+    new_entry.in_use       = true;
+    new_entry.last_seen_ms = now_ms;
+    new_entry.last_rx_rssi = rssi_dbm;
+    size_++;
+    recompute_collisions();
+    idx = free_idx;
+  }
+
+  NodeEntry& entry = entries_[static_cast<size_t>(idx)];
+  // Apply Tail-2 fields. MUST NOT touch position.
+  if (has_max_silence) {
+    entry.has_max_silence = true;
+    entry.max_silence_10s = max_silence_10s;
+  }
+  if (has_battery) {
+    entry.has_battery      = true;
+    entry.battery_percent  = battery_percent;
+  }
+  if (has_hw_profile) {
+    entry.has_hw_profile = true;
+    entry.hw_profile_id  = hw_profile_id;
+  }
+  if (has_fw_version) {
+    entry.has_fw_version = true;
+    entry.fw_version_id  = fw_version_id;
+  }
+  if (has_uptime) {
+    entry.has_uptime  = true;
+    entry.uptime_sec  = uptime_sec;
+  }
+  entry.last_seen_ms = now_ms;
+  entry.last_rx_rssi = rssi_dbm;
   return true;
 }
 
@@ -394,6 +498,17 @@ size_t NodeTable::get_snapshot_page(uint16_t snapshot_id,
 
   return offset;
 }
+
+#if defined(NAVIGA_TEST)
+bool NodeTable::find_entry_for_test(uint64_t node_id, NodeEntry* out) const {
+  const int idx = find_entry_index(node_id);
+  if (idx < 0 || !out) {
+    return false;
+  }
+  *out = entries_[static_cast<size_t>(idx)];
+  return true;
+}
+#endif
 
 int NodeTable::find_entry_index(uint64_t node_id) const {
   for (size_t i = 0; i < entries_.size(); ++i) {

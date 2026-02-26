@@ -160,7 +160,55 @@ bool BeaconLogic::on_rx(uint32_t now_ms,
                                now_ms);
   }
 
-  // TAIL1/TAIL2 and future types: not yet implemented → drop.
+  if (hdr.msg_type == protocol::MsgType::BeaconTail1) {
+    protocol::Tail1Fields tail1{};
+    const protocol::Tail1DecodeError err =
+        protocol::decode_tail1_payload(payload, payload_len, &tail1);
+    if (err != protocol::Tail1DecodeError::Ok) {
+      return false;
+    }
+    if (out_node_id)  { *out_node_id  = tail1.node_id; }
+    if (out_seq)      { *out_seq      = tail1.core_seq16; }
+    if (out_pos_valid){ *out_pos_valid = false; }
+    if (out_type)     { *out_type     = PacketLogType::TAIL1; }
+    if (out_core_seq) { *out_core_seq = tail1.core_seq16; }
+
+    // Apply Tail-1: core_seq16 match enforced inside apply_tail1.
+    // Return value indicates match (true) or silent drop (false).
+    // Either way we return true to the caller — the frame was valid.
+    table.apply_tail1(tail1.node_id,
+                      tail1.core_seq16,
+                      tail1.has_pos_flags, tail1.pos_flags,
+                      tail1.has_sats, tail1.sats,
+                      rssi_dbm,
+                      now_ms);
+    return true;
+  }
+
+  if (hdr.msg_type == protocol::MsgType::BeaconTail2) {
+    protocol::Tail2Fields tail2{};
+    const protocol::Tail2DecodeError err =
+        protocol::decode_tail2_payload(payload, payload_len, &tail2);
+    if (err != protocol::Tail2DecodeError::Ok) {
+      return false;
+    }
+    if (out_node_id)  { *out_node_id  = tail2.node_id; }
+    if (out_seq)      { *out_seq      = 0; }
+    if (out_pos_valid){ *out_pos_valid = false; }
+    if (out_type)     { *out_type     = PacketLogType::TAIL2; }
+    if (out_core_seq) { *out_core_seq = 0; }
+
+    return table.apply_tail2(tail2.node_id,
+                             tail2.has_max_silence, tail2.max_silence_10s,
+                             tail2.has_battery,     tail2.battery_percent,
+                             tail2.has_hw_profile,  tail2.hw_profile_id,
+                             tail2.has_fw_version,  tail2.fw_version_id,
+                             tail2.has_uptime,      tail2.uptime_sec,
+                             rssi_dbm,
+                             now_ms);
+  }
+
+  // Unknown/future msg_type → drop.
   return false;
 }
 

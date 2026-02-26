@@ -6,6 +6,8 @@
 #include "domain/node_table.h"
 #include "../../protocol/geo_beacon_codec.h"
 #include "../../protocol/alive_codec.h"
+#include "../../protocol/tail1_codec.h"
+#include "../../protocol/tail2_codec.h"
 
 namespace naviga {
 namespace domain {

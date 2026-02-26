@@ -20,6 +20,29 @@ struct NodeEntry {
   uint16_t last_seq = 0;
   uint32_t last_seen_ms = 0;
   bool in_use = false;
+
+  // Tail-1: seq16 of the last accepted BeaconCore for this node.
+  // Used by Tail-1 RX to enforce core_seq16 match (tail1_packet_encoding_v0 §4.1).
+  uint16_t last_core_seq16 = 0;
+  bool     has_core_seq16  = false;  ///< false until first Core received.
+
+  // Tail-1 optional fields (position quality for last Core sample).
+  bool    has_pos_flags = false;
+  uint8_t pos_flags     = 0x00;
+  bool    has_sats      = false;
+  uint8_t sats          = 0x00;
+
+  // Tail-2 optional fields (slow-state / diagnostic).
+  bool     has_max_silence   = false;
+  uint8_t  max_silence_10s   = 0;       ///< 0 = absent/unknown; unit = 10 s.
+  bool     has_battery       = false;
+  uint8_t  battery_percent   = 0xFF;    ///< 0xFF = not present.
+  bool     has_hw_profile    = false;
+  uint16_t hw_profile_id     = 0xFFFF;  ///< 0xFFFF = not present.
+  bool     has_fw_version    = false;
+  uint16_t fw_version_id     = 0xFFFF;  ///< 0xFFFF = not present.
+  bool     has_uptime        = false;
+  uint32_t uptime_sec        = 0xFFFFFFFFu; ///< 0xFFFFFFFF = not present.
 };
 
 class NodeTable {
@@ -44,6 +67,68 @@ class NodeTable {
                      int8_t last_rx_rssi,
                      uint16_t last_seq,
                      uint32_t now_ms);
+
+  /**
+   * Apply Tail-1 fields to an existing NodeTable entry.
+   *
+   * Enforces the core_seq16 match rule per tail1_packet_encoding_v0 §4.1:
+   * - Returns false (silent drop) if no Core has been received for node_id.
+   * - Returns false (silent drop) if core_seq16 != last_core_seq16 for this node.
+   * - Returns true and applies posFlags/sats only on match.
+   * - MUST NOT update position fields.
+   *
+   * @param node_id     NodeID48 from the Tail-1 payload.
+   * @param core_seq16  core_seq16 from the Tail-1 payload.
+   * @param has_pos_flags  Whether posFlags is present.
+   * @param pos_flags      posFlags value (ignored if !has_pos_flags).
+   * @param has_sats       Whether sats is present.
+   * @param sats           sats value (ignored if !has_sats).
+   * @param rssi_dbm    Link metric from the received frame.
+   * @param now_ms      Current time for lastRxAt update.
+   * @return true if applied; false if dropped (mismatch or no prior Core).
+   */
+  bool apply_tail1(uint64_t node_id,
+                   uint16_t core_seq16,
+                   bool has_pos_flags, uint8_t pos_flags,
+                   bool has_sats, uint8_t sats,
+                   int8_t rssi_dbm,
+                   uint32_t now_ms);
+
+  /**
+   * Apply Tail-2 fields to a NodeTable entry (create if not found).
+   *
+   * No core_seq16 binding — applied unconditionally per tail2_packet_encoding_v0 §4.1.
+   * MUST NOT update position fields.
+   *
+   * @param node_id          NodeID48 from the Tail-2 payload.
+   * @param has_max_silence  Whether maxSilence10s is present.
+   * @param max_silence_10s  maxSilence10s value (ignored if !has_max_silence).
+   * @param has_battery      Whether batteryPercent is present.
+   * @param battery_percent  batteryPercent value (ignored if !has_battery).
+   * @param has_hw_profile   Whether hwProfileId is present.
+   * @param hw_profile_id    hwProfileId value (ignored if !has_hw_profile).
+   * @param has_fw_version   Whether fwVersionId is present.
+   * @param fw_version_id    fwVersionId value (ignored if !has_fw_version).
+   * @param has_uptime       Whether uptimeSec is present.
+   * @param uptime_sec       uptimeSec value (ignored if !has_uptime).
+   * @param rssi_dbm         Link metric from the received frame.
+   * @param now_ms           Current time for lastRxAt update.
+   * @return true on success; false only on table-full eviction failure.
+   */
+  bool apply_tail2(uint64_t node_id,
+                   bool has_max_silence, uint8_t max_silence_10s,
+                   bool has_battery, uint8_t battery_percent,
+                   bool has_hw_profile, uint16_t hw_profile_id,
+                   bool has_fw_version, uint16_t fw_version_id,
+                   bool has_uptime, uint32_t uptime_sec,
+                   int8_t rssi_dbm,
+                   uint32_t now_ms);
+
+#if defined(NAVIGA_TEST)
+  /** Test-only: copy the NodeEntry for node_id into *out. Returns false if not found.
+   *  Not compiled into production firmware (guarded by NAVIGA_TEST). */
+  bool find_entry_for_test(uint64_t node_id, NodeEntry* out) const;
+#endif
 
   size_t size() const;
 
