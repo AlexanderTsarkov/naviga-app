@@ -60,9 +60,8 @@ void M1Runtime::init(uint64_t self_id,
   self_fields_ = {};
   self_fields_.node_id = self_id;
   self_fields_.pos_valid = 0;
-  self_fields_.lat_e7 = 0;
-  self_fields_.lon_e7 = 0;
-  self_fields_.pos_age_s = 0;
+  self_fields_.lat_deg = 0.0;
+  self_fields_.lon_deg = 0.0;
   self_fields_.seq = 0;
 
   device_info_ = device_info;
@@ -86,9 +85,8 @@ void M1Runtime::set_self_position(bool pos_valid,
   if (pos_valid) {
     node_table_.update_self_position(lat_e7, lon_e7, pos_age_s, now_ms);
     self_fields_.pos_valid = 1;
-    self_fields_.lat_e7 = lat_e7;
-    self_fields_.lon_e7 = lon_e7;
-    self_fields_.pos_age_s = pos_age_s;
+    self_fields_.lat_deg = static_cast<double>(lat_e7) * 1e-7;
+    self_fields_.lon_deg = static_cast<double>(lon_e7) * 1e-7;
 
     gnss_snapshot_.fix_state = fix_state;
     gnss_snapshot_.pos_valid = true;
@@ -99,9 +97,8 @@ void M1Runtime::set_self_position(bool pos_valid,
   } else {
     node_table_.touch_self(now_ms);
     self_fields_.pos_valid = 0;
-    self_fields_.lat_e7 = 0;
-    self_fields_.lon_e7 = 0;
-    self_fields_.pos_age_s = 0;
+    self_fields_.lat_deg = 0.0;
+    self_fields_.lon_deg = 0.0;
 
     gnss_snapshot_.fix_state = GNSSFixState::NO_FIX;
     gnss_snapshot_.pos_valid = false;

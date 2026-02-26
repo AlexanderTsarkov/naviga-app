@@ -72,9 +72,8 @@ void test_e2e_beacon_to_ble_bridge() {
   // NodeID48: upper 16 bits = 0x0000 so round-trip through codec is lossless.
   fields.node_id = 0x0000030405060708ULL;
   fields.pos_valid = 1;
-  fields.lat_e7 = 123456;
-  fields.lon_e7 = -654321;
-  fields.pos_age_s = 4;
+  fields.lat_deg = 55.7558;   // Moscow — canonical example from beacon_payload_encoding_v0 §5.1
+  fields.lon_deg = 37.6173;
 
   uint8_t payload[naviga::protocol::kGeoBeaconSize] = {};
   size_t payload_len = 0;

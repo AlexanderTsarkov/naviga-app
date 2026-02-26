@@ -1,5 +1,7 @@
 #include "domain/beacon_logic.h"
 
+#include <cmath>
+
 namespace naviga {
 namespace domain {
 
@@ -40,20 +42,21 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
     return false;
   }
 
-  // We send: (min_interval + allow_core → CORE with fix) or (maxSilence → CORE if fix, ALIVE if no fix).
-  const bool send_position = (self_fields.pos_valid != 0);
-  const PacketLogType ptype = send_position ? PacketLogType::CORE : PacketLogType::ALIVE;
+  // BeaconCore is position-bearing only. No-fix → silence until Alive framing lands.
+  // Sending (0,0) through Core payload would be a semantic regression (#301).
+  if (self_fields.pos_valid == 0) {
+    *out_len = 0;
+    return false;
+  }
+
   if (out_type) {
-    *out_type = ptype;
+    *out_type = PacketLogType::CORE;
   }
   if (out_core_seq) {
     *out_core_seq = 0;  // no tail on-air yet; core_seq only for TAIL1/TAIL2
   }
 
   protocol::GeoBeaconFields fields = self_fields;
-  if (!send_position) {
-    fields.pos_valid = 0;  // encode as ALIVE (maxSilence no-fix path only)
-  }
   fields.seq = static_cast<uint16_t>(seq_ + 1u);
   const size_t written = protocol::encode_geo_beacon(fields, protocol::ByteSpan{out, out_cap});
   if (written == 0) {
@@ -89,20 +92,25 @@ bool BeaconLogic::on_rx(uint32_t now_ms,
   if (out_seq) {
     *out_seq = fields.seq;
   }
+  // decode_geo_beacon sets pos_valid=1 (BeaconCore is always position-bearing).
   if (out_pos_valid) {
     *out_pos_valid = (fields.pos_valid != 0);
   }
   if (out_type) {
-    *out_type = (fields.pos_valid != 0) ? PacketLogType::CORE : PacketLogType::ALIVE;
+    *out_type = PacketLogType::CORE;
   }
   if (out_core_seq) {
     *out_core_seq = 0;  // single format has no tail; core_seq only when tail decoded
   }
+  // Convert decoded degrees to int32 × 1e7 for NodeTable domain storage.
+  // llround avoids truncation bias from static_cast on negative values.
+  const int32_t lat_e7 = static_cast<int32_t>(std::llround(fields.lat_deg * 1e7));
+  const int32_t lon_e7 = static_cast<int32_t>(std::llround(fields.lon_deg * 1e7));
   return table.upsert_remote(fields.node_id,
-                             fields.pos_valid != 0,
-                             fields.lat_e7,
-                             fields.lon_e7,
-                             fields.pos_age_s,
+                             true,
+                             lat_e7,
+                             lon_e7,
+                             0,  // pos_age_s not in BeaconCore v0 (Tail-1 only)
                              rssi_dbm,
                              fields.seq,
                              now_ms);
