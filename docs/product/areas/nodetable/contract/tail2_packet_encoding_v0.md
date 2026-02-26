@@ -55,7 +55,7 @@ Appended in order after the minimum payload. Fields may be omitted from the end.
 
 | Offset | Field | Type | Bytes | Encoding |
 |--------|-------|------|-------|----------|
-| 7 | `maxSilence10s` | uint8 | 1 | **Informative.** Max silence in 10-second steps; clamp ≤ 90 (= 15 min). `0x00` = not specified. **MUST NOT** be included on every operational Tail-2 send unless value changed. See [field_cadence_v0.md §2.2](../policy/field_cadence_v0.md). |
+| 7 | `maxSilence10s` | uint8 | 1 | **Informative.** Max silence in 10-second steps; range 0..255; 0 = absent/unknown; 255 = 2550 s ≈ 42.5 min. **MUST NOT** be included on every operational Tail-2 send unless value changed. See [field_cadence_v0.md §2.2](../policy/field_cadence_v0.md). |
 | 8 | `batteryPercent` | uint8 | 1 | Battery level 0–100 %. `0xFF` = not present. |
 | 9 | `hwProfileId` | uint16 LE | 2 | Hardware profile identifier. `0xFFFF` = not present. |
 | 11 | `fwVersionId` | uint16 LE | 2 | Firmware version identifier. `0xFFFF` = not present. |
