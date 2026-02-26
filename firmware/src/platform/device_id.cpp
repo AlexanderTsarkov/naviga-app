@@ -35,19 +35,9 @@ void get_device_mac_bytes(uint8_t out_mac[6]) {
     return;
   }
   std::memset(out_mac, 0, 6);
+  // Source policy (#298): use factory/base eFuse MAC only.
+  // Interface MACs (BLE, BT) may differ across ESP32 variants and are not stable.
   uint8_t base_mac[6] = {0};
-#if defined(ESP_MAC_BLE)
-  if (esp_read_mac(base_mac, ESP_MAC_BLE) == ESP_OK) {
-    std::memcpy(out_mac, base_mac, 6);
-    return;
-  }
-#endif
-#if defined(ESP_MAC_BT)
-  if (esp_read_mac(base_mac, ESP_MAC_BT) == ESP_OK) {
-    std::memcpy(out_mac, base_mac, 6);
-    return;
-  }
-#endif
   if (esp_efuse_mac_get_default(base_mac) == ESP_OK) {
     std::memcpy(out_mac, base_mac, 6);
   }
@@ -69,13 +59,13 @@ uint64_t full_id_from_mac(const uint8_t mac[6]) {
   if (!mac) {
     return 0;
   }
+  // Domain NodeId: lower 48 bits = MAC48 (big-endian display order), upper 16 bits = 0x0000.
+  // Per nodeid_policy_v0 §1.
   uint64_t id = 0;
-  // Canonical order: MAC bytes [0..5] map to hex string and full_id_u64.
-  // full_id_u64 = 0x0000 <mac[0]..mac[5]> (big-endian packing into lower 6 bytes).
   for (int i = 0; i < 6; ++i) {
     id = (id << 8) | mac[i];
   }
-  return id;
+  return id & UINT64_C(0x0000FFFFFFFFFFFF);
 }
 
 uint16_t short_id_from_mac(const uint8_t mac[6]) {
