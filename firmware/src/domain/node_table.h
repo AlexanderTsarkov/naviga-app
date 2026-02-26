@@ -124,8 +124,11 @@ class NodeTable {
                    int8_t rssi_dbm,
                    uint32_t now_ms);
 
-  /** Test-only: copy the NodeEntry for node_id into *out. Returns false if not found. */
+#if defined(NAVIGA_TEST)
+  /** Test-only: copy the NodeEntry for node_id into *out. Returns false if not found.
+   *  Not compiled into production firmware (guarded by NAVIGA_TEST). */
   bool find_entry_for_test(uint64_t node_id, NodeEntry* out) const;
+#endif
 
   size_t size() const;
 

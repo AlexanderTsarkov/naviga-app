@@ -499,6 +499,7 @@ size_t NodeTable::get_snapshot_page(uint16_t snapshot_id,
   return offset;
 }
 
+#if defined(NAVIGA_TEST)
 bool NodeTable::find_entry_for_test(uint64_t node_id, NodeEntry* out) const {
   const int idx = find_entry_index(node_id);
   if (idx < 0 || !out) {
@@ -507,6 +508,7 @@ bool NodeTable::find_entry_for_test(uint64_t node_id, NodeEntry* out) const {
   *out = entries_[static_cast<size_t>(idx)];
   return true;
 }
+#endif
 
 int NodeTable::find_entry_index(uint64_t node_id) const {
   for (size_t i = 0; i < entries_.size(); ++i) {
