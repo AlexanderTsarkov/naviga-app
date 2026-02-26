@@ -45,7 +45,7 @@ esp_efuse_mac_get_default(base_mac[6])          // esp_device_id_provider.cpp:16
 |------|----------|-------|
 | NodeTable primary key (lookup) | `firmware/src/domain/node_table.cpp` `find_entry_index()` | `node_id == entry.node_id` |
 | NodeTable primary key (init) | `node_table.cpp` `init_self()`, `upsert_remote()` | Stored in `NodeEntry.node_id` |
-| On-air beacon (Core/Tail-1/Tail-2/Alive) | `firmware/protocol/geo_beacon_codec.cpp` | Bytes 1–8 of payload (after payloadVersion byte) in current codec; bytes 3–10 in OOTB-spec codec (after msg_type+ver+flags header — not yet implemented) |
+| On-air beacon (Core/Tail-1/Tail-2/Alive) | `firmware/protocol/geo_beacon_codec.cpp` | Bytes 1–8 of payload (after payloadVersion byte) in current codec. _(Historical note: earlier audit referenced "bytes 3–10 after msg_type+ver+flags 3-byte header"; that 3-byte header was never implemented and is superseded by the 2-byte 7+3+6 header per [#304](https://github.com/AlexanderTsarkov/naviga-app/issues/304). With the 2-byte header: payload bytes 1–8 remain at the same payload-relative offsets.)_ |
 | BLE NodeTableSnapshot record | `firmware/src/domain/node_table.cpp` `get_page()` offset 0 | 8 bytes LE |
 | Mobile model | `app/lib/features/connect/connect_controller.dart` `NodeRecordV1.nodeId` | Parsed from BLE record |
 | Dedup / seq ordering key | `node_table.cpp` `upsert_remote()` seq16_order | Per-node seq16 counter keyed by node_id |
