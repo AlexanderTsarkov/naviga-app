@@ -582,7 +582,7 @@ now \- last\_direct\_time\_X \<= direct\_link\_valid\_window\_X
 
 * `origin_pos` — позиция origin в сжатом формате.
 
-* `seq` — последовательный номер пакета (уникален в паре `(origin_id, seq)`).
+* `seq` — последовательный номер пакета (уникален в паре `(origin_id, seq)`). **Тип: uint16 (seq16)** — тот же on-air счётчик из поля `seq16` в BeaconCore / Alive (см. [beacon_payload_encoding_v0](../areas/nodetable/contract/beacon_payload_encoding_v0.md) §4.1).
 
 * `hop_count` — число хопов (0 у origin).
 
@@ -1032,7 +1032,7 @@ TTL\_initial \= 8
 
 * **`usefulness(Me)`** — Σ QoD по `Potential(Me)`.
 
-* **`PacketState(origin, seq)`** — состояние обработки пакета: `seen`, `scheduled`, `sent`, `best_mask`.
+* **`PacketState(origin, seq)`** — состояние обработки пакета: `seen`, `scheduled`, `sent`, `best_mask`. `seq` здесь — uint16 (seq16), тот же on-air счётчик из поля `seq16` в BeaconCore / Alive.
 
 * **`TTL`, `TTL_initial`** — лимит по хопам и стартовое значение.
 
