@@ -140,6 +140,19 @@ void test_header_encode_payload_len_overflow_rejected() {
   TEST_ASSERT_FALSE(encode_header(hdr, buf, sizeof(buf)));
 }
 
+// Non-zero reserved MUST be rejected on encode (TX invariant: reserved==0 on send).
+void test_header_encode_nonzero_reserved_rejected() {
+  PacketHeader hdr;
+  hdr.msg_type    = MsgType::BeaconCore;
+  hdr.reserved    = 1;  // any non-zero value
+  hdr.payload_len = 15;
+  uint8_t buf[2] = {};
+  TEST_ASSERT_FALSE(encode_header(hdr, buf, sizeof(buf)));
+
+  hdr.reserved = 7;  // all 3 bits set
+  TEST_ASSERT_FALSE(encode_header(hdr, buf, sizeof(buf)));
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // SECTION 2: BeaconCore framed encode/decode golden vectors
 // ═══════════════════════════════════════════════════════════════════════════
@@ -470,6 +483,20 @@ void test_alive_decode_short_buffer() {
                     decode_alive_payload(payload, sizeof(payload), &out));
 }
 
+// Alive payload_len must be exactly 9 or 10; anything else is rejected.
+void test_alive_decode_bad_payload_len() {
+  // len=11: one byte too long
+  const uint8_t payload_11[11] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00};
+  AliveFields out{};
+  TEST_ASSERT_EQUAL(AliveDecodeError::BadPayloadLen,
+                    decode_alive_payload(payload_11, sizeof(payload_11), &out));
+
+  // len=8: one byte too short (ShortBuffer fires first, before BadPayloadLen)
+  const uint8_t payload_8[8] = {};
+  TEST_ASSERT_EQUAL(AliveDecodeError::ShortBuffer,
+                    decode_alive_payload(payload_8, sizeof(payload_8), &out));
+}
+
 void test_alive_decode_bad_payload_version() {
   uint8_t payload[9] = {0x00, 0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x01, 0x00};
   payload[0] = 0xFF;
@@ -517,6 +544,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_header_decode_nonzero_reserved_accepted);
   RUN_TEST(test_header_validate);
   RUN_TEST(test_header_encode_payload_len_overflow_rejected);
+  RUN_TEST(test_header_encode_nonzero_reserved_rejected);
 
   // Framed BeaconCore golden vectors
   RUN_TEST(test_framed_core_golden_encode);
@@ -543,6 +571,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_alive_decode_min);
   RUN_TEST(test_alive_decode_with_status);
   RUN_TEST(test_alive_decode_short_buffer);
+  RUN_TEST(test_alive_decode_bad_payload_len);
   RUN_TEST(test_alive_decode_bad_payload_version);
   RUN_TEST(test_alive_roundtrip);
 

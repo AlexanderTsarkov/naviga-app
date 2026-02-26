@@ -49,6 +49,7 @@ enum class AliveDecodeError {
   Ok = 0,
   ShortBuffer,
   BadPayloadVersion,
+  BadPayloadLen,  ///< payload_len is not 9 or 10 (strict per alive_packet_encoding_v0).
 };
 
 /**
@@ -102,6 +103,10 @@ inline AliveDecodeError decode_alive_payload(const uint8_t* payload, size_t payl
                                              AliveFields* out) {
   if (!payload || !out || payload_len < kAlivePayloadMin) {
     return AliveDecodeError::ShortBuffer;
+  }
+  // Strict length check: only 9 (without aliveStatus) or 10 (with aliveStatus) are valid.
+  if (payload_len != kAlivePayloadMin && payload_len != kAlivePayloadMax) {
+    return AliveDecodeError::BadPayloadLen;
   }
   if (payload[0] != kAlivePayloadVersion) {
     return AliveDecodeError::BadPayloadVersion;

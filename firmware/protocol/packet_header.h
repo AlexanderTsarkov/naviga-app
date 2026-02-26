@@ -55,17 +55,20 @@ struct PacketHeader {
  * @param hdr     Header to encode. reserved MUST be 0; payload_len MUST be ≤ 63.
  * @param out     Destination buffer; MUST have at least kHeaderSize bytes.
  * @param out_cap Capacity of \a out.
- * @return true on success; false if out is null, too small, or payload_len > 63.
+ * @return true on success; false if out is null, too small, payload_len > 63, or reserved != 0.
  */
 inline bool encode_header(const PacketHeader& hdr, uint8_t* out, size_t out_cap) {
   if (!out || out_cap < kHeaderSize) {
+    return false;
+  }
+  if (hdr.reserved != 0) {
     return false;
   }
   if (hdr.payload_len > kMaxPayloadLen) {
     return false;
   }
   const uint8_t mt = static_cast<uint8_t>(hdr.msg_type);
-  const uint8_t res = hdr.reserved & 0x07;
+  const uint8_t res = 0;
   out[0] = static_cast<uint8_t>(((res & 0x3u) << 6) | hdr.payload_len);
   out[1] = static_cast<uint8_t>((mt << 1) | (res >> 2));
   return true;
