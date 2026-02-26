@@ -258,7 +258,7 @@ void AppServices::init() {
 
   // --- Phase C: Start comms — wire runtime; tick() runs Alive/Beacon cadence ---
   format_short_id_hex(short_id_, short_id_hex_, sizeof(short_id_hex_));
-  format_mac_colon_hex(mac_bytes, mac_hex_, sizeof(mac_hex_));
+  format_mac_colon_hex(device_id.bytes, mac_hex_, sizeof(mac_hex_));
   extract_bt_short(mac_hex_, bt_short_, sizeof(bt_short_));
   oled_.init(profile);
 
