@@ -8,7 +8,10 @@ namespace naviga {
 namespace {
 
 constexpr uint32_t kBleUpdateIntervalMs = 1000U;
+// msg_type byte used in event log payloads (instrumentation only).
 constexpr uint8_t kGeoBeaconMsgType = protocol::kGeoBeaconMsgType;
+// RX buffer must fit the largest current on-air frame (BeaconCore = 17 B).
+constexpr size_t kRxBufSize = protocol::kGeoBeaconFrameSize;
 constexpr uint32_t kSenseTimeoutMs = 20U;
 constexpr size_t kMaxRxPerTick = 4;
 
@@ -245,12 +248,12 @@ void M1Runtime::handle_tx(uint32_t now_ms) {
 
 void M1Runtime::handle_rx(uint32_t now_ms) {
   for (size_t i = 0; i < kMaxRxPerTick; ++i) {
-    uint8_t payload[protocol::kGeoBeaconSize] = {};
+    uint8_t frame[kRxBufSize] = {};
     size_t out_len = 0;
-    if (!radio_->recv(payload, sizeof(payload), &out_len)) {
+    if (!radio_->recv(frame, sizeof(frame), &out_len)) {
       return;
     }
-    if (out_len == 0 || out_len > sizeof(payload)) {
+    if (out_len == 0 || out_len > sizeof(frame)) {
       log_event(now_ms, domain::LogEventId::RADIO_RX_ERR, domain::LogLevel::kWarn, &kGeoBeaconMsgType, 1);
       continue;
     }
@@ -265,7 +268,7 @@ void M1Runtime::handle_rx(uint32_t now_ms) {
     bool rx_pos_valid = false;
     domain::PacketLogType rx_type = domain::PacketLogType::CORE;
     uint16_t rx_core_seq = 0;
-    const bool updated = beacon_logic_.on_rx(now_ms, payload, out_len, stats_.last_rssi_dbm,
+    const bool updated = beacon_logic_.on_rx(now_ms, frame, out_len, stats_.last_rssi_dbm,
                                              node_table_, &rx_node_id, &rx_seq, &rx_pos_valid,
                                              &rx_type, &rx_core_seq);
     if (instrumentation_log_fn_ && instrumentation_ctx_) {

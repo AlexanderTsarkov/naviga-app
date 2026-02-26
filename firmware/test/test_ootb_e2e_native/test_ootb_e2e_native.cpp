@@ -5,6 +5,7 @@
 #include "../../protocol/ble_node_table_bridge.h"
 #include "../../protocol/ble_node_table_bridge.cpp"
 #include "../../protocol/geo_beacon_codec.h"
+#include "../../protocol/alive_codec.h"
 #include "../../src/domain/beacon_logic.h"
 #include "../../src/domain/beacon_logic.cpp"
 #include "../../src/domain/node_table.h"
@@ -75,10 +76,10 @@ void test_e2e_beacon_to_ble_bridge() {
   fields.lat_deg = 55.7558;   // Moscow — canonical example from beacon_payload_encoding_v0 §5.1
   fields.lon_deg = 37.6173;
 
-  uint8_t payload[naviga::protocol::kGeoBeaconSize] = {};
+  uint8_t payload[naviga::protocol::kGeoBeaconFrameSize] = {};
   size_t payload_len = 0;
   TEST_ASSERT_TRUE(tx_logic.build_tx(1000, fields, payload, sizeof(payload), &payload_len));
-  TEST_ASSERT_EQUAL_UINT32(naviga::protocol::kGeoBeaconSize, payload_len);
+  TEST_ASSERT_EQUAL_UINT32(naviga::protocol::kGeoBeaconFrameSize, payload_len);
 
   TEST_ASSERT_TRUE(rx_logic.on_rx(1010, payload, payload_len, -72, table_b));
 

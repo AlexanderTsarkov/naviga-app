@@ -5,11 +5,12 @@
 
 #include "domain/node_table.h"
 #include "../../protocol/geo_beacon_codec.h"
+#include "../../protocol/alive_codec.h"
 
 namespace naviga {
 namespace domain {
 
-/** Packet type for instrumentation logs. On-air we have a single format; we log CORE/ALIVE from intent/pos_valid. TAIL1/TAIL2 reserved for when tail packets exist. */
+/** Packet type for instrumentation logs. Dispatched from msg_type in the 2-byte frame header (#304). */
 enum class PacketLogType {
   CORE,
   TAIL1,
