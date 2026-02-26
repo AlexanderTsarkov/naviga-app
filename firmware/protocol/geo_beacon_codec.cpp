@@ -1,4 +1,5 @@
 #include "geo_beacon_codec.h"
+#include "wire_helpers.h"
 
 #include <cmath>
 
@@ -9,7 +10,6 @@ namespace {
 
 constexpr double kMaxU24 = 16777215.0;  // 2^24 - 1
 
-// Clamp helpers
 double clamp_lat(double v) {
   if (v < -90.0) return -90.0;
   if (v > 90.0) return 90.0;
@@ -40,103 +40,93 @@ double u24_to_lon(uint32_t v) {
   return static_cast<double>(v) / kMaxU24 * 360.0 - 180.0;
 }
 
-void write_u16_le(uint8_t* dst, uint16_t value) {
-  dst[0] = static_cast<uint8_t>(value & 0xFF);
-  dst[1] = static_cast<uint8_t>((value >> 8) & 0xFF);
-}
-
 void write_u24_le(uint8_t* dst, uint32_t value) {
-  dst[0] = static_cast<uint8_t>(value & 0xFF);
-  dst[1] = static_cast<uint8_t>((value >> 8) & 0xFF);
-  dst[2] = static_cast<uint8_t>((value >> 16) & 0xFF);
-}
-
-void write_nodeid48_le(uint8_t* dst, uint64_t value) {
-  // On-air NodeID48: lower 48 bits of domain uint64, written as 6-byte LE.
-  // Upper 16 bits are always 0x0000 (domain invariant); they are not transmitted.
-  dst[0] = static_cast<uint8_t>(value & 0xFF);
-  dst[1] = static_cast<uint8_t>((value >> 8) & 0xFF);
-  dst[2] = static_cast<uint8_t>((value >> 16) & 0xFF);
-  dst[3] = static_cast<uint8_t>((value >> 24) & 0xFF);
-  dst[4] = static_cast<uint8_t>((value >> 32) & 0xFF);
-  dst[5] = static_cast<uint8_t>((value >> 40) & 0xFF);
-}
-
-uint16_t read_u16_le(const uint8_t* src) {
-  return static_cast<uint16_t>(src[0]) |
-         static_cast<uint16_t>(src[1]) << 8;
+  dst[0] = static_cast<uint8_t>(value & 0xFFu);
+  dst[1] = static_cast<uint8_t>((value >> 8) & 0xFFu);
+  dst[2] = static_cast<uint8_t>((value >> 16) & 0xFFu);
 }
 
 uint32_t read_u24_le(const uint8_t* src) {
   return static_cast<uint32_t>(src[0]) |
-         static_cast<uint32_t>(src[1]) << 8 |
-         static_cast<uint32_t>(src[2]) << 16;
-}
-
-uint64_t read_nodeid48_le(const uint8_t* src) {
-  // Read 6-byte LE NodeID48 and expand to domain uint64 (upper 16 bits = 0x0000).
-  return static_cast<uint64_t>(src[0]) |
-         static_cast<uint64_t>(src[1]) << 8 |
-         static_cast<uint64_t>(src[2]) << 16 |
-         static_cast<uint64_t>(src[3]) << 24 |
-         static_cast<uint64_t>(src[4]) << 32 |
-         static_cast<uint64_t>(src[5]) << 40;
+         (static_cast<uint32_t>(src[1]) << 8) |
+         (static_cast<uint32_t>(src[2]) << 16);
 }
 
 } // namespace
 
 size_t encode_geo_beacon(const GeoBeaconFields& fields, ByteSpan out) {
-  if (!out.data || out.size < kGeoBeaconSize) {
+  if (!out.data || out.size < kGeoBeaconFrameSize) {
     return 0;
   }
-
-  // BeaconCore is position-bearing only. Caller must not invoke this codec
-  // without a valid fix; until Alive framing lands, no-fix traffic is silenced.
+  // BeaconCore is position-bearing only.
   if (fields.pos_valid == 0) {
     return 0;
   }
 
-  // BeaconCore packed24 v0 payload layout (15 bytes):
-  //   [0]     payloadVersion = 0x00
-  //   [1..6]  nodeId48 LE
-  //   [7..8]  seq16 LE
-  //   [9..11] lat_u24 LE
-  //   [12..14] lon_u24 LE
-  out.data[0] = kGeoBeaconPayloadVersion;
-  write_nodeid48_le(out.data + 1, fields.node_id);
-  write_u16_le(out.data + 7, fields.seq);
-  write_u24_le(out.data + 9, lat_to_u24(fields.lat_deg));
-  write_u24_le(out.data + 12, lon_to_u24(fields.lon_deg));
+  // Write 2-byte frame header: msg_type=0x01, reserved=0, payload_len=15.
+  PacketHeader hdr;
+  hdr.msg_type    = MsgType::BeaconCore;
+  hdr.reserved    = 0;
+  hdr.payload_len = static_cast<uint8_t>(kGeoBeaconSize);
+  if (!encode_header(hdr, out.data, out.size)) {
+    return 0;
+  }
 
-  return kGeoBeaconSize;
+  // Write BeaconCore payload starting at byte 2.
+  uint8_t* p = out.data + kHeaderSize;
+  p[0] = kGeoBeaconPayloadVersion;
+  wire::write_nodeid48_le(p + 1, fields.node_id);
+  wire::write_u16_le(p + 7, fields.seq);
+  write_u24_le(p + 9, lat_to_u24(fields.lat_deg));
+  write_u24_le(p + 12, lon_to_u24(fields.lon_deg));
+
+  return kGeoBeaconFrameSize;
 }
 
 DecodeError decode_geo_beacon(ConstByteSpan in, GeoBeaconFields* out) {
   if (!in.data || !out || in.size < kGeoBeaconSize) {
     return DecodeError::ShortBuffer;
   }
-
   if (in.data[0] != kGeoBeaconPayloadVersion) {
     return DecodeError::BadPayloadVersion;
   }
 
-  out->node_id = read_nodeid48_le(in.data + 1);
-  out->seq = read_u16_le(in.data + 7);
+  out->node_id = wire::read_nodeid48_le(in.data + 1);
+  out->seq     = wire::read_u16_le(in.data + 7);
 
   const uint32_t lat_u24 = read_u24_le(in.data + 9);
   const uint32_t lon_u24 = read_u24_le(in.data + 12);
 
-  // Validate packed24 values are within [0, 16777215].
   if (lat_u24 > static_cast<uint32_t>(kMaxU24) ||
       lon_u24 > static_cast<uint32_t>(kMaxU24)) {
     return DecodeError::InvalidRange;
   }
 
-  out->lat_deg = u24_to_lat(lat_u24);
-  out->lon_deg = u24_to_lon(lon_u24);
+  out->lat_deg   = u24_to_lat(lat_u24);
+  out->lon_deg   = u24_to_lon(lon_u24);
   out->pos_valid = 1;  // BeaconCore is always position-bearing (§3.1).
 
   return DecodeError::Ok;
+}
+
+DecodeError decode_geo_beacon_frame(ConstByteSpan in, GeoBeaconFields* out) {
+  if (!in.data || !out || in.size < kGeoBeaconFrameSize) {
+    return DecodeError::ShortBuffer;
+  }
+
+  PacketHeader hdr;
+  if (!decode_header(in.data, in.size, &hdr)) {
+    return DecodeError::BadMsgType;
+  }
+  if (hdr.msg_type != MsgType::BeaconCore) {
+    return DecodeError::BadMsgType;
+  }
+  if (!validate_header(hdr, in.size - kHeaderSize)) {
+    return DecodeError::PayloadLenMismatch;
+  }
+
+  const ConstByteSpan payload{in.data + kHeaderSize, in.size - kHeaderSize};
+  return decode_geo_beacon(payload, out);
 }
 
 } // namespace protocol
