@@ -145,8 +145,6 @@ void AppServices::init() {
   log_kv("role: ", role_ == RadioRole::INIT ? "INIT" : "RESP");
 
   const platform::DeviceId device_id = device_id_provider_.get();
-  uint8_t mac_bytes[6] = {0};
-  get_device_mac_bytes(mac_bytes);
   const uint64_t full_id = full_id_from_mac(device_id.bytes);
   short_id_ = domain::NodeTable::compute_short_id(full_id);
 #if defined(GNSS_PROVIDER_UBLOX)

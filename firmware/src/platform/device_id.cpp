@@ -52,7 +52,31 @@ uint64_t get_device_full_id_u64() {
 uint16_t get_device_short_id_u16() {
   uint8_t mac[6] = {0};
   get_device_mac_bytes(mac);
-  return short_id_from_mac(mac);
+  // Delegate to canonical path: full_id → compute_short_id (6-byte LE CRC16 + reserved fix).
+  // Callers that already hold a uint64_t node_id should use NodeTable::compute_short_id directly.
+  const uint64_t node_id = full_id_from_mac(mac);
+  // Inline the canonical algorithm here to avoid a domain dependency in platform layer.
+  constexpr uint16_t kInit = 0xFFFF;
+  constexpr uint16_t kPoly = 0x1021;
+  uint8_t bytes[6] = {0};
+  for (int i = 0; i < 6; ++i) {
+    bytes[i] = static_cast<uint8_t>((node_id >> (8 * i)) & 0xFF);
+  }
+  uint16_t crc = kInit;
+  for (size_t i = 0; i < 6; ++i) {
+    crc ^= static_cast<uint16_t>(bytes[i]) << 8;
+    for (int bit = 0; bit < 8; ++bit) {
+      if (crc & 0x8000) {
+        crc = static_cast<uint16_t>((crc << 1) ^ kPoly);
+      } else {
+        crc <<= 1;
+      }
+    }
+  }
+  if (crc == 0x0000u || crc == 0xFFFFu) {
+    return static_cast<uint16_t>(crc ^ 0x0001u);
+  }
+  return crc;
 }
 
 uint64_t full_id_from_mac(const uint8_t mac[6]) {
@@ -68,13 +92,6 @@ uint64_t full_id_from_mac(const uint8_t mac[6]) {
   return id & UINT64_C(0x0000FFFFFFFFFFFF);
 }
 
-uint16_t short_id_from_mac(const uint8_t mac[6]) {
-  if (!mac) {
-    return 0;
-  }
-  // CRC16-CCITT-FALSE over the 6 MAC bytes.
-  return crc16_ccitt_false(mac, 6);
-}
 
 void format_full_id_u64_hex(uint64_t full_id, char* out, size_t out_len) {
   if (!out || out_len == 0) {

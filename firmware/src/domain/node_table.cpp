@@ -60,9 +60,20 @@ uint16_t clamp_u16(uint32_t value) {
 } // namespace
 
 uint16_t NodeTable::compute_short_id(uint64_t node_id) {
-  uint8_t bytes[8] = {0};
-  write_u64_le(bytes, node_id);
-  return crc16_ccitt(bytes, sizeof(bytes));
+  // Canonical ShortId per nodeid_policy_v0 §4:
+  // CRC16-CCITT-FALSE over the 6-byte LE wire representation of NodeID48.
+  // Upper 16 bits of node_id are always 0x0000 (domain invariant).
+  uint8_t bytes[6] = {0};
+  for (int i = 0; i < 6; ++i) {
+    bytes[i] = static_cast<uint8_t>((node_id >> (8 * i)) & 0xFF);
+  }
+  const uint16_t crc = crc16_ccitt(bytes, sizeof(bytes));
+  // Reserved-values fix: if and only if crc == 0x0000 or crc == 0xFFFF,
+  // compute short_id = crc XOR 0x0001 exactly once; otherwise short_id = crc.
+  if (crc == 0x0000u || crc == 0xFFFFu) {
+    return static_cast<uint16_t>(crc ^ 0x0001u);
+  }
+  return crc;
 }
 
 void NodeTable::set_expected_interval_s(uint16_t expected_interval_s) {
