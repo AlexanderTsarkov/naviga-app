@@ -15,7 +15,8 @@ enum class RadioRole : uint8_t {
 struct RadioSmokeStats {
   uint32_t tx_count = 0;
   uint32_t rx_count = 0;
-  uint32_t last_seq = 0;
+  /** Instrumentation TX event counter (uint32). Not the on-air seq16 (uint16) from BeaconCore/Alive. */
+  uint32_t tx_event_seq = 0;
   uint32_t last_tx_ms = 0;
   uint32_t last_rx_ms = 0;
   int8_t last_rssi_dbm = 0;

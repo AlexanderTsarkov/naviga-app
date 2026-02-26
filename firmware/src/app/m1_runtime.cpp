@@ -206,10 +206,11 @@ void M1Runtime::handle_tx(uint32_t now_ms) {
     }
   }
 
-  const uint32_t next_seq = stats_.last_seq + 1;
+  // tx_event_seq is an instrumentation TX event counter (uint32); not the on-air seq16 (uint16) from BeaconCore/Alive.
+  const uint32_t next_seq = stats_.tx_event_seq + 1;
   const bool ok = radio_->send(pending_payload_, pending_len_);
   send_policy_.on_send_result(ok, now_ms);
-  stats_.last_seq = next_seq;
+  stats_.tx_event_seq = next_seq;
   if (ok) {
     stats_.tx_count++;
     stats_.last_tx_ms = now_ms;
@@ -218,11 +219,11 @@ void M1Runtime::handle_tx(uint32_t now_ms) {
       if (is_tail_type(last_tx_type_)) {
         std::snprintf(line, sizeof(line), "pkt tx t_ms=%lu type=%s seq=%u core_seq=%u",
                       static_cast<unsigned long>(now_ms), packet_log_type_str(last_tx_type_),
-                      static_cast<unsigned>(stats_.last_seq), static_cast<unsigned>(last_tx_core_seq_));
+                      static_cast<unsigned>(stats_.tx_event_seq), static_cast<unsigned>(last_tx_core_seq_));
       } else {
         std::snprintf(line, sizeof(line), "pkt tx t_ms=%lu type=%s seq=%u",
                       static_cast<unsigned long>(now_ms), packet_log_type_str(last_tx_type_),
-                      static_cast<unsigned>(stats_.last_seq));
+                      static_cast<unsigned>(stats_.tx_event_seq));
       }
       instrumentation_log_fn_(line, instrumentation_ctx_);
     }

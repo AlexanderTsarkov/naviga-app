@@ -73,9 +73,9 @@ RadioRole RadioSmokeService::role() const {
 }
 
 void RadioSmokeService::send_ping(uint32_t now_ms) {
-  RadioMsg msg{static_cast<uint8_t>(RadioMsgType::Ping), stats_.last_seq + 1};
+  RadioMsg msg{static_cast<uint8_t>(RadioMsgType::Ping), stats_.tx_event_seq + 1};
   if (radio_->send(reinterpret_cast<const uint8_t*>(&msg), sizeof(msg))) {
-    stats_.last_seq = msg.seq;
+    stats_.tx_event_seq = msg.seq;
     stats_.tx_count++;
     stats_.last_tx_ms = now_ms;
     log_radio_event(event_logger_, now_ms, domain::LogEventId::RADIO_TX_OK,
@@ -89,7 +89,7 @@ void RadioSmokeService::send_ping(uint32_t now_ms) {
 void RadioSmokeService::send_pong(uint32_t seq, uint32_t now_ms) {
   RadioMsg msg{static_cast<uint8_t>(RadioMsgType::Pong), seq};
   if (radio_->send(reinterpret_cast<const uint8_t*>(&msg), sizeof(msg))) {
-    stats_.last_seq = msg.seq;
+    stats_.tx_event_seq = msg.seq;
     stats_.tx_count++;
     stats_.last_tx_ms = now_ms;
     log_radio_event(event_logger_, now_ms, domain::LogEventId::RADIO_TX_OK,
@@ -129,7 +129,7 @@ void RadioSmokeService::handle_rx(uint32_t now_ms) {
     stats_.last_rx_was_pong = true;
     stats_.rx_count++;
     stats_.last_rx_ms = now_ms;
-    stats_.last_seq = msg.seq;
+    stats_.tx_event_seq = msg.seq;
     log_radio_event(event_logger_, now_ms, domain::LogEventId::RADIO_RX_OK,
                     domain::LogLevel::kInfo, msg.type);
     if (stats_.rssi_available) {
