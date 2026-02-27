@@ -24,7 +24,7 @@ This policy defines the **v0 mapping** of NodeTable-related fields into delivery
 | **B** | Tail-1 | Operational data; delay-tolerant (seconds–minutes). Capability/version and timing hints. | Degraded diagnostics; core tracking still works. |
 | **C** | Tail-2 | Slow/diagnostic (minutes) or event-driven. Health, power hints. | Only diagnostics/UX suffer. |
 
-**Freshness marker (Tier A):** Tier A **MUST** include a **freshness marker** (e.g. sequence number or monotonic tick) so receivers can order updates and detect staleness. **seq16** is canonical; byte layout in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §4.1. Tail-1 **MUST** carry **core_seq16** when sent separately; receiver applies only if core_seq16 == lastCoreSeq (CoreRef-lite). See encoding §4.2.
+**Freshness marker (Tier A):** Tier A **MUST** include a **freshness marker** (e.g. sequence number or monotonic tick) so receivers can order updates and detect staleness. **seq16** is canonical; byte layout in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §4.1. Tail-1 **MUST** carry **`ref_core_seq16`** when sent separately — a back-reference to the `seq16` of the Core sample it qualifies (Core linkage key, not a per-frame freshness counter); receiver applies only if `ref_core_seq16 == lastCoreSeq` (CoreRef-lite). See encoding §4.2.
 
 **Core transmit precondition:** BeaconCore is position-bearing and **MUST** only be transmitted when the sender has a valid GNSS fix. When the sender has no valid fix, it **MUST** satisfy the maxSilence liveness requirement via an **Alive packet** (see [alive_packet_encoding_v0.md](../contract/alive_packet_encoding_v0.md)); Alive is alive-bearing, non-position-bearing.
 
@@ -106,8 +106,8 @@ Source: fields from [link-telemetry-minset](../contract/link-telemetry-minset-v0
 
 ## 8) Encoding decisions (closed)
 
-- **Freshness marker encoding:** **Decided.** seq16 (uint16, 2 bytes, little-endian) is canonical. Byte layout is in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §4.1 (BeaconCore) and §4.2 (Tail-1 core_seq16). Scope: single per-node counter across all packet types (Core, Tail-1/2, Alive) during uptime; see [rx_semantics_v0.md](rx_semantics_v0.md) §1.
-- **Beacon encoding:** Core/Tail split and byte layouts are in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §3–5 (Core **15 B payload / 17 B on-air** with 2B header — nodeId48(6) + packed24 geo per #298/#301; Tail-1 core_seq16 + optional posFlags/sats; Tail-2 maxSilence10s + optional fields; Tail-2 scheduling per §2.2 above).
+- **Freshness marker encoding:** **Decided.** seq16 (uint16, 2 bytes, little-endian) is canonical. Byte layout is in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §4.1 (BeaconCore) and §4.2 (Tail-1 `ref_core_seq16`). Sender counter scope: single per-node counter across all packet types (Core, Tail-1/2, Alive) during uptime. Payload presence: BeaconCore and BeaconAlive embed `seq16`; BeaconTail-1 embeds `ref_core_seq16` (Core linkage key, not the current counter); BeaconTail-2 carries no seq-like field. See [rx_semantics_v0.md](rx_semantics_v0.md) §1.
+- **Beacon encoding:** Core/Tail split and byte layouts are in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §3–5 (Core **15 B payload / 17 B on-air** with 2B header — nodeId48(6) + packed24 geo per #298/#301; Tail-1 `ref_core_seq16` + optional posFlags/sats; Tail-2 maxSilence10s + optional fields; Tail-2 scheduling per §2.2 above).
 
 ---
 

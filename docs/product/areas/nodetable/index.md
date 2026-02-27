@@ -19,7 +19,7 @@ Canon semantics are in the linked contract and policy docs; this list is a stric
 - **Core only with valid fix.** BeaconCore is transmitted only when the sender has a valid GNSS fix. Core implies a valid lat/lon sample. When the node has no fix, it does not send Core.
 - **No-fix liveness via Alive.** The maxSilence liveness requirement is satisfied by an **Alive** packet when the node has no valid fix. Alive is **alive-bearing, non-position-bearing**; it carries identity + seq16 (same per-node counter as Core/Tails).
 - **seq16 scope.** seq16 is a **single per-node counter** across all packet types (BeaconCore, Tail-1, Tail-2, Alive) during uptime. RX semantics: accepted / duplicate / out-of-order / wrap are defined per-node globally, not per packet type.
-- **Tail-1 never revokes Core.** Tail-1 qualifies the **same** Core sample (core_seq16). Tail-1 **MUST NOT** revoke or invalidate position already received in BeaconCore. CoreRef-lite: Tail-1 payload is applied **only if** core_seq16 matches lastCoreSeq for that node; otherwise payload is ignored (lastRxAt/link metrics may still be updated).
+- **Tail-1 never revokes Core.** Tail-1 qualifies the **same** Core sample (`ref_core_seq16`). Tail-1 **MUST NOT** revoke or invalidate position already received in BeaconCore. CoreRef-lite: Tail-1 payload is applied **only if** `ref_core_seq16` matches lastCoreSeq for that node; otherwise payload is ignored (lastRxAt/link metrics may still be updated).
 
 ---
 

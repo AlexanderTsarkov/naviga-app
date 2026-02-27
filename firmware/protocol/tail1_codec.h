@@ -12,10 +12,13 @@ namespace protocol {
 /**
  * BeaconTail-1 packet v0 — payload fields.
  *
- * On-air payload layout:
- *   [0]      payloadVersion = 0x00
- *   [1..6]   nodeId48 LE (lower 48 bits of domain uint64_t)
- *   [7..8]   core_seq16 LE (seq16 of the Core sample this Tail-1 qualifies)
+ * On-air payload layout (Common prefix + Functional payload):
+ *   [0]      payloadVersion = 0x00          (Common prefix byte 0)
+ *   [1..6]   nodeId48 LE                    (Common prefix bytes 1–6)
+ *   [7..8]   ref_core_seq16 LE              (Functional payload: Core linkage key —
+ *                                            back-reference to the seq16 of the Core
+ *                                            sample this Tail-1 qualifies; NOT a
+ *                                            per-frame freshness counter)
  *   [9]      posFlags  (optional; 0x00 = not present)
  *   [10]     sats      (optional; 0x00 = not present)
  *
@@ -25,18 +28,18 @@ namespace protocol {
  * Spec: docs/product/areas/nodetable/contract/tail1_packet_encoding_v0.md, issue #307.
  */
 struct Tail1Fields {
-  uint64_t node_id      = 0;
-  uint16_t core_seq16   = 0;
-  bool     has_pos_flags = false;
-  uint8_t  pos_flags    = 0x00;  ///< 0x00 = not present.
-  bool     has_sats     = false;
-  uint8_t  sats         = 0x00;  ///< 0x00 = not present.
+  uint64_t node_id         = 0;
+  uint16_t ref_core_seq16  = 0;  ///< Core linkage key: seq16 of the Core this Tail-1 qualifies.
+  bool     has_pos_flags   = false;
+  uint8_t  pos_flags       = 0x00;  ///< 0x00 = not present.
+  bool     has_sats        = false;
+  uint8_t  sats            = 0x00;  ///< 0x00 = not present.
 };
 
 /** Tail-1 payload version byte. */
 constexpr uint8_t kTail1PayloadVersion = 0x00;
 
-/** Minimum Tail-1 payload size (payloadVersion + nodeId48 + core_seq16). */
+/** Minimum Tail-1 payload size (payloadVersion + nodeId48 + ref_core_seq16). */
 constexpr size_t kTail1PayloadMin = 9;
 
 /** Maximum Tail-1 payload size (with posFlags + sats). */
@@ -83,7 +86,7 @@ inline size_t encode_tail1_frame(const Tail1Fields& fields, uint8_t* out, size_t
   uint8_t* p = out + kHeaderSize;
   p[0] = kTail1PayloadVersion;
   wire::write_nodeid48_le(p + 1, fields.node_id);
-  wire::write_u16_le(p + 7, fields.core_seq16);
+  wire::write_u16_le(p + 7, fields.ref_core_seq16);
   if (with_optional) {
     p[9]  = fields.pos_flags;
     p[10] = fields.sats;
@@ -118,8 +121,8 @@ inline Tail1DecodeError decode_tail1_payload(const uint8_t* payload, size_t payl
     return Tail1DecodeError::BadPayloadVersion;
   }
 
-  out->node_id    = wire::read_nodeid48_le(payload + 1);
-  out->core_seq16 = wire::read_u16_le(payload + 7);
+  out->node_id        = wire::read_nodeid48_le(payload + 1);
+  out->ref_core_seq16 = wire::read_u16_le(payload + 7);
 
   out->has_pos_flags = (payload_len >= kTail1PayloadMax);
   out->pos_flags     = out->has_pos_flags ? payload[9]  : 0x00u;

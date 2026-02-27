@@ -59,10 +59,30 @@ The following **MUST NOT** appear inside the v0 beacon payload:
 
 Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../policy/field_cadence_v0.md) §2. This section defines the **v0 byte layouts** only.
 
+### Common prefix (all beacon-family packets)
+
+Every beacon-family payload (BeaconCore, BeaconAlive, BeaconTail-1, BeaconTail-2) begins with the same **7-byte Common prefix**:
+
+| Offset | Field | Bytes | Notes |
+|--------|-------|-------|-------|
+| 0 | `payloadVersion` | 1 | Version byte; determines entire payload layout for this `msg_type`. |
+| 1–6 | `nodeId48` | 6 | NodeID48 (6-byte LE MAC48); sender identity. |
+
+After the Common prefix, each packet type has its own **Functional payload** (bytes 7+):
+
+| Packet type | Functional payload (bytes 7+) | Seq-like field |
+|-------------|-------------------------------|---------------|
+| BeaconCore | `seq16(2)` + `lat_u24(3)` + `lon_u24(3)` | `seq16` — per-frame freshness counter |
+| BeaconAlive | `seq16(2)` + optional `aliveStatus(1)` | `seq16` — per-frame freshness counter |
+| BeaconTail-1 | `ref_core_seq16(2)` + optional `posFlags(1)` + optional `sats(1)` | `ref_core_seq16` — Core linkage key (back-reference, not a freshness counter) |
+| BeaconTail-2 | optional fields only | none |
+
+**`ref_core_seq16` vs `seq16`:** BeaconTail-1 carries `ref_core_seq16` — a back-reference to the `seq16` of the specific BeaconCore sample it qualifies. This is a Core linkage key, not the sender's current counter value. BeaconTail-1 does **not** carry a per-frame freshness counter. See [rx_semantics_v0.md §1](../policy/rx_semantics_v0.md) for duplicate/OOO handling per packet type.
+
 | Type | Purpose | MUST fields | Optional fields | Notes |
 |------|---------|-------------|-----------------|--------|
 | **BeaconCore** | Minimal sample: WHO + WHERE + freshness. Strict cadence; MUST deliver. | payloadVersion(1), nodeId48(6), seq16(2), lat_u24(3), lon_u24(3) | — | Smallest possible; **15 B fixed** (+ 2B frame header = 17 B on-air). lat/lon MUST be valid coordinates; Core MUST NOT be transmitted without valid fix (§3.1). |
-| **BeaconTail-1** | Attached-to-Core extension; qualifies one Core sample. Optional, loss-tolerant. | payloadVersion(1), nodeId48(6), core_seq16(2) | posFlags(1), sats(1) | Receiver applies only if **core_seq16 == lastCoreSeq**; else ignore. MUST NOT update position. Full contract: [tail1_packet_encoding_v0.md](tail1_packet_encoding_v0.md). |
+| **BeaconTail-1** | Attached-to-Core extension; qualifies one Core sample. Optional, loss-tolerant. | payloadVersion(1), nodeId48(6), ref_core_seq16(2) | posFlags(1), sats(1) | Receiver applies only if **ref_core_seq16 == lastCoreSeq**; else ignore. MUST NOT update position. `ref_core_seq16` is a Core linkage key (back-reference), not a per-frame freshness counter. Full contract: [tail1_packet_encoding_v0.md](tail1_packet_encoding_v0.md). |
 | **BeaconTail-2** | Uncoupled slow state; no CoreRef. Optional, loss-tolerant. | payloadVersion(1), nodeId48(6) | maxSilence10s(1), batteryPercent(1), hwProfileId(2), fwVersionId(2), uptimeSec(4) | No CoreRef; apply unconditionally. MUST NOT update position. Two scheduling classes: Operational and Informative. Full contract: [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md). |
 
 - **Byte order:** Little-endian for all multi-byte integers.
@@ -113,9 +133,10 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 
 **Summary:**
 - `msg_type = 0x03`, `payloadVersion = 0x00`
-- **Minimum (MUST):** `payloadVersion(1) | nodeId48(6) | core_seq16(2)` = **9 bytes**
+- **Minimum (MUST):** `payloadVersion(1) | nodeId48(6) | ref_core_seq16(2)` = **9 bytes**
 - **Optional:** `posFlags(1)`, `sats(1)` — up to **11 bytes**
-- **RX rule (normative):** Apply payload **only if** `core_seq16 == last_core_seq16[N]` for that node; otherwise **MUST** ignore. See [rx_semantics_v0](../policy/rx_semantics_v0.md) §2 and §4.
+- **`ref_core_seq16`:** Core linkage key — the `seq16` of the BeaconCore sample this Tail-1 qualifies. This is a back-reference, not a per-frame freshness counter. BeaconTail-1 does **not** carry the sender's current seq16 counter value.
+- **RX rule (normative):** Apply payload **only if** `ref_core_seq16 == last_core_seq16[N]` for that node; otherwise **MUST** ignore. See [rx_semantics_v0](../policy/rx_semantics_v0.md) §2 and §4.
 - **Invariants:** Tail-1 MUST NOT update position. Tail-1 is optional and loss-tolerant; product MUST function with zero Tail-1 packets received.
 
 ### 4.3 BeaconTail-2
@@ -147,13 +168,13 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 
 **Full hex (15 bytes):** `00 FF EE DD CC BB AA 01 00 10 4C CF 05 C0 9A`
 
-### 5.2 BeaconTail-1 (11 B): core_seq16 + posFlags + sats
+### 5.2 BeaconTail-1 (11 B): ref_core_seq16 + posFlags + sats
 
 | Field | Value | Bytes (hex) |
 |-------|--------|-------------|
 | payloadVersion | 0 | 00 |
 | nodeId | 0x0000_AABB_CCDD_EEFF | FF EE DD CC BB AA |
-| core_seq16 | 1 (matches last Core) | 01 00 |
+| ref_core_seq16 | 1 (matches last Core) | 01 00 |
 | posFlags | 0x01 (position valid) | 01 |
 | sats | 8 | 08 |
 

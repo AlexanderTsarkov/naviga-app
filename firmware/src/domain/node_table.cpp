@@ -237,7 +237,7 @@ bool NodeTable::upsert_remote(uint64_t node_id,
 }
 
 bool NodeTable::apply_tail1(uint64_t node_id,
-                            uint16_t core_seq16,
+                            uint16_t ref_core_seq16,
                             bool has_pos_flags, uint8_t pos_flags,
                             bool has_sats, uint8_t sats,
                             int8_t rssi_dbm,
@@ -248,8 +248,8 @@ bool NodeTable::apply_tail1(uint64_t node_id,
     return false;
   }
   NodeEntry& entry = entries_[static_cast<size_t>(idx)];
-  if (!entry.has_core_seq16 || entry.last_core_seq16 != core_seq16) {
-    // core_seq16 mismatch (stale, reordered, or no Core yet) — drop silently.
+  if (!entry.has_core_seq16 || entry.last_core_seq16 != ref_core_seq16) {
+    // ref_core_seq16 mismatch (stale, reordered, or no Core yet) — drop silently.
     // Still update link metrics per tail1_packet_encoding_v0 §4.4.
     entry.last_seen_ms = now_ms;
     entry.last_rx_rssi = rssi_dbm;

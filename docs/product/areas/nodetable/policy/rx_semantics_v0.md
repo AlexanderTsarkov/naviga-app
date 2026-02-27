@@ -13,18 +13,28 @@ This policy defines how the receiver interprets and applies incoming packets (Be
 | Term | Meaning |
 |------|---------|
 | **Accepted packet** | A packet that passes version and nodeId checks and any payload checks the receiver applies; it is used to update NodeTable (at least lastRxAt and, where applicable, position/telemetry/link metrics). BeaconCore, BeaconTail-1, BeaconTail-2, and Alive can all be accepted. |
-| **Duplicate** | A packet that carries the same logical sample as one already applied (e.g. same nodeId and seq16 for Core or Alive). Receiver may refresh lastRxAt but MUST NOT treat it as a new sample for position/telemetry (no overwrite with same data). |
-| **Out-of-order (ooo)** | A packet whose seq16 (or core_seq16 for Tail-1) is older than the last accepted seq for that node. Receiver MUST NOT use it to overwrite newer position or telemetry ("no time travel"); MAY ignore for payload or accept only for lastRxAt within a small tolerance (implementation-defined). |
-| **seq16 wrap** | seq16 is a 16-bit counter; it wraps. Ordering is defined by modulo subtraction: `delta = (incoming − last) mod 2¹⁶`. If `delta = 0` → Duplicate. If `delta ∈ [1, 32767]` → Newer. If `delta ∈ [32768, 65535]` → Older (out-of-order). Implementations MUST use this rule consistently for all duplicate / new / ooo decisions. |
+| **Duplicate** | A packet that carries the same logical sample as one already applied (e.g. same nodeId and seq16 for Core or Alive). Receiver may refresh lastRxAt but MUST NOT treat it as a new sample for position/telemetry (no overwrite with same data). For Tail-1, duplicate means same `(nodeId, ref_core_seq16)` — applying it twice is idempotent (same posFlags/sats for the same Core sample). |
+| **Out-of-order (ooo)** | A packet whose seq16 (for Core/Alive) is older than the last accepted seq for that node. Receiver MUST NOT use it to overwrite newer position or telemetry ("no time travel"); MAY ignore for payload or accept only for lastRxAt within a small tolerance (implementation-defined). For Tail-1, OOO is handled by the `ref_core_seq16 == lastCoreSeq` gate — a stale Tail-1 is dropped silently. |
+| **seq16 wrap** | seq16 is a 16-bit counter; it wraps. Ordering is defined by modulo subtraction: `delta = (incoming − last) mod 2¹⁶`. If `delta = 0` → Duplicate. If `delta ∈ [1, 32767]` → Newer. If `delta ∈ [32768, 65535]` → Older (out-of-order). Implementations MUST use this rule consistently for Core and Alive duplicate / new / ooo decisions. |
 
-**seq16 scope:** seq16 is a **single per-node counter** across all transmitted packet types during uptime (BeaconCore, Tail-1/2, Alive). Receivers **MUST** treat seq16 ordering and deduplication across packet types accordingly. The seen seq16 set (or ordering window) is **per-node global**, not per packet type.
+**seq16 scope — sender counter:** The sender maintains **one seq16 counter per node**, incremented on every transmitted packet regardless of type (BeaconCore, BeaconAlive, and Tails when implemented). This counter is shared across all packet types during uptime.
+
+**seq16 scope — payload presence:** Not every packet type embeds the current counter value:
+- **BeaconCore** and **BeaconAlive** embed the current counter value as `seq16` in their payload (offset 7). Receivers use this for ordering, duplicate detection, and wrap handling.
+- **BeaconTail-1** does **not** embed the current counter value. It embeds `ref_core_seq16` — a back-reference to the `seq16` of the specific BeaconCore sample it qualifies. This is not a freshness counter; it is a Core linkage key.
+- **BeaconTail-2** carries no seq-like field. It is applied unconditionally (no CoreRef).
+
+**Duplicate / OOO handling per packet type:**
+- **BeaconCore / BeaconAlive:** Use the seq16 wrap rule (modulo subtraction) for duplicate and OOO detection. The seen seq16 set is per-node global across Core and Alive.
+- **BeaconTail-1:** Duplicate and OOO detection is handled by the `ref_core_seq16 == lastCoreSeq` gate. Two Tail-1 packets referencing the same Core are idempotent (same posFlags/sats for the same sample). A stale Tail-1 (referencing an old Core) is dropped by the gate.
+- **BeaconTail-2:** No deduplication; applied unconditionally when version and nodeId are valid.
 
 ---
 
 ## 2) Which packets update NodeTable
 
 - **BeaconCore:** Accepted if version and nodeId valid. Updates lastRxAt, lastCoreSeq, position (lat/lon when not sentinel), seq16. Link metrics (rssiLast, snrLast, etc.) updated on acceptance.
-- **BeaconTail-1:** Applied **only if** core_seq16 equals the last Core seq16 received from that node (**CoreRef-lite**); otherwise **MUST** ignore for payload. When applied: updates lastRxAt; may update posFlags/sats and other attached fields for that Core sample. Link metrics updated on acceptance. **Tail-1 MUST NOT revoke or invalidate position already received in BeaconCore** for that node (see §4).
+- **BeaconTail-1:** Applied **only if** `ref_core_seq16` equals the last Core seq16 received from that node (**CoreRef-lite**); otherwise **MUST** ignore for payload. When applied: updates lastRxAt; may update posFlags/sats and other attached fields for that Core sample. Link metrics updated on acceptance. **Tail-1 MUST NOT revoke or invalidate position already received in BeaconCore** for that node (see §4).
 - **BeaconTail-2:** No CoreRef. Accepted if version and nodeId valid. Updates lastRxAt and any carried Tail-2 fields (maxSilence, batteryPercent, etc.). Link metrics updated on acceptance.
 - **Alive:** Accepted if version and nodeId valid. Updates lastRxAt and seq16 for ordering (same per-node counter as Core/Tails; §1). **Does not** carry or update position. Link metrics updated on acceptance. **Alive satisfies the "alive within maxSilence window"** for Activity derivation when the node has no fix and therefore does not send BeaconCore (see [activity_state_v0](activity_state_v0.md), [field_cadence_v0](field_cadence_v0.md)).
 
@@ -39,7 +49,7 @@ This policy defines how the receiver interprets and applies incoming packets (Be
 
 ### 3.2 Link metrics (rssiLast, snrLast, etc.)
 
-- Link metrics are updated on **accepted** packets. If Tail-1 is **not** applied (core_seq16 ≠ lastCoreSeq), the receiver may still update lastRxAt and link metrics from that packet, or may treat the packet as ignored for all purposes; policy choice is implementation-defined. Recommended: update lastRxAt and link metrics even when Tail-1 payload is ignored, so "last heard" remains accurate.
+- Link metrics are updated on **accepted** packets. If Tail-1 is **not** applied (`ref_core_seq16` ≠ lastCoreSeq), the receiver may still update lastRxAt and link metrics from that packet, or may treat the packet as ignored for all purposes; policy choice is implementation-defined. Recommended: update lastRxAt and link metrics even when Tail-1 payload is ignored, so "last heard" remains accurate.
 
 ### 3.3 Activity derivation and maxSilence
 
@@ -51,7 +61,7 @@ This policy defines how the receiver interprets and applies incoming packets (Be
 ## 4) Tail-1 and position: no revocation of Core
 
 - **Baseline** (first Core sent) is defined in [field_cadence_v0](field_cadence_v0.md) §2.1; once a node has sent at least one BeaconCore, it has a baseline. **BeaconCore** is position-bearing; when a receiver has accepted a BeaconCore with valid lat/lon, that position is **authoritative** for that node until a **new** BeaconCore with a newer seq16 updates it.
-- **Tail-1** carries posFlags/sats that **qualify** the **same** Core sample (same core_seq16). Tail-1 **MUST NOT** be interpreted as revoking or invalidating position already received in BeaconCore. In particular: if the receiver already has position from Core for that node, a subsequent Tail-1 with posFlags = 0 (or "no fix") **does not** clear or invalidate that position; it only qualifies the metadata for that sample. Position is overwritten only by a newer BeaconCore.
+- **Tail-1** carries posFlags/sats that **qualify** the **same** Core sample (same `ref_core_seq16`). Tail-1 **MUST NOT** be interpreted as revoking or invalidating position already received in BeaconCore. In particular: if the receiver already has position from Core for that node, a subsequent Tail-1 with posFlags = 0 (or "no fix") **does not** clear or invalidate that position; it only qualifies the metadata for that sample. Position is overwritten only by a newer BeaconCore.
 
 ---
 

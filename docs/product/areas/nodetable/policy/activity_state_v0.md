@@ -102,6 +102,6 @@ No magic numbers: implementations and product policy choose T_active, T_stale, T
 
 - **Field cadence:** [field_cadence_v0](field_cadence_v0.md) — Core/Tail tiers, Core only with valid fix; maxSilence via Alive when no fix.
 - **RX semantics:** [rx_semantics_v0](rx_semantics_v0.md) — accepted/duplicate/ooo; lastRxAt and Activity on Alive.
-- **Beacon encoding:** [beacon_payload_encoding_v0](../contract/beacon_payload_encoding_v0.md) — seq16 in Core §4.1; Tail core_seq16. **Alive:** [alive_packet_encoding_v0](../contract/alive_packet_encoding_v0.md).
+- **Beacon encoding:** [beacon_payload_encoding_v0](../contract/beacon_payload_encoding_v0.md) — seq16 in Core §4.1; Tail-1 `ref_core_seq16` (Core linkage key). **Alive:** [alive_packet_encoding_v0](../contract/alive_packet_encoding_v0.md).
 - **Traffic model:** [traffic_model_v0](../../../wip/areas/radio/policy/traffic_model_v0.md) — frame limits, beacon-only forwarding.
 - **NodeTable hub:** [../index.md](../index.md) §5 — Activity (derived states, lastSeenAge, policy-supplied boundary).

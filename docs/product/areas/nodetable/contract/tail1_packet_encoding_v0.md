@@ -4,7 +4,7 @@
 
 **Work Area:** Product Specs WIP · **Parent:** [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147) · **Tail productization:** [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307) · **Beacon encoding hub:** [beacon_payload_encoding_v0.md](beacon_payload_encoding_v0.md) · **NodeID policy:** [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298) · **Packet header framing:** [#304](https://github.com/AlexanderTsarkov/naviga-app/issues/304)
 
-This contract defines the **v0 BeaconTail-1 payload**: byte layout, field semantics, units, ranges, and RX rules. BeaconTail-1 is an **optional, loss-tolerant** extension that qualifies one specific BeaconCore sample via `core_seq16`. It is **never required for correctness**; product MUST function correctly with zero Tail-1 packets received.
+This contract defines the **v0 BeaconTail-1 payload**: byte layout, field semantics, units, ranges, and RX rules. BeaconTail-1 is an **optional, loss-tolerant** extension that qualifies one specific BeaconCore sample via `ref_core_seq16`. It is **never required for correctness**; product MUST function correctly with zero Tail-1 packets received.
 
 ---
 
@@ -19,9 +19,31 @@ Every on-air BeaconTail-1 frame is preceded by a **2-byte frame header** defined
 
 ---
 
+## 0.1) Payload structure: Common prefix vs Functional payload
+
+Every beacon-family payload (BeaconCore, BeaconAlive, BeaconTail-1, BeaconTail-2) begins with the same **7-byte Common prefix**:
+
+| Offset | Field | Bytes | Notes |
+|--------|-------|-------|-------|
+| 0 | `payloadVersion` | 1 | Version byte; determines entire payload layout. |
+| 1–6 | `nodeId48` | 6 | NodeID48 (6-byte LE MAC48); sender identity. |
+
+After the Common prefix, each packet type has its own **Functional payload**:
+
+| Packet type | Functional payload (bytes 7+) |
+|-------------|-------------------------------|
+| BeaconCore | `seq16(2)` (per-frame freshness counter) + `lat_u24(3)` + `lon_u24(3)` |
+| BeaconAlive | `seq16(2)` (per-frame freshness counter) + optional `aliveStatus(1)` |
+| **BeaconTail-1** | **`ref_core_seq16(2)`** (Core linkage key — see below) + optional `posFlags(1)` + optional `sats(1)` |
+| BeaconTail-2 | optional fields only (no seq-like field) |
+
+**Key distinction for BeaconTail-1:** The field at offset 7 is **`ref_core_seq16`**, not a per-frame freshness counter. It is a **back-reference** to the `seq16` of the specific BeaconCore sample this Tail-1 qualifies. It is a Core linkage key, not a freshness marker. BeaconTail-1 does **not** carry the sender's current seq16 counter value.
+
+---
+
 ## 1) Role and invariants
 
-- **BeaconTail-1 is sample-attached:** It qualifies exactly one BeaconCore sample, identified by `core_seq16`.
+- **BeaconTail-1 is sample-attached:** It qualifies exactly one BeaconCore sample, identified by `ref_core_seq16`.
 - **Optional and loss-tolerant:** Tail-1 packets may be missing, reordered, or dropped. The product MUST remain fully functional (position tracking, liveness) with zero Tail-1 packets received.
 - **Never moves position:** Tail-1 MUST NOT update `lat`, `lon`, `alt`, or any position-derived field. Position is owned exclusively by BeaconCore.
 - **Does not revoke Core position:** A Tail-1 with `posFlags = 0` (or any other value) MUST NOT clear or invalidate position already received in BeaconCore for that node. Position is overwritten only by a newer BeaconCore.
@@ -46,7 +68,7 @@ Every on-air BeaconTail-1 frame is preceded by a **2-byte frame header** defined
 |--------|-------|------|-------|----------|
 | 0 | `payloadVersion` | uint8 | 1 | `0x00` = v0. Determines the entire payload layout. Unknown value → discard. |
 | 1 | `nodeId` | uint48 LE | 6 | NodeID48 (6-byte LE MAC48); same semantics as BeaconCore. See [nodeid_policy_v0](../../../identity/nodeid_policy_v0.md). |
-| 7 | `core_seq16` | uint16 LE | 2 | `seq16` of the BeaconCore sample this Tail-1 qualifies. Little-endian. MUST match `last_core_seq16` for this node on RX (see §4). |
+| 7 | `ref_core_seq16` | uint16 LE | 2 | **Core linkage key:** the `seq16` of the BeaconCore sample this Tail-1 qualifies. This is a back-reference, not a per-frame freshness counter. Little-endian. MUST match `last_core_seq16` stored for this node on RX (see §4). |
 
 **Minimum size:** **9 bytes** (payload only). On-air with 2-byte header: **11 bytes**.
 
@@ -69,9 +91,9 @@ With both optional fields: **11 bytes** payload; **13 bytes** on-air.
 
 On receiving a BeaconTail-1 for node `N`:
 
-1. **Match check:** Compare `core_seq16` in the Tail-1 against `last_core_seq16` stored in NodeTable for node `N`.
-2. **Apply on match:** If `core_seq16 == last_core_seq16[N]` → apply Tail-1 fields to the sample record for that node (update posFlags, sats as present).
-3. **Ignore on mismatch:** If `core_seq16 != last_core_seq16[N]` (stale, reordered, or orphaned Tail-1) → **drop silently**. MUST NOT overwrite any NodeTable field.
+1. **Match check:** Compare `ref_core_seq16` in the Tail-1 against `last_core_seq16` stored in NodeTable for node `N`.
+2. **Apply on match:** If `ref_core_seq16 == last_core_seq16[N]` → apply Tail-1 fields to the sample record for that node (update posFlags, sats as present).
+3. **Ignore on mismatch:** If `ref_core_seq16 != last_core_seq16[N]` (stale, reordered, or orphaned Tail-1) → **drop silently**. MUST NOT overwrite any NodeTable field.
 4. **No node yet:** If no BeaconCore has ever been received from node `N` → drop silently (no `last_core_seq16` to match against).
 
 ### 4.2 Position invariant (MUST NOT)
@@ -88,7 +110,7 @@ Tail-1 MUST NOT update `lat`, `lon`, `alt`, or any position-derived field, regar
 
 ### 4.4 lastRxAt and link metrics
 
-Even when Tail-1 payload is **not** applied (core_seq16 mismatch), the receiver SHOULD update `lastRxAt` and link metrics (rssiLast, snrLast) from the received frame. This keeps "last heard" accurate. See [rx_semantics_v0.md §3.2](../policy/rx_semantics_v0.md).
+Even when Tail-1 payload is **not** applied (`ref_core_seq16` mismatch), the receiver SHOULD update `lastRxAt` and link metrics (rssiLast, snrLast) from the received frame. This keeps "last heard" accurate. See [rx_semantics_v0.md §3.2](../policy/rx_semantics_v0.md).
 
 ---
 
@@ -108,7 +130,7 @@ Even when Tail-1 payload is **not** applied (core_seq16 mismatch), the receiver 
 |-------|-------|-------------|
 | payloadVersion | 0 | `00` |
 | nodeId | 0x0000_AABB_CCDD_EEFF | `FF EE DD CC BB AA` |
-| core_seq16 | 1 (matches last Core) | `01 00` |
+| ref_core_seq16 | 1 (matches last Core) | `01 00` |
 
 **Full hex (9 bytes):** `00 FF EE DD CC BB AA 01 00`
 
@@ -118,7 +140,7 @@ Even when Tail-1 payload is **not** applied (core_seq16 mismatch), the receiver 
 |-------|-------|-------------|
 | payloadVersion | 0 | `00` |
 | nodeId | 0x0000_AABB_CCDD_EEFF | `FF EE DD CC BB AA` |
-| core_seq16 | 1 | `01 00` |
+| ref_core_seq16 | 1 | `01 00` |
 | posFlags | 0x01 (position valid) | `01` |
 | sats | 8 | `08` |
 
@@ -126,7 +148,7 @@ Even when Tail-1 payload is **not** applied (core_seq16 mismatch), the receiver 
 
 ### 6.3 RX rule: ignore on mismatch
 
-Node `N` has `last_core_seq16 = 7`. Incoming Tail-1 carries `core_seq16 = 5`.
+Node `N` has `last_core_seq16 = 7`. Incoming Tail-1 carries `ref_core_seq16 = 5`.
 → `5 ≠ 7` → drop silently. No NodeTable fields updated (except optionally lastRxAt and link metrics).
 
 ---

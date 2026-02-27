@@ -22,7 +22,9 @@ struct NodeEntry {
   bool in_use = false;
 
   // Tail-1: seq16 of the last accepted BeaconCore for this node.
-  // Used by Tail-1 RX to enforce core_seq16 match (tail1_packet_encoding_v0 §4.1).
+  // Stored as last_core_seq16 (internal name); compared against ref_core_seq16
+  // from incoming Tail-1 frames to enforce the CoreRef-lite gate
+  // (tail1_packet_encoding_v0 §4.1).
   uint16_t last_core_seq16 = 0;
   bool     has_core_seq16  = false;  ///< false until first Core received.
 
@@ -71,24 +73,24 @@ class NodeTable {
   /**
    * Apply Tail-1 fields to an existing NodeTable entry.
    *
-   * Enforces the core_seq16 match rule per tail1_packet_encoding_v0 §4.1:
+   * Enforces the ref_core_seq16 match rule per tail1_packet_encoding_v0 §4.1:
    * - Returns false (silent drop) if no Core has been received for node_id.
-   * - Returns false (silent drop) if core_seq16 != last_core_seq16 for this node.
+   * - Returns false (silent drop) if ref_core_seq16 != last_core_seq16 for this node.
    * - Returns true and applies posFlags/sats only on match.
    * - MUST NOT update position fields.
    *
-   * @param node_id     NodeID48 from the Tail-1 payload.
-   * @param core_seq16  core_seq16 from the Tail-1 payload.
-   * @param has_pos_flags  Whether posFlags is present.
-   * @param pos_flags      posFlags value (ignored if !has_pos_flags).
-   * @param has_sats       Whether sats is present.
-   * @param sats           sats value (ignored if !has_sats).
-   * @param rssi_dbm    Link metric from the received frame.
-   * @param now_ms      Current time for lastRxAt update.
+   * @param node_id         NodeID48 from the Tail-1 payload.
+   * @param ref_core_seq16  ref_core_seq16 from the Tail-1 payload (Core linkage key).
+   * @param has_pos_flags   Whether posFlags is present.
+   * @param pos_flags       posFlags value (ignored if !has_pos_flags).
+   * @param has_sats        Whether sats is present.
+   * @param sats            sats value (ignored if !has_sats).
+   * @param rssi_dbm        Link metric from the received frame.
+   * @param now_ms          Current time for lastRxAt update.
    * @return true if applied; false if dropped (mismatch or no prior Core).
    */
   bool apply_tail1(uint64_t node_id,
-                   uint16_t core_seq16,
+                   uint16_t ref_core_seq16,
                    bool has_pos_flags, uint8_t pos_flags,
                    bool has_sats, uint8_t sats,
                    int8_t rssi_dbm,
@@ -97,7 +99,7 @@ class NodeTable {
   /**
    * Apply Tail-2 fields to a NodeTable entry (create if not found).
    *
-   * No core_seq16 binding — applied unconditionally per tail2_packet_encoding_v0 §4.1.
+   * No CoreRef binding — applied unconditionally per tail2_packet_encoding_v0 §4.1.
    * MUST NOT update position fields.
    *
    * @param node_id          NodeID48 from the Tail-2 payload.
