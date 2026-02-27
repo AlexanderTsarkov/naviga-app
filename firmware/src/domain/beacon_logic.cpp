@@ -168,16 +168,16 @@ bool BeaconLogic::on_rx(uint32_t now_ms,
       return false;
     }
     if (out_node_id)  { *out_node_id  = tail1.node_id; }
-    if (out_seq)      { *out_seq      = tail1.core_seq16; }
+    if (out_seq)      { *out_seq      = tail1.ref_core_seq16; }
     if (out_pos_valid){ *out_pos_valid = false; }
     if (out_type)     { *out_type     = PacketLogType::TAIL1; }
-    if (out_core_seq) { *out_core_seq = tail1.core_seq16; }
+    if (out_core_seq) { *out_core_seq = tail1.ref_core_seq16; }
 
-    // Apply Tail-1: core_seq16 match enforced inside apply_tail1.
+    // Apply Tail-1: ref_core_seq16 match enforced inside apply_tail1.
     // Return value indicates match (true) or silent drop (false).
     // Either way we return true to the caller — the frame was valid.
     table.apply_tail1(tail1.node_id,
-                      tail1.core_seq16,
+                      tail1.ref_core_seq16,
                       tail1.has_pos_flags, tail1.pos_flags,
                       tail1.has_sats, tail1.sats,
                       rssi_dbm,

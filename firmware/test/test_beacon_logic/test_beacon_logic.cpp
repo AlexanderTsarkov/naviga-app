@@ -310,11 +310,11 @@ void test_rx_payload_len_mismatch_dropped() {
 // ── Tail-1 codec: golden vectors ────────────────────────────────────────────
 
 void test_tail1_codec_base_round_trip() {
-  // Golden vector: nodeId=0xAABBCCDDEEFF, core_seq16=0x0042, no optional fields.
+  // Golden vector: nodeId=0xAABBCCDDEEFF, ref_core_seq16=0x0042, no optional fields.
   // Expected payload (9 B): 00 FF EE DD CC BB AA 42 00
   Tail1Fields fields{};
-  fields.node_id    = 0x0000AABBCCDDEEFFULL;
-  fields.core_seq16 = 0x0042;
+  fields.node_id         = 0x0000AABBCCDDEEFFULL;
+  fields.ref_core_seq16  = 0x0042;
 
   uint8_t frame[kTail1FrameMax] = {};
   const size_t written = encode_tail1_frame(fields, frame, sizeof(frame));
@@ -331,15 +331,15 @@ void test_tail1_codec_base_round_trip() {
   TEST_ASSERT_EQUAL_HEX8(0xCC, frame[6]);
   TEST_ASSERT_EQUAL_HEX8(0xBB, frame[7]);
   TEST_ASSERT_EQUAL_HEX8(0xAA, frame[8]);  // nodeId byte 5
-  TEST_ASSERT_EQUAL_HEX8(0x42, frame[9]);  // core_seq16 lo
-  TEST_ASSERT_EQUAL_HEX8(0x00, frame[10]); // core_seq16 hi
+  TEST_ASSERT_EQUAL_HEX8(0x42, frame[9]);  // ref_core_seq16 lo
+  TEST_ASSERT_EQUAL_HEX8(0x00, frame[10]); // ref_core_seq16 hi
 
   // Decode round-trip
   Tail1Fields decoded{};
   const auto err = naviga::protocol::decode_tail1_payload(frame + 2, 9, &decoded);
   TEST_ASSERT_EQUAL_INT(0, static_cast<int>(err));
   TEST_ASSERT_EQUAL_UINT64(fields.node_id, decoded.node_id);
-  TEST_ASSERT_EQUAL_UINT16(0x0042, decoded.core_seq16);
+  TEST_ASSERT_EQUAL_UINT16(0x0042, decoded.ref_core_seq16);
   TEST_ASSERT_FALSE(decoded.has_pos_flags);
   TEST_ASSERT_FALSE(decoded.has_sats);
 }
@@ -348,12 +348,12 @@ void test_tail1_codec_extended_round_trip() {
   // Golden vector: with posFlags=0x01, sats=8.
   // Expected payload (11 B): 00 FF EE DD CC BB AA 01 00 01 08
   Tail1Fields fields{};
-  fields.node_id       = 0x0000AABBCCDDEEFFULL;
-  fields.core_seq16    = 0x0001;
-  fields.has_pos_flags = true;
-  fields.pos_flags     = 0x01;
-  fields.has_sats      = true;
-  fields.sats          = 8;
+  fields.node_id          = 0x0000AABBCCDDEEFFULL;
+  fields.ref_core_seq16   = 0x0001;
+  fields.has_pos_flags    = true;
+  fields.pos_flags        = 0x01;
+  fields.has_sats         = true;
+  fields.sats             = 8;
 
   uint8_t frame[kTail1FrameMax] = {};
   const size_t written = encode_tail1_frame(fields, frame, sizeof(frame));
@@ -369,7 +369,7 @@ void test_tail1_codec_extended_round_trip() {
   const auto err = naviga::protocol::decode_tail1_payload(frame + 2, 11, &decoded);
   TEST_ASSERT_EQUAL_INT(0, static_cast<int>(err));
   TEST_ASSERT_EQUAL_UINT64(fields.node_id, decoded.node_id);
-  TEST_ASSERT_EQUAL_UINT16(0x0001, decoded.core_seq16);
+  TEST_ASSERT_EQUAL_UINT16(0x0001, decoded.ref_core_seq16);
   TEST_ASSERT_TRUE(decoded.has_pos_flags);
   TEST_ASSERT_EQUAL_HEX8(0x01, decoded.pos_flags);
   TEST_ASSERT_TRUE(decoded.has_sats);
@@ -481,11 +481,11 @@ void test_tail1_rx_apply_on_match() {
   seed_core(logic, table, node_id, core_seq, 1000);
   TEST_ASSERT_EQUAL_UINT32(1, table.size());
 
-  // Build Tail-1 frame with matching core_seq16=7, posFlags=0x01, sats=8.
+  // Build Tail-1 frame with matching ref_core_seq16=7, posFlags=0x01, sats=8.
   Tail1Fields t1{};
-  t1.node_id       = node_id;
-  t1.core_seq16    = core_seq;
-  t1.has_pos_flags = true;
+  t1.node_id          = node_id;
+  t1.ref_core_seq16   = core_seq;
+  t1.has_pos_flags    = true;
   t1.pos_flags     = 0x01;
   t1.has_sats      = true;
   t1.sats          = 8;
@@ -517,10 +517,10 @@ void test_tail1_rx_drop_on_mismatch() {
 
   seed_core(logic, table, node_id, core_seq, 1000);
 
-  // Build Tail-1 with stale core_seq16=5 (mismatch).
+  // Build Tail-1 with stale ref_core_seq16=5 (mismatch).
   Tail1Fields t1{};
-  t1.node_id       = node_id;
-  t1.core_seq16    = 5;  // != 7
+  t1.node_id          = node_id;
+  t1.ref_core_seq16   = 5;  // != 7
   t1.has_pos_flags = true;
   t1.pos_flags     = 0x01;
   t1.has_sats      = true;
@@ -543,8 +543,8 @@ void test_tail1_rx_drop_no_prior_core() {
   NodeTable table;
   // No Core seeded — node not in table.
   Tail1Fields t1{};
-  t1.node_id    = 0x0000AABBCCDDEEFFULL;
-  t1.core_seq16 = 1;
+  t1.node_id          = 0x0000AABBCCDDEEFFULL;
+  t1.ref_core_seq16   = 1;
   uint8_t frame[kTail1FrameMin] = {};
   encode_tail1_frame(t1, frame, sizeof(frame));
 
@@ -646,9 +646,9 @@ void test_tail_never_overwrites_position() {
 
   // Apply matching Tail-1.
   Tail1Fields t1{};
-  t1.node_id       = node_id;
-  t1.core_seq16    = core_seq;
-  t1.has_pos_flags = true;
+  t1.node_id          = node_id;
+  t1.ref_core_seq16   = core_seq;
+  t1.has_pos_flags    = true;
   t1.pos_flags     = 0x01;
   uint8_t t1_frame[kTail1FrameMax] = {};
   encode_tail1_frame(t1, t1_frame, sizeof(t1_frame));

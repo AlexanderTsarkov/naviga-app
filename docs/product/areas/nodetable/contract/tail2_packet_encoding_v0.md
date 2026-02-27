@@ -21,7 +21,7 @@ Every on-air BeaconTail-2 frame is preceded by a **2-byte frame header** defined
 
 ## 1) Role and invariants
 
-- **BeaconTail-2 is uncoupled slow state:** Unlike Tail-1, it carries no `core_seq16` and is not attached to a specific Core sample. It is applied unconditionally when received (version and nodeId valid).
+- **BeaconTail-2 is uncoupled slow state:** Unlike Tail-1, it carries no `ref_core_seq16` and is not attached to a specific Core sample. It is applied unconditionally when received (version and nodeId valid).
 - **Optional and loss-tolerant:** Tail-2 packets may be missing, reordered, or dropped. The product MUST remain fully functional (position tracking, liveness) with zero Tail-2 packets received.
 - **Never moves position:** Tail-2 MUST NOT update `lat`, `lon`, `alt`, or any position-derived field. Position is owned exclusively by BeaconCore.
 - **Two scheduling classes:** See [field_cadence_v0.md §2.2](../policy/field_cadence_v0.md) — Operational (on change + at forced Core) and Informative (on change + default 10 min). `maxSilence10s` is Informative and MUST NOT be included on every operational Tail-2 send unless its value changed.
@@ -69,7 +69,7 @@ Appended in order after the minimum payload. Fields may be omitted from the end.
 
 ### 4.1 Acceptance (no CoreRef)
 
-BeaconTail-2 has **no** `core_seq16` linkage. On receiving a BeaconTail-2 for node `N`:
+BeaconTail-2 has **no** `ref_core_seq16` linkage. On receiving a BeaconTail-2 for node `N`:
 
 1. **Version check:** If `payloadVersion != 0x00` → drop and log; do not apply.
 2. **Length check:** If `payload_len < 7` → drop packet.
@@ -166,7 +166,7 @@ Tail-2 MUST NOT update `lat`, `lon`, `alt`, or any position-derived field, regar
 ## 8) Related
 
 - **Beacon encoding hub (Core/Tail overview):** [beacon_payload_encoding_v0.md](beacon_payload_encoding_v0.md) — §3 packet types table; §4.1 BeaconCore layout.
-- **BeaconTail-1:** [tail1_packet_encoding_v0.md](tail1_packet_encoding_v0.md) — sample-attached Tail; CoreRef-lite via core_seq16.
+- **BeaconTail-1:** [tail1_packet_encoding_v0.md](tail1_packet_encoding_v0.md) — sample-attached Tail; CoreRef-lite via `ref_core_seq16`.
 - **Alive packet:** [alive_packet_encoding_v0.md](alive_packet_encoding_v0.md) — alive-bearing, non-position; no-fix liveness.
 - **RX semantics (Tail-2 apply rules):** [../policy/rx_semantics_v0.md](../policy/rx_semantics_v0.md) — §2 BeaconTail-2 acceptance.
 - **Field cadence (Tail-2 scheduling classes):** [../policy/field_cadence_v0.md](../policy/field_cadence_v0.md) — §2.2 Operational vs Informative; Tier C fields.

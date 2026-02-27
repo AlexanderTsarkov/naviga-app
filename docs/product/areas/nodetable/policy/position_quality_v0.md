@@ -16,7 +16,7 @@ In v0, the **only** position-quality fields sent on the wire are in **Tail-1** (
 | **sats**     | Tail-1 optional | Satellite count when position is valid; 0 = not present. |
 
 - **Source:** [beacon_payload_encoding_v0](../contract/beacon_payload_encoding_v0.md) §4.2 Tail-1 optional block.
-- Tail-1 is **attached to Core sample** (same `core_seq16`); position quality is therefore sample-scoped.
+- Tail-1 is **attached to Core sample** (same `ref_core_seq16`); position quality is therefore sample-scoped.
 
 No other position-quality metrics (e.g. fixType, hdop, accuracy, age) are encoded in the beacon in v0. They may be introduced in a later tier/cadence or Tail-2 if needed.
 
