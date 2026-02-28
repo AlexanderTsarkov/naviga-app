@@ -11,6 +11,18 @@
 
 This report is the PR0 research map for the Tail-2 split. Its sole purpose is to inventory the current state of canon docs, WIP docs, and firmware touchpoints so that the follow-up issues (#314–#317) have exact file paths and change descriptions. No doc edits and no code changes are made here. The split introduces `msg_type=0x05` (`Node_OOTB_Informative` / legacy wire: `BEACON_INFO`) as an independent Informative-only packet, and narrows `msg_type=0x04` (`Node_OOTB_Operational` / legacy: `BEACON_TAIL2`) to Operational fields only.
 
+### Protocol invariants (agreed in #318)
+
+These invariants are fixed and must be reflected in all follow-up contracts and firmware:
+
+- **Frame anatomy:** `[2-byte header] [Common(always)] [Useful payload]`
+- **Common(always) for ALL `Node_*` packets:** `payloadVersion` (1 B) + `nodeId48` (6 B) + `seq16` (2 B) = **9 bytes minimum payload**.
+- **`seq16` is one global per-node counter** shared across ALL `Node_*` packet types. It is not per-type. Every packet a node sends — regardless of `msg_type` — increments the same counter.
+- **Dedupe key:** `(nodeId48, seq16)`. Receivers MUST deduplicate on this pair only; dedupe MUST NOT inspect payload type or content.
+- **`Node_OOTB_Core_Tail` (`0x03`) carries TWO seq fields:**
+  - `seq16` in Common — its own unique packet id (increments the global counter).
+  - `ref_core_seq16` in payload — references the `seq16` of the `Node_OOTB_Core_Pos` packet it supplements. These are distinct fields; `seq16 ≠ ref_core_seq16`.
+
 ---
 
 ## 2) Canonical Alias Table (0x01–0x05)
@@ -43,19 +55,20 @@ Current table lists `0x01`–`0x04` as defined; `0x05–0x7F` as `(reserved) →
 **File:** `docs/product/areas/nodetable/contract/tail2_packet_encoding_v0.md`
 **Sections:** `§1 Role and invariants` (scheduling classes reference), `§3 Byte layout (v0)`
 
-The contract defines a single `msg_type=0x04` packet carrying all fields — including `maxSilence10s` at byte offset 7 — and acknowledges the two scheduling classes via a cross-reference to `field_cadence_v0.md §2.2`. The byte layout is:
+The contract defines a single `msg_type=0x04` packet carrying all fields — including `maxSilence10s` at byte offset 7 — and acknowledges the two scheduling classes via a cross-reference to `field_cadence_v0.md §2.2`. The current byte layout (no `seq16` in Common today):
 
-| Offset | Field | Class |
-|---|---|---|
-| 0 | `payloadVersion` | — |
-| 1–6 | `nodeId48` | — |
-| 7 | `maxSilence10s` | **Informative** |
-| 8 | `batteryPercent` | Operational |
-| 9–10 | `hwProfileId` | Operational |
-| 11–12 | `fwVersionId` | Operational |
-| 13–16 | `uptimeSec` | Operational |
+| Offset | Field | Current class | Target |
+|---|---|---|---|
+| 0 | `payloadVersion` | — | Common (both packets) |
+| 1–6 | `nodeId48` | — | Common (both packets) |
+| *(absent)* | `seq16` | — | **Common (new, both packets)** |
+| 7 | `maxSilence10s` | Informative | → **`0x05`** |
+| 8 | `batteryPercent` | Operational | stays `0x04` |
+| 9–10 | `hwProfileId` | *(treated Operational)* | → **`0x05`** (Informative: static identity) |
+| 11–12 | `fwVersionId` | *(treated Operational)* | → **`0x05`** (Informative: static identity) |
+| 13–16 | `uptimeSec` | Operational | stays `0x04` |
 
-**Gap:** After the split, `maxSilence10s` moves to `0x05`; the `0x04` layout must be updated to remove it. A new contract doc for `0x05` must be created.
+**Gap:** `seq16` is absent from all current contracts; must be added to Common prefix for all `Node_*` packets. `maxSilence10s`, `hwProfileId`, and `fwVersionId` all move to `0x05`. A new contract doc for `0x05` must be created.
 
 ### 3.3 Field Cadence Policy
 
@@ -174,54 +187,75 @@ After the split, `test_tail2_codec_with_max_silence_round_trip` and `test_tail2_
 
 ## 6) Target State
 
+All `Node_*` packets share the same Common prefix (see §1 invariants). Offsets below are payload offsets (after the 2-byte frame header).
+
 ### Node_OOTB_Operational (`msg_type=0x04`, legacy `BEACON_TAIL2`)
 
-**Carries:** `payloadVersion` + `nodeId48` + Operational optional fields only.
+**Semantic:** Dynamic runtime state that changes during normal node operation.
 
-| Offset | Field | Encoding |
-|---|---|---|
-| 0 | `payloadVersion` | `0x00` |
-| 1–6 | `nodeId48` | uint48 LE |
-| 7 | `batteryPercent` | uint8; `0xFF` = absent |
-| 8–9 | `hwProfileId` | uint16 LE; `0xFFFF` = absent |
-| 10–11 | `fwVersionId` | uint16 LE; `0xFFFF` = absent |
-| 12–15 | `uptimeSec` | uint32 LE; `0xFFFFFFFF` = absent |
+| Offset | Field | Section | Encoding |
+|---|---|---|---|
+| 0 | `payloadVersion` | Common | `0x00` |
+| 1–6 | `nodeId48` | Common | uint48 LE |
+| 7–8 | `seq16` | Common | uint16 LE; global per-node counter |
+| 9 | `batteryPercent` | Useful payload | uint8; `0xFF` = absent |
+| 10–13 | `uptimeSec` | Useful payload | uint32 LE; `0xFFFFFFFF` = absent |
+| *(future)* | `txPowerStep` | Useful payload | planned; not in canon yet |
 
-Min payload: 7 B. Max payload: 16 B. On-air: 9–18 B. Fits LongDist budget (24 B).
+Min payload: 9 B (Common only). On-air min: 11 B. Fits LongDist budget (24 B).
 
 **Cadence:** On Operational field change + at forced Core (every N Core beacons; N implementation-defined).
 
 ### Node_OOTB_Informative (`msg_type=0x05`, legacy `BEACON_INFO`)
 
-**Carries:** `payloadVersion` + `nodeId48` + Informative optional fields only.
+**Semantic:** Static or user-configured fields that rarely change (device identity, config).
 
-| Offset | Field | Encoding |
-|---|---|---|
-| 0 | `payloadVersion` | `0x00` |
-| 1–6 | `nodeId48` | uint48 LE |
-| 7 | `maxSilence10s` | uint8; `0x00` = absent; unit = 10 s |
+| Offset | Field | Section | Encoding |
+|---|---|---|---|
+| 0 | `payloadVersion` | Common | `0x00` |
+| 1–6 | `nodeId48` | Common | uint48 LE |
+| 7–8 | `seq16` | Common | uint16 LE; global per-node counter |
+| 9 | `maxSilence10s` | Useful payload | uint8; `0x00` = absent; unit = 10 s |
+| 10–11 | `hwProfileId` | Useful payload | uint16 LE; `0xFFFF` = absent |
+| 12–13 | `fwVersionId` | Useful payload | uint16 LE; `0xFFFF` = absent |
 
-Min payload: 7 B. Current max payload: 8 B (extensible). On-air: 9–10 B. Fits all profile budgets.
+Min payload: 9 B (Common only). On-air min: 11 B. Fits all profile budgets.
 
-**Cadence:** On `maxSilence10s` change + fixed slow cadence (default 10 min). MUST NOT be sent on every Operational send.
+**Cadence:** On static/config field change + fixed slow cadence (default 10 min). MUST NOT be sent on every Operational send.
 
-**Loss-tolerance invariant (inherited):** Product MUST function correctly with zero `0x05` packets received. `0x05` absence is the normal operating condition.
+**Loss-tolerance invariant (inherited):** Product MUST function correctly with zero `0x05` packets received.
+
+### Note on Node_OOTB_Core_Tail (`msg_type=0x03`)
+
+`Node_OOTB_Core_Tail` carries **two** seq fields:
+- `seq16` in Common — its own unique packet id; increments the global per-node counter.
+- `ref_core_seq16` in Useful payload — references the `seq16` of the `Node_OOTB_Core_Pos` packet it supplements. Receiver applies Tail-1 fields only if `ref_core_seq16 == lastCoreSeq` for that node.
 
 ---
 
-## 7) Field Migration Table
+## 7) Field Migration Tables
 
-| Field | Current packet | Target packet | Class | Notes |
+> Current offsets in `tail2_packet_encoding_v0.md` are conditional (variable-length payload, no `seq16` in Common). Target offsets are fixed after the split adds `seq16` to Common and separates the two packets. All codec constants and golden vectors must be regenerated.
+
+### 7A) Tail-2 → Operational / Informative split
+
+| Field | Current packet | Target packet | Class | Semantic |
 |---|---|---|---|---|
-| `payloadVersion` | `0x04` | Both `0x04` and `0x05` | — | First byte of every payload |
-| `nodeId48` | `0x04` | Both `0x04` and `0x05` | — | Bytes 1–6 of every payload |
-| `maxSilence10s` | `0x04` (byte 7) | **`0x05`** (byte 7) | **Informative** | Moves entirely to `0x05` |
-| `batteryPercent` | `0x04` (byte 8) | `0x04` (byte 7) | Operational | Offset shifts by −1 after `maxSilence10s` removed |
-| `hwProfileId` | `0x04` (bytes 9–10) | `0x04` (bytes 8–9) | Operational | Offset shifts by −1 |
-| `fwVersionId` | `0x04` (bytes 11–12) | `0x04` (bytes 10–11) | Operational | Offset shifts by −1 |
-| `uptimeSec` | `0x04` (bytes 13–16) | `0x04` (bytes 12–15) | Operational | Offset shifts by −1 |
+| `payloadVersion` | `0x04` | Both `0x04` and `0x05` | Common | Payload format version |
+| `nodeId48` | `0x04` | Both `0x04` and `0x05` | Common | Node identity |
+| `seq16` | *(absent today)* | Both `0x04` and `0x05` | **Common (new)** | Global per-node counter; dedupe key with `nodeId48` |
+| `batteryPercent` | `0x04` | `0x04` | **Operational** | Dynamic runtime: changes during operation |
+| `uptimeSec` | `0x04` | `0x04` | **Operational** | Dynamic runtime: changes during operation |
+| `maxSilence10s` | `0x04` | **`0x05`** | **Informative** | Static/config: user-set liveness hint |
+| `hwProfileId` | `0x04` | **`0x05`** | **Informative** | Static: hardware identity, set at manufacture |
+| `fwVersionId` | `0x04` | **`0x05`** | **Informative** | Static: firmware version, changes only on OTA |
 
-> **Note on offset shift:** Removing `maxSilence10s` from `0x04` shifts all subsequent optional field offsets by −1. The `0x04` codec (`tail2_codec.h`) and all offset constants (`kTail2OffsetBattery`, etc.) must be updated. Existing golden vectors for `0x04` will change.
+### 7B) Core_Tail sequencing invariant
+
+| Field | Section | Source | Meaning |
+|---|---|---|---|
+| `seq16` | Common | Global per-node counter | Unique id for this `Node_OOTB_Core_Tail` packet; used for dedupe |
+| `ref_core_seq16` | Useful payload | Copied from `Node_OOTB_Core_Pos`.`seq16` | Binds this Tail-1 to the Core_Pos packet it supplements; receiver drops if mismatch |
 
 ---
 
@@ -229,43 +263,45 @@ Min payload: 7 B. Current max payload: 8 B (extensible). On-air: 9–10 B. Fits 
 
 ### #314 — Docs changes
 
-- `docs/protocols/ootb_radio_v0.md §3.2` — Add `0x05` (`BEACON_INFO`) row to registry; remove from reserved range.
-- `docs/product/areas/nodetable/contract/tail2_packet_encoding_v0.md §1, §3` — Remove `maxSilence10s` from layout; update role description to "Operational-only"; update byte offsets for remaining fields.
-- **New file** `docs/product/areas/nodetable/contract/tail2_info_packet_encoding_v0.md` — Full `0x05` contract: byte layout, `maxSilence10s`, RX rules, loss-tolerance invariant, examples.
-- `docs/product/areas/nodetable/policy/field_cadence_v0.md §2.2` — Replace "two scheduling classes in one packet" with "two separate packets"; update field table.
-- `docs/product/areas/nodetable/contract/beacon_payload_encoding_v0.md §3, §4.3` — Add `0x05` row to packet-types table; update §4.3 to Operational-only; add new §4.4 for `0x05`.
-- `docs/product/areas/nodetable/policy/nodetable_fields_inventory_v0.md §2` — Update `maxSilence10s` row: packet placement → `Node_OOTB_Informative (0x05)`.
-- `docs/product/areas/nodetable/policy/rx_semantics_v0.md` — Add `0x05` acceptance rules (parallel to existing `0x04` rules).
+- `docs/protocols/ootb_radio_v0.md §3.2` — Add `0x05` (`BEACON_INFO`) row to registry; remove from reserved range; add naming memo with `<Originator>_<Scope>_<Intent>` alias table.
+- `docs/protocols/ootb_radio_v0.md` (or new `naming_aliases_v0.md`) — Document Common(always) anatomy (`payloadVersion` + `nodeId48` + `seq16`) as a cross-packet invariant for all `Node_*` types.
+- `docs/product/areas/nodetable/contract/tail2_packet_encoding_v0.md §1, §3` — Add `seq16` to Common prefix; remove `maxSilence10s`, `hwProfileId`, `fwVersionId` from layout (move to `0x05`); keep `batteryPercent` and `uptimeSec` as Operational; update role description to "Operational-only (dynamic runtime state)".
+- **New file** `docs/product/areas/nodetable/contract/tail2_info_packet_encoding_v0.md` — Full `0x05` contract: Common prefix (`payloadVersion` + `nodeId48` + `seq16`) + Informative payload (`maxSilence10s`, `hwProfileId`, `fwVersionId`); RX rules; loss-tolerance invariant; examples.
+- `docs/product/areas/nodetable/contract/tail1_packet_encoding_v0.md §3` — Explicitly document that `seq16` (Common) and `ref_core_seq16` (payload) are distinct fields; clarify `seq16 ≠ ref_core_seq16`.
+- `docs/product/areas/nodetable/policy/field_cadence_v0.md §2.2` — Replace "two scheduling classes in one packet" with "two separate packets"; update field table with corrected Operational/Informative split (`hwProfileId`/`fwVersionId` → Informative).
+- `docs/product/areas/nodetable/contract/beacon_payload_encoding_v0.md §3, §4.3` — Add `seq16` to all Common prefix descriptions; add `0x05` row to packet-types table; update §4.3 to Operational-only; add new §4.4 for `0x05`.
+- `docs/product/areas/nodetable/policy/nodetable_fields_inventory_v0.md §2` — Update `maxSilence10s`, `hwProfileId`, `fwVersionId` rows: packet placement → `Node_OOTB_Informative (0x05)`.
+- `docs/product/areas/nodetable/policy/rx_semantics_v0.md` — Add `0x05` acceptance rules; add dedupe rule: `(nodeId48, seq16)` only, payload-agnostic.
 - `docs/product/areas/nodetable/policy/activity_state_v0.md` — Update `maxSilence10s` source reference from `0x04` to `0x05`.
 - `docs/product/areas/nodetable/contract/alive_packet_encoding_v0.md §8 Related` — Update `maxSilence10s` source to `0x05`.
-- `docs/product/areas/nodetable/index.md` — Add `0x05` to packet family summary.
-- `docs/product/areas/domain/policy/role_profiles_policy_v0.md` — Update `maxSilence10s` source to `0x05`.
+- `docs/product/areas/nodetable/index.md` — Add `0x05` to packet family summary; note Common(always) anatomy.
+- `docs/product/areas/domain/policy/role_profiles_policy_v0.md` — Update `maxSilence10s`, `hwProfileId`, `fwVersionId` source to `0x05`.
 - `docs/product/wip/spec_map_v0.md` — Add inventory row for new `tail2_info_packet_encoding_v0.md`.
-- **Naming memo** — Add canonical alias table (`0x01`–`0x05`) to `ootb_radio_v0.md §3.2` or as a standalone `docs/product/areas/nodetable/contract/naming_aliases_v0.md`.
 
 ### #315 — Firmware changes (RX + dispatch)
 
 - `firmware/protocol/packet_header.h` (line 42) — Add `BeaconInfo = 0x05` to `MsgType` enum.
 - `firmware/protocol/packet_header.h` (line 97) — Raise drop guard upper bound from `BeaconTail2` to `BeaconInfo`.
-- **New file** `firmware/protocol/info_codec.h` — `InfoFields` struct (`node_id`, `has_max_silence`, `max_silence_10s`), `encode_info_frame`, `decode_info_payload`, offset constants, `InfoDecodeError` enum.
+- `firmware/protocol/tail2_codec.h` — Add `seq16` to `Tail2Fields` struct and Common prefix encoding/decoding; remove `has_max_silence`/`max_silence_10s`, `has_hw_profile`/`hw_profile_id`, `has_fw_version`/`fw_version_id` (all move to `0x05`); update all offset constants; regenerate golden vectors.
+- **New file** `firmware/protocol/info_codec.h` — `InfoFields` struct (Common: `node_id`, `seq16`; payload: `has_max_silence`/`max_silence_10s`, `has_hw_profile`/`hw_profile_id`, `has_fw_version`/`fw_version_id`); `encode_info_frame`; `decode_info_payload`; `InfoDecodeError` enum.
 - `firmware/src/domain/beacon_logic.h` (line 16) — Add `PacketLogType::INFO` to enum.
 - `firmware/src/domain/beacon_logic.cpp` (after line 209) — Add `MsgType::BeaconInfo` case in `on_rx`; call `decode_info_payload` + `table.apply_info(...)`.
-- `firmware/src/domain/node_table.h` (line 120) — Remove `has_max_silence`/`max_silence_10s` from `apply_tail2` signature; add new `apply_info(node_id, has_max_silence, max_silence_10s, rssi_dbm, now_ms)` declaration.
-- `firmware/src/domain/node_table.cpp` — Implement `apply_info`; update `apply_tail2` to remove max_silence handling.
+- `firmware/src/domain/node_table.h` (line 120) — Remove `has_max_silence`/`max_silence_10s`, `has_hw_profile`/`hw_profile_id`, `has_fw_version`/`fw_version_id` from `apply_tail2`; add `apply_info(node_id, seq16, has_max_silence, max_silence_10s, has_hw_profile, hw_profile_id, has_fw_version, fw_version_id, rssi_dbm, now_ms)`.
+- `firmware/src/domain/node_table.cpp` — Implement `apply_info`; update `apply_tail2` to remove moved fields.
 - `firmware/src/app/m1_runtime.cpp` (line 22) — Add `PacketLogType::INFO → "INFO"` to `packet_log_type_str()`; update `is_tail_type()` if needed.
-- `firmware/protocol/tail2_codec.h` — Update byte offsets (`kTail2OffsetBattery` → 7, `kTail2OffsetHwProfile` → 8, etc.) after removing `maxSilence10s` from `0x04` layout.
 
 ### #316 — TX policy / queue fairness
 
 - `firmware/src/domain/beacon_logic.h` — Add `build_tail2_tx` and `build_info_tx` method declarations; add replaced/expired counter member.
-- `firmware/src/domain/beacon_logic.cpp` — Implement `build_tail2_tx` (Operational: on-change + forced Core) and `build_info_tx` (Informative: on-change + 10 min cadence); neither path gates on the other.
+- `firmware/src/domain/beacon_logic.cpp` — Implement `build_tail2_tx` (Operational: `batteryPercent`/`uptimeSec` on-change + forced Core; includes `seq16` in Common) and `build_info_tx` (Informative: `maxSilence10s`/`hwProfileId`/`fwVersionId` on-change + 10 min cadence; includes `seq16` in Common); neither path gates on the other.
 - `firmware/src/app/m1_runtime.cpp` — Wire `build_tail2_tx` and `build_info_tx` into the TX loop.
 
 ### #317 — Tests / evidence
 
-- `firmware/test/test_beacon_logic/test_beacon_logic.cpp` — Update `test_tail2_codec_with_max_silence_round_trip` and `test_tail2_rx_applies_max_silence` (maxSilence10s no longer in `0x04`); add new golden vectors for `0x04` (updated offsets) and `0x05`.
-- **New test** `firmware/test/test_beacon_logic/test_info_codec.cpp` (or inline) — `test_info_codec_base_round_trip`, `test_info_codec_with_max_silence_round_trip`, `test_info_decode_bad_version_dropped`, `test_info_rx_applies_max_silence`.
-- **TX independence test** — Verify `0x04` TX never includes `maxSilence10s`; `0x05` TX fires independently.
+- `firmware/test/test_beacon_logic/test_beacon_logic.cpp` — Update `test_tail2_codec_with_max_silence_round_trip` and `test_tail2_rx_applies_max_silence` (`maxSilence10s`, `hwProfileId`, `fwVersionId` no longer in `0x04`); regenerate golden vectors for `0x04` (new Common prefix with `seq16`; Operational fields only).
+- **New tests** — `test_info_codec_base_round_trip`, `test_info_codec_with_max_silence_round_trip`, `test_info_decode_bad_version_dropped`, `test_info_rx_applies_max_silence`, `test_info_rx_applies_hw_profile`, `test_info_rx_applies_fw_version`.
+- **Dedupe test** — Verify receiver deduplicates on `(nodeId48, seq16)` regardless of `msg_type`; same `seq16` from `0x04` and `0x05` must not be treated as the same packet (different `msg_type` → different packet, but counter is shared).
+- **TX independence test** — Verify `0x04` TX never includes Informative fields; `0x05` TX fires independently.
 - **Cadence/fairness test** — Verify replaced/expired counter increments under simulated congestion.
 
 ---
