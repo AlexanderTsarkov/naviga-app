@@ -4,7 +4,7 @@
 
 **Work Area:** Product Specs WIP · **Parent:** [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 
-This policy defines how the receiver interprets and applies incoming packets (BeaconCore, BeaconTail-1, BeaconTail-2, Alive) for NodeTable updates: accepted vs duplicate vs out-of-order, seq16 wrap handling, and rules for lastRxAt, link metrics, Activity, and position. Contract truth is [beacon_payload_encoding_v0](../contract/beacon_payload_encoding_v0.md) and [alive_packet_encoding_v0](../contract/alive_packet_encoding_v0.md); this doc is the receiver behaviour policy.
+This policy defines how the receiver interprets and applies incoming packets (`Node_OOTB_Core_Pos`, `Node_OOTB_Core_Tail`, `Node_OOTB_Operational`, `Node_OOTB_Informative`, `Node_OOTB_I_Am_Alive`) for NodeTable updates: accepted vs duplicate vs out-of-order, seq16 wrap handling, and rules for lastRxAt, link metrics, Activity, and position. Contract truth is [beacon_payload_encoding_v0](../contract/beacon_payload_encoding_v0.md), [alive_packet_encoding_v0](../contract/alive_packet_encoding_v0.md), [tail2_packet_encoding_v0](../contract/tail2_packet_encoding_v0.md), and [info_packet_encoding_v0](../contract/info_packet_encoding_v0.md); this doc is the receiver behaviour policy.
 
 ---
 
@@ -19,24 +19,22 @@ This policy defines how the receiver interprets and applies incoming packets (Be
 
 **seq16 scope — sender counter:** The sender maintains **one seq16 counter per node**, incremented on every transmitted packet regardless of type (BeaconCore, BeaconAlive, and Tails when implemented). This counter is shared across all packet types during uptime.
 
-**seq16 scope — payload presence:** Not every packet type embeds the current counter value:
-- **BeaconCore** and **BeaconAlive** embed the current counter value as `seq16` in their payload (offset 7). Receivers use this for ordering, duplicate detection, and wrap handling.
-- **BeaconTail-1** does **not** embed the current counter value. It embeds `ref_core_seq16` — a back-reference to the `seq16` of the specific BeaconCore sample it qualifies. This is not a freshness counter; it is a Core linkage key.
-- **BeaconTail-2** carries no seq-like field. It is applied unconditionally (no CoreRef).
+**seq16 scope — payload presence:** `seq16` is part of the **Common prefix** of every `Node_*` packet (see [ootb_radio_v0.md §3.0](../../../../protocols/ootb_radio_v0.md#30-packet-anatomy--invariants)). All packet types embed the current counter value as `seq16` at payload bytes 7–8. **Dedupe key: `(nodeId48, seq16)` — payload-agnostic.** Exception: `Node_OOTB_Core_Tail` additionally carries `ref_core_seq16` in its Useful payload (bytes 9–10) as a Core linkage key; this is distinct from `seq16`.
 
 **Duplicate / OOO handling per packet type:**
-- **BeaconCore / BeaconAlive:** Use the seq16 wrap rule (modulo subtraction) for duplicate and OOO detection. The seen seq16 set is per-node global across Core and Alive.
-- **BeaconTail-1:** Duplicate and OOO detection is handled by the `ref_core_seq16 == lastCoreSeq` gate. Two Tail-1 packets referencing the same Core are idempotent (same posFlags/sats for the same sample). A stale Tail-1 (referencing an old Core) is dropped by the gate.
-- **BeaconTail-2:** No deduplication; applied unconditionally when version and nodeId are valid.
+- **`Node_OOTB_Core_Pos` / `Node_OOTB_I_Am_Alive`:** Use the seq16 wrap rule (modulo subtraction) for duplicate and OOO detection. The seen seq16 set is per-node global across all packet types.
+- **`Node_OOTB_Core_Tail`:** Primary dedupe is `(nodeId48, seq16)` from Common. Payload application is additionally gated by `ref_core_seq16 == lastCoreSeq`. Two Core_Tail packets with the same `ref_core_seq16` are idempotent. A stale Core_Tail (referencing an old Core) is dropped by the gate.
+- **`Node_OOTB_Operational` / `Node_OOTB_Informative`:** Dedupe by `(nodeId48, seq16)`. Applied unconditionally when version and nodeId are valid (no CoreRef).
 
 ---
 
 ## 2) Which packets update NodeTable
 
-- **BeaconCore:** Accepted if version and nodeId valid. Updates lastRxAt, lastCoreSeq, position (lat/lon when not sentinel), seq16. Link metrics (rssiLast, snrLast, etc.) updated on acceptance.
-- **BeaconTail-1:** Applied **only if** `ref_core_seq16` equals the last Core seq16 received from that node (**CoreRef-lite**); otherwise **MUST** ignore for payload. When applied: updates lastRxAt; may update posFlags/sats and other attached fields for that Core sample. Link metrics updated on acceptance. **Tail-1 MUST NOT revoke or invalidate position already received in BeaconCore** for that node (see §4).
-- **BeaconTail-2:** No CoreRef. Accepted if version and nodeId valid. Updates lastRxAt and any carried Tail-2 fields (maxSilence, batteryPercent, etc.). Link metrics updated on acceptance.
-- **Alive:** Accepted if version and nodeId valid. Updates lastRxAt and seq16 for ordering (same per-node counter as Core/Tails; §1). **Does not** carry or update position. Link metrics updated on acceptance. **Alive satisfies the "alive within maxSilence window"** for Activity derivation when the node has no fix and therefore does not send BeaconCore (see [activity_state_v0](activity_state_v0.md), [field_cadence_v0](field_cadence_v0.md)).
+- **`Node_OOTB_Core_Pos`:** Accepted if version and nodeId valid. Updates lastRxAt, lastCoreSeq, position (lat/lon), seq16. Link metrics updated on acceptance.
+- **`Node_OOTB_Core_Tail`:** Applied **only if** `ref_core_seq16` equals the last Core seq16 received from that node (**CoreRef-lite**); otherwise **MUST** ignore for payload. When applied: updates lastRxAt; may update posFlags/sats for that Core sample. Link metrics updated on acceptance. **MUST NOT revoke or invalidate position already received in Core_Pos** (see §4).
+- **`Node_OOTB_Operational`:** No CoreRef. Accepted if version and nodeId valid. Updates lastRxAt and any carried Operational fields (`batteryPercent`, `uptimeSec`). Link metrics updated on acceptance.
+- **`Node_OOTB_Informative`:** No CoreRef. Accepted if version and nodeId valid. Updates lastRxAt and any carried Informative fields (`maxSilence10s`, `hwProfileId`, `fwVersionId`). Link metrics updated on acceptance.
+- **`Node_OOTB_I_Am_Alive`:** Accepted if version and nodeId valid. Updates lastRxAt and seq16 for ordering (same per-node counter as all `Node_*` packets; §1). **Does not** carry or update position. Link metrics updated on acceptance. **Alive satisfies the "alive within maxSilence window"** for Activity derivation when the node has no fix (see [activity_state_v0](activity_state_v0.md), [field_cadence_v0](field_cadence_v0.md)).
 
 ---
 

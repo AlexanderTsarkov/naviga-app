@@ -19,25 +19,29 @@ Every on-air BeaconTail-1 frame is preceded by a **2-byte frame header** defined
 
 ---
 
-## 0.1) Payload structure: Common prefix vs Functional payload
+## 0.1) Payload structure: Common prefix vs Useful payload
 
-Every beacon-family payload (BeaconCore, BeaconAlive, BeaconTail-1, BeaconTail-2) begins with the same **7-byte Common prefix**:
+Every `Node_*` payload begins with the same **9-byte Common prefix** (see [ootb_radio_v0.md §3.0](../../../../protocols/ootb_radio_v0.md#30-packet-anatomy--invariants)):
 
 | Offset | Field | Bytes | Notes |
 |--------|-------|-------|-------|
 | 0 | `payloadVersion` | 1 | Version byte; determines entire payload layout. |
 | 1–6 | `nodeId48` | 6 | NodeID48 (6-byte LE MAC48); sender identity. |
+| 7–8 | `seq16` | 2 | Global per-node counter (uint16 LE). One counter shared across all `Node_*` packet types. Dedupe key: `(nodeId48, seq16)`. |
 
-After the Common prefix, each packet type has its own **Functional payload**:
+After the Common prefix, each packet type has its own **Useful payload** (bytes 9+):
 
-| Packet type | Functional payload (bytes 7+) |
-|-------------|-------------------------------|
-| BeaconCore | `seq16(2)` (per-frame freshness counter) + `lat_u24(3)` + `lon_u24(3)` |
-| BeaconAlive | `seq16(2)` (per-frame freshness counter) + optional `aliveStatus(1)` |
-| **BeaconTail-1** | **`ref_core_seq16(2)`** (Core linkage key — see below) + optional `posFlags(1)` + optional `sats(1)` |
-| BeaconTail-2 | optional fields only (no seq-like field) |
+| Canonical alias | Useful payload (bytes 9+) |
+|---|---|
+| `Node_OOTB_Core_Pos` | `lat_u24(3)` + `lon_u24(3)` |
+| `Node_OOTB_I_Am_Alive` | optional `aliveStatus(1)` |
+| **`Node_OOTB_Core_Tail`** | **`ref_core_seq16(2)`** (Core linkage key) + optional `posFlags(1)` + optional `sats(1)` |
+| `Node_OOTB_Operational` | optional `batteryPercent(1)`, `uptimeSec(4)` |
+| `Node_OOTB_Informative` | optional `maxSilence10s(1)`, `hwProfileId(2)`, `fwVersionId(2)` |
 
-**Key distinction for BeaconTail-1:** The field at offset 7 is **`ref_core_seq16`**, not a per-frame freshness counter. It is a **back-reference** to the `seq16` of the specific BeaconCore sample this Tail-1 qualifies. It is a Core linkage key, not a freshness marker. BeaconTail-1 does **not** carry the sender's current seq16 counter value.
+**Key distinction for `Node_OOTB_Core_Tail`:** This packet carries **two** seq fields:
+- `seq16` in Common (bytes 7–8) — the sender's own global counter value for **this** packet; its unique packet id; used for dedupe.
+- `ref_core_seq16` in Useful payload (bytes 9–10) — a **back-reference** to the `seq16` of the specific `Node_OOTB_Core_Pos` sample this Tail qualifies. This is a Core linkage key, not the sender's current counter. `seq16 ≠ ref_core_seq16`.
 
 ---
 
@@ -52,9 +56,9 @@ After the Common prefix, each packet type has its own **Functional payload**:
 
 ## 2) Packet type and naming
 
-- **Message type name:** **BeaconTail-1** (or **Tail-1** in policy/cadence docs).
+- **Canonical alias:** `Node_OOTB_Core_Tail`. Legacy wire enum: `BEACON_TAIL1`. See [ootb_radio_v0.md §3.0a](../../../../protocols/ootb_radio_v0.md#30a-canonical-packet-naming) for the full alias table.
 - **`msg_type` value:** `0x03` (`BEACON_TAIL1`) in the 2-byte frame header. See [ootb_radio_v0.md §3.2](../../../../protocols/ootb_radio_v0.md#32-msg_type-registry-v0) for the full registry.
-- **Distinct packet family:** `msg_type = 0x03` is dispatched independently from BeaconCore (`0x01`), BeaconAlive (`0x02`), and BeaconTail-2 (`0x04`).
+- **Distinct packet family:** `msg_type = 0x03` is dispatched independently from `Node_OOTB_Core_Pos` (`0x01`), `Node_OOTB_I_Am_Alive` (`0x02`), `Node_OOTB_Operational` (`0x04`), and `Node_OOTB_Informative` (`0x05`).
 
 ---
 
@@ -64,13 +68,16 @@ After the Common prefix, each packet type has its own **Functional payload**:
 
 ### 3.1 Minimum payload (MUST)
 
-| Offset | Field | Type | Bytes | Encoding |
-|--------|-------|------|-------|----------|
-| 0 | `payloadVersion` | uint8 | 1 | `0x00` = v0. Determines the entire payload layout. Unknown value → discard. |
-| 1 | `nodeId` | uint48 LE | 6 | NodeID48 (6-byte LE MAC48); same semantics as BeaconCore. See [nodeid_policy_v0](../../../identity/nodeid_policy_v0.md). |
-| 7 | `ref_core_seq16` | uint16 LE | 2 | **Core linkage key:** the `seq16` of the BeaconCore sample this Tail-1 qualifies. This is a back-reference, not a per-frame freshness counter. Little-endian. MUST match `last_core_seq16` stored for this node on RX (see §4). |
+The first 9 bytes are the **Common prefix** shared by all `Node_*` packets. Bytes 9–10 are the Useful payload minimum for `Node_OOTB_Core_Tail`.
 
-**Minimum size:** **9 bytes** (payload only). On-air with 2-byte header: **11 bytes**.
+| Offset | Field | Type | Bytes | Section | Encoding |
+|--------|-------|------|-------|---------|----------|
+| 0 | `payloadVersion` | uint8 | 1 | Common | `0x00` = v0. Determines the entire payload layout. Unknown value → discard. |
+| 1–6 | `nodeId` | uint48 LE | 6 | Common | NodeID48 (6-byte LE MAC48); same semantics as `Node_OOTB_Core_Pos`. See [nodeid_policy_v0](../../../identity/nodeid_policy_v0.md). |
+| 7–8 | `seq16` | uint16 LE | 2 | Common | **Global per-node counter.** This packet's own unique id; increments the sender's global counter. Used for dedupe: `(nodeId48, seq16)`. |
+| 9–10 | `ref_core_seq16` | uint16 LE | 2 | Useful payload | **Core linkage key:** the `seq16` of the `Node_OOTB_Core_Pos` sample this Tail qualifies. A back-reference; `ref_core_seq16 ≠ seq16`. MUST match `last_core_seq16` stored for this node on RX (see §4). |
+
+**Minimum size:** **11 bytes** (Common + ref_core_seq16). On-air with 2-byte header: **13 bytes**.
 
 ### 3.2 Optional: position quality fields (v0)
 
@@ -78,10 +85,10 @@ Appended in order after the minimum payload. Fields may be omitted from the end.
 
 | Offset | Field | Type | Bytes | Encoding |
 |--------|-------|------|-------|----------|
-| 9 | `posFlags` | uint8 | 1 | Position-quality flags for this Core sample. `0x00` = not present / unknown. Bit definitions: bit 0 = position valid at TX time; bits 1–7 reserved. Does NOT revoke Core position (§1). See [position_quality_v0](../policy/position_quality_v0.md). |
-| 10 | `sats` | uint8 | 1 | Satellite count at TX time; `0x00` = not present. |
+| 11 | `posFlags` | uint8 | 1 | Position-quality flags for this Core sample. `0x00` = not present / unknown. Bit definitions: bit 0 = position valid at TX time; bits 1–7 reserved. Does NOT revoke Core position (§1). See [position_quality_v0](../policy/position_quality_v0.md). |
+| 12 | `sats` | uint8 | 1 | Satellite count at TX time; `0x00` = not present. |
 
-With both optional fields: **11 bytes** payload; **13 bytes** on-air.
+With both optional fields: **13 bytes** payload; **15 bytes** on-air.
 
 ---
 
@@ -124,31 +131,33 @@ Even when Tail-1 payload is **not** applied (`ref_core_seq16` mismatch), the rec
 
 ## 6) Examples
 
-### 6.1 BeaconTail-1 (9 B): minimum
+### 6.1 Node_OOTB_Core_Tail (11 B): minimum
 
-| Field | Value | Bytes (hex) |
-|-------|-------|-------------|
-| payloadVersion | 0 | `00` |
-| nodeId | 0x0000_AABB_CCDD_EEFF | `FF EE DD CC BB AA` |
-| ref_core_seq16 | 1 (matches last Core) | `01 00` |
+| Field | Section | Value | Bytes (hex) |
+|-------|---------|-------|-------------|
+| payloadVersion | Common | 0 | `00` |
+| nodeId | Common | 0x0000_AABB_CCDD_EEFF | `FF EE DD CC BB AA` |
+| seq16 | Common | 5 (own packet id) | `05 00` |
+| ref_core_seq16 | Useful payload | 1 (matches last Core) | `01 00` |
 
-**Full hex (9 bytes):** `00 FF EE DD CC BB AA 01 00`
+**Full hex (11 bytes):** `00 FF EE DD CC BB AA 05 00 01 00`
 
-### 6.2 BeaconTail-1 (11 B): with posFlags + sats
+### 6.2 Node_OOTB_Core_Tail (13 B): with posFlags + sats
 
-| Field | Value | Bytes (hex) |
-|-------|-------|-------------|
-| payloadVersion | 0 | `00` |
-| nodeId | 0x0000_AABB_CCDD_EEFF | `FF EE DD CC BB AA` |
-| ref_core_seq16 | 1 | `01 00` |
-| posFlags | 0x01 (position valid) | `01` |
-| sats | 8 | `08` |
+| Field | Section | Value | Bytes (hex) |
+|-------|---------|-------|-------------|
+| payloadVersion | Common | 0 | `00` |
+| nodeId | Common | 0x0000_AABB_CCDD_EEFF | `FF EE DD CC BB AA` |
+| seq16 | Common | 5 (own packet id) | `05 00` |
+| ref_core_seq16 | Useful payload | 1 | `01 00` |
+| posFlags | Useful payload | 0x01 (position valid) | `01` |
+| sats | Useful payload | 8 | `08` |
 
-**Full hex (11 bytes):** `00 FF EE DD CC BB AA 01 00 01 08`
+**Full hex (13 bytes):** `00 FF EE DD CC BB AA 05 00 01 00 01 08`
 
 ### 6.3 RX rule: ignore on mismatch
 
-Node `N` has `last_core_seq16 = 7`. Incoming Tail-1 carries `ref_core_seq16 = 5`.
+Node `N` has `last_core_seq16 = 7`. Incoming Core_Tail carries `ref_core_seq16 = 5`.
 → `5 ≠ 7` → drop silently. No NodeTable fields updated (except optionally lastRxAt and link metrics).
 
 ---
@@ -164,7 +173,8 @@ Node `N` has `last_core_seq16 = 7`. Incoming Tail-1 carries `ref_core_seq16 = 5`
 ## 8) Related
 
 - **Beacon encoding hub (Core/Tail overview):** [beacon_payload_encoding_v0.md](beacon_payload_encoding_v0.md) — §3 packet types table; §4.1 BeaconCore layout.
-- **BeaconTail-2:** [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md) — slow-state Tail; no CoreRef.
+- **Node_OOTB_Operational:** [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md) — Operational slow state; no CoreRef.
+- **Node_OOTB_Informative:** [info_packet_encoding_v0.md](info_packet_encoding_v0.md) — Informative/static config; no CoreRef.
 - **Alive packet:** [alive_packet_encoding_v0.md](alive_packet_encoding_v0.md) — alive-bearing, non-position; no-fix liveness.
 - **RX semantics (CoreRef-lite rule):** [../policy/rx_semantics_v0.md](../policy/rx_semantics_v0.md) — §2 BeaconTail-1 apply rules; §4 no revocation of Core.
 - **Field cadence (Tail-1 tier):** [../policy/field_cadence_v0.md](../policy/field_cadence_v0.md) — Tier B fields; degrade-under-load order.

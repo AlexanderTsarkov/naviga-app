@@ -30,7 +30,7 @@ Each **role profile** (default or user-defined) carries the following **normativ
 |-----------|---------|----------------------|
 | **minIntervalSec** | Minimum interval between beacon sends (rate limit). | Positive; product-defined units (seconds). Used for first-fix bootstrap and normal cadence ([field_cadence_v0](../../nodetable/policy/field_cadence_v0.md) §2.1). |
 | **minDisplacementM** | Minimum displacement (meters) before sending next position-bearing Core (movement gating). Applied **after** first Core sent; not applied to first Core ([PR #213](https://github.com/AlexanderTsarkov/naviga-app/pull/213)). | Non-negative; product-defined. |
-| **maxSilence10s** | Upper bound of acceptable silence (seconds) before the node **MUST** send at least one alive-bearing packet (BeaconCore or Alive). Sent in beacon as uint8 in **10s steps**; clamp ≤ 90 (15 min). | uint8; step 10s; 0 = not specified. See [beacon_payload_encoding_v0](../../nodetable/contract/beacon_payload_encoding_v0.md) § Tail-2. |
+| **maxSilence10s** | Upper bound of acceptable silence (seconds) before the node **MUST** send at least one alive-bearing packet (`Node_OOTB_Core_Pos` or `Node_OOTB_I_Am_Alive`). Sent in `Node_OOTB_Informative` (`0x05`) as uint8 in **10s steps**; clamp ≤ 90 (15 min). | uint8; step 10s; 0 = not specified. See [info_packet_encoding_v0](../../nodetable/contract/info_packet_encoding_v0.md) §3.2. |
 
 **Invariants (normative):**
 
@@ -95,4 +95,4 @@ The following are **design artifacts** used to derive or explain normative param
 - **Radio profiles (distinct):** [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)) — channel, modulation preset, txPower; not cadence.
 - **Boot pipeline:** [boot_pipeline_v0](../../firmware/policy/boot_pipeline_v0.md) ([#214](https://github.com/AlexanderTsarkov/naviga-app/issues/214)) — Phase B provisions role (and radio profile).
 - **Field cadence / first-fix:** [field_cadence_v0](../../nodetable/policy/field_cadence_v0.md) §2.1, §6 — Core/Alive, DOG_COLLAR vs HUMAN.
-- **Beacon encoding:** [beacon_payload_encoding_v0](../../nodetable/contract/beacon_payload_encoding_v0.md) — maxSilence10s Tail-2.
+- **Informative packet (maxSilence10s wire encoding):** [info_packet_encoding_v0](../../nodetable/contract/info_packet_encoding_v0.md) — `Node_OOTB_Informative` (`0x05`); `maxSilence10s` at offset 9.

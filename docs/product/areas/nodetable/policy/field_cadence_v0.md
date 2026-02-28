@@ -32,12 +32,14 @@ This policy defines the **v0 mapping** of NodeTable-related fields into delivery
 
 While the sender has **no** valid GNSS fix, BeaconCore is **not** sent; liveness is provided by **Alive (no-fix)** per maxSilence. When the sender **first** obtains a valid fix and has **no baseline** (no lastPublishedPosition, i.e. first BeaconCore not yet sent), it **MUST** send the first BeaconCore at the next opportunity, limited only by the applicable rate limit (e.g. minInterval); **min displacement** does **not** apply to this first Core. After the first BeaconCore has been sent, movement gating (min displacement) applies as usual to subsequent Core sends.
 
-### 2.2 Tail-2 scheduling classes (v0)
+### 2.2 Operational vs Informative packets (v0)
 
-Tail-2 (BeaconTail-2) is split into two scheduling classes:
+Slow-state data is split across **two separate packets** with independent scheduling:
 
-- **Tail-2 Operational:** Send **on change** (when any operational Tail-2 field value changes) **and at forced Core** (at least every N Core beacons as fallback; N and bootstrap/backoff are implementation-defined within product constraints). Keeps operational Tail-2 state eventually consistent without a fixed slow interval.
-- **Tail-2 Informative:** Bootstrap/backoff → fixed cadence (default **10 min**), **and on change**. Informative fields (e.g. maxSilence10s) are sent at the informative cadence or when the value changes; they **MUST NOT** be required on every operational Tail-2 send.
+- **`Node_OOTB_Operational` (`0x04`, legacy `BEACON_TAIL2`):** Carries dynamic runtime fields (`batteryPercent`, `uptimeSec`). Send **on change** (when any Operational field value changes) **and at forced Core** (at least every N Core beacons as fallback; N implementation-defined). Full contract: [tail2_packet_encoding_v0.md](../contract/tail2_packet_encoding_v0.md).
+- **`Node_OOTB_Informative` (`0x05`, legacy `BEACON_INFO`):** Carries static/config fields (`maxSilence10s`, `hwProfileId`, `fwVersionId`). Bootstrap/backoff → fixed cadence (default **10 min**), **and on change**. MUST NOT be sent on every Operational send. Full contract: [info_packet_encoding_v0.md](../contract/info_packet_encoding_v0.md).
+
+These are independent TX paths; neither gates on the other.
 
 ---
 
@@ -45,19 +47,19 @@ Tail-2 (BeaconTail-2) is split into two scheduling classes:
 
 Source: fields from [link-telemetry-minset](../contract/link-telemetry-minset-v0.md) and [beacon_payload_encoding](../contract/beacon_payload_encoding_v0.md); no new semantics invented.
 
-| Field | Tier | Default cadence | Source | Rationale |
-|-------|------|-----------------|--------|------------|
-| **nodeId** | A | Every beacon tick | Encoding | WHO; identity is required. |
-| **positionLat** / **positionLon** (`lat_u24` / `lon_u24`, packed24) | A | Every beacon tick when position valid | [beacon_payload_encoding_v0 §4.1](../contract/beacon_payload_encoding_v0.md) | WHERE; core for map. On-air: 3 bytes each (packed24 absolute WGS84). `pos_valid`/`pos_age_s` are NOT in BeaconCore — see Tail-1 (§4.2). |
-| **freshness marker** (seq16) | A | Every beacon tick | [beacon_payload_encoding_v0](../contract/beacon_payload_encoding_v0.md) §4.1 | Ordering and staleness; required for Core. seq16 (uint16, 2 B, LE) is canonical. |
-| **posFlags** | B | Every Tail-1 (when position valid or every Tail-1) | Encoding §4.2, [position_quality_v0](position_quality_v0.md) | Position quality attached to Core sample. |
-| **sats** | B | Every Tail-1 (when position valid or every Tail-1) | Encoding §4.2, [position_quality_v0](position_quality_v0.md) | Position quality attached to Core sample. |
-| **hwProfileId** | B | Every N Core beacons OR every 60–120 s | Encoding, minset | Operational; capability lookup. |
-| **fwVersionId** | B/C | Every 60–120 s (B) or 10 min (C) | Encoding, minset | Operational/diagnostic. |
-| **uptimeSec** | B | Every 60–120 s | Encoding, minset | Timing; operational. |
-| **maxSilence10s** | C | Tail-2 Informative: on change + every 10 min (bootstrap allowed) | Encoding §4.3, Policy | Helps activity/staleness; uint8, 10s steps, clamp ≤ 90. Not sent on every operational Tail-2. |
-| **batteryPercent** | C | Every 10 min OR event-driven | Encoding, minset | Diagnostic; slow. |
-| **txPowerStep hint** | B/C | Stub; 60–120 s or 10 min if used | Policy stub | Optional; diagnostic. |
+| Field | Tier | Packet | Default cadence | Source | Rationale |
+|-------|------|--------|-----------------|--------|------------|
+| **nodeId** | A | Common (all) | Every beacon tick | Encoding | WHO; identity is required. |
+| **seq16** | A | Common (all) | Every beacon tick | [ootb_radio_v0 §3.0](../../../../protocols/ootb_radio_v0.md#30-packet-anatomy--invariants) | Global per-node counter; ordering, dedupe. |
+| **positionLat** / **positionLon** (`lat_u24` / `lon_u24`) | A | `Node_OOTB_Core_Pos` | Every beacon tick when position valid | [beacon_payload_encoding_v0 §4.1](../contract/beacon_payload_encoding_v0.md) | WHERE; core for map. `pos_valid`/`pos_age_s` are NOT in Core_Pos — see Core_Tail. |
+| **posFlags** | B | `Node_OOTB_Core_Tail` | Every Core_Tail (when position valid) | Encoding, [position_quality_v0](position_quality_v0.md) | Position quality attached to Core sample. |
+| **sats** | B | `Node_OOTB_Core_Tail` | Every Core_Tail (when position valid) | Encoding, [position_quality_v0](position_quality_v0.md) | Position quality attached to Core sample. |
+| **batteryPercent** | C | `Node_OOTB_Operational` (`0x04`) | On change + at forced Core | Encoding, minset | Dynamic runtime: changes during operation. |
+| **uptimeSec** | B | `Node_OOTB_Operational` (`0x04`) | On change + at forced Core | Encoding, minset | Dynamic runtime: changes during operation. |
+| **maxSilence10s** | C | `Node_OOTB_Informative` (`0x05`) | On change + every 10 min (bootstrap allowed) | Encoding, Policy | Static/config: user-set liveness hint. uint8, 10s steps. |
+| **hwProfileId** | C | `Node_OOTB_Informative` (`0x05`) | On change + every 10 min | Encoding, minset | Static: hardware identity, set at manufacture. |
+| **fwVersionId** | C | `Node_OOTB_Informative` (`0x05`) | On change + every 10 min | Encoding, minset | Static: firmware version, changes only on OTA. |
+| **txPower** | B/C | `Node_OOTB_Operational` (`0x04`) | On change + at forced Core (planned S03) | Policy stub | Dynamic adaptive; requires radio layer to expose tx power step. Not in canon yet. |
 
 *Receiver-side only (lastRxAt, rssiLast, snrLast, etc.) are not sent in beacon; they are observed on RX. They are not tiered in this table.*
 
@@ -106,8 +108,8 @@ Source: fields from [link-telemetry-minset](../contract/link-telemetry-minset-v0
 
 ## 8) Encoding decisions (closed)
 
-- **Freshness marker encoding:** **Decided.** seq16 (uint16, 2 bytes, little-endian) is canonical. Byte layout is in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §4.1 (BeaconCore) and §4.2 (Tail-1 `ref_core_seq16`). Sender counter scope: single per-node counter across all packet types (Core, Tail-1/2, Alive) during uptime. Payload presence: BeaconCore and BeaconAlive embed `seq16`; BeaconTail-1 embeds `ref_core_seq16` (Core linkage key, not the current counter); BeaconTail-2 carries no seq-like field. See [rx_semantics_v0.md](rx_semantics_v0.md) §1.
-- **Beacon encoding:** Core/Tail split and byte layouts are in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §3–5 (Core **15 B payload / 17 B on-air** with 2B header — nodeId48(6) + packed24 geo per #298/#301; Tail-1 `ref_core_seq16` + optional posFlags/sats; Tail-2 maxSilence10s + optional fields; Tail-2 scheduling per §2.2 above).
+- **Freshness marker encoding:** **Decided.** `seq16` (uint16, 2 bytes, little-endian) is canonical. It is part of the **Common prefix** of every `Node_*` packet (see [ootb_radio_v0.md §3.0](../../../../protocols/ootb_radio_v0.md#30-packet-anatomy--invariants)). Sender counter scope: **one global per-node counter** across ALL packet types during uptime. Dedupe key: `(nodeId48, seq16)`. `Node_OOTB_Core_Tail` additionally carries `ref_core_seq16` in its Useful payload — a back-reference to the `seq16` of the Core_Pos sample it qualifies; `seq16 ≠ ref_core_seq16`. See [rx_semantics_v0.md](rx_semantics_v0.md) §1.
+- **Beacon encoding:** Core/Tail split and byte layouts are in [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) §3–5. Common prefix (payloadVersion + nodeId48 + seq16 = 9 B) is shared by all packets. `Node_OOTB_Core_Pos`: 15 B payload / 17 B on-air. `Node_OOTB_Core_Tail`: `ref_core_seq16` + optional posFlags/sats. `Node_OOTB_Operational` (`0x04`): `batteryPercent`, `uptimeSec`. `Node_OOTB_Informative` (`0x05`): `maxSilence10s`, `hwProfileId`, `fwVersionId`. Two-packet split per §2.2 above.
 
 ---
 
