@@ -734,6 +734,87 @@ void test_tail1_rx_duplicate_seq16_ignored() {
   TEST_ASSERT_EQUAL_UINT8(8, entry.sats);
 }
 
+// ── Tail-1 RX: Variant 2 — one tail per Core sample ─────────────────────────
+
+void test_tail1_rx_variant2_second_tail_same_ref_ignored() {
+  // Arrange: Core with seq=100.
+  BeaconLogic logic;
+  NodeTable table;
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  const uint16_t core_seq = 100;
+
+  seed_core(logic, table, node_id, core_seq, 1000);
+
+  // Apply first Tail-1: seq16=101, ref_core_seq16=100, sats=8 → should apply.
+  Tail1Fields t1a{};
+  t1a.node_id        = node_id;
+  t1a.seq16          = 101;
+  t1a.ref_core_seq16 = core_seq;
+  t1a.has_sats       = true;
+  t1a.sats           = 8;
+  uint8_t frame[kTail1FrameMax] = {};
+  encode_tail1_frame(t1a, frame, sizeof(frame));
+  TEST_ASSERT_TRUE(logic.on_rx(2000, frame, kTail1FrameMax, -55, table));
+
+  NodeEntry after_first{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &after_first));
+  TEST_ASSERT_TRUE(after_first.has_sats);
+  TEST_ASSERT_EQUAL_UINT8(8, after_first.sats);
+
+  // Apply second Tail-1: seq16=102 (different!), ref_core_seq16=100 (same!) → must be ignored.
+  Tail1Fields t1b{};
+  t1b.node_id        = node_id;
+  t1b.seq16          = 102;
+  t1b.ref_core_seq16 = core_seq;  // same ref as first
+  t1b.has_sats       = true;
+  t1b.sats           = 99;  // different value — must not overwrite
+  encode_tail1_frame(t1b, frame, sizeof(frame));
+  TEST_ASSERT_TRUE(logic.on_rx(2100, frame, kTail1FrameMax, -55, table));
+
+  // sats MUST still be 8 (Variant 2: second tail for same Core sample ignored).
+  NodeEntry after_second{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &after_second));
+  TEST_ASSERT_EQUAL_UINT8(8, after_second.sats);
+}
+
+void test_tail1_rx_variant2_new_core_resets_tail_gate() {
+  // After a new Core_Pos is received, a new Tail-1 for the new Core sample must apply.
+  BeaconLogic logic;
+  NodeTable table;
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+
+  // First Core: seq=100.
+  seed_core(logic, table, node_id, 100, 1000);
+
+  // First Tail-1: seq16=101, ref=100, sats=8 → applied.
+  Tail1Fields t1a{};
+  t1a.node_id        = node_id;
+  t1a.seq16          = 101;
+  t1a.ref_core_seq16 = 100;
+  t1a.has_sats       = true;
+  t1a.sats           = 8;
+  uint8_t frame[kTail1FrameMax] = {};
+  encode_tail1_frame(t1a, frame, sizeof(frame));
+  logic.on_rx(2000, frame, kTail1FrameMax, -55, table);
+
+  // Second Core: seq=102 → updates last_core_seq16 to 102.
+  seed_core(logic, table, node_id, 102, 3000);
+
+  // Tail-1 for new Core: seq16=103, ref=102, sats=15 → must apply (new Core sample).
+  Tail1Fields t1b{};
+  t1b.node_id        = node_id;
+  t1b.seq16          = 103;
+  t1b.ref_core_seq16 = 102;
+  t1b.has_sats       = true;
+  t1b.sats           = 15;
+  encode_tail1_frame(t1b, frame, sizeof(frame));
+  TEST_ASSERT_TRUE(logic.on_rx(4000, frame, kTail1FrameMax, -55, table));
+
+  NodeEntry entry{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &entry));
+  TEST_ASSERT_EQUAL_UINT8(15, entry.sats);
+}
+
 // ── Tail-2 (Operational) RX ──────────────────────────────────────────────────
 
 void test_tail2_rx_applies_battery() {
@@ -1034,6 +1115,8 @@ int main(int argc, char** argv) {
   RUN_TEST(test_tail1_rx_drop_no_prior_core);
   RUN_TEST(test_tail1_rx_bad_version_dropped);
   RUN_TEST(test_tail1_rx_duplicate_seq16_ignored);
+  RUN_TEST(test_tail1_rx_variant2_second_tail_same_ref_ignored);
+  RUN_TEST(test_tail1_rx_variant2_new_core_resets_tail_gate);
   // Tail-2 RX dispatch
   RUN_TEST(test_tail2_rx_applies_battery);
   RUN_TEST(test_tail2_rx_no_prior_core_creates_entry);

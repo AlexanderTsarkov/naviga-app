@@ -266,8 +266,20 @@ bool NodeTable::apply_tail1(uint64_t node_id,
     return false;
   }
 
+  // Variant 2 invariant: at most one Core_Tail per Core_Pos sample.
+  // If a Tail-1 for this ref_core_seq16 has already been applied (even with a
+  // different seq16), treat this as an unexpected duplicate and drop.
+  if (entry.has_applied_tail_ref_core_seq16 &&
+      entry.last_applied_tail_ref_core_seq16 == ref_core_seq16) {
+    entry.last_seen_ms = now_ms;
+    entry.last_rx_rssi = rssi_dbm;
+    return false;
+  }
+
   // Match: apply Tail-1 fields. MUST NOT touch position.
   entry.last_seq = seq16;
+  entry.last_applied_tail_ref_core_seq16 = ref_core_seq16;
+  entry.has_applied_tail_ref_core_seq16  = true;
   if (has_pos_flags) {
     entry.has_pos_flags = true;
     entry.pos_flags     = pos_flags;

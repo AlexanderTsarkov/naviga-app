@@ -17,16 +17,26 @@ struct NodeEntry {
   int32_t lon_e7 = 0;
   uint16_t pos_age_s = 0;
   int8_t last_rx_rssi = 0;
+  // Global per-node sequence counter: last accepted seq16 from ANY Node_* packet type
+  // (Core, Alive, Tail-1, Tail-2, Info). Used as the (nodeId48, seq16) dedupe key
+  // per rx_semantics_v0 §1. MUST NOT be interpreted as "last Core seq" or "last
+  // position freshness" — those roles belong to last_core_seq16 and pos_age_s.
   uint16_t last_seq = 0;
   uint32_t last_seen_ms = 0;
   bool in_use = false;
 
-  // Tail-1: seq16 of the last accepted BeaconCore for this node.
-  // Stored as last_core_seq16 (internal name); compared against ref_core_seq16
-  // from incoming Tail-1 frames to enforce the CoreRef-lite gate
-  // (tail1_packet_encoding_v0 §4.1).
+  // Core_Tail binding: seq16 of the last accepted Node_OOTB_Core_Pos for this node.
+  // Compared against ref_core_seq16 from incoming Core_Tail frames to enforce
+  // the CoreRef-lite gate (tail1_packet_encoding_v0 §4.1).
   uint16_t last_core_seq16 = 0;
   bool     has_core_seq16  = false;  ///< false until first Core received.
+
+  // Variant 2 invariant: at most one Core_Tail per Core_Pos sample.
+  // Tracks the ref_core_seq16 of the last successfully applied Core_Tail.
+  // If a new Core_Tail arrives with the same ref_core_seq16 (even with a
+  // different seq16), it is treated as an unexpected duplicate and ignored.
+  uint16_t last_applied_tail_ref_core_seq16 = 0;
+  bool     has_applied_tail_ref_core_seq16  = false;  ///< false until first Tail-1 applied.
 
   // Tail-1 optional fields (position quality for last Core sample).
   bool    has_pos_flags = false;
