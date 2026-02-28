@@ -10,23 +10,27 @@ namespace {
 constexpr uint32_t kBleUpdateIntervalMs = 1000U;
 // msg_type byte used in event log payloads (instrumentation only).
 constexpr uint8_t kGeoBeaconMsgType = protocol::kGeoBeaconMsgType;
-// RX buffer must fit the largest current on-air frame (BeaconCore = 17 B).
-constexpr size_t kRxBufSize = protocol::kGeoBeaconFrameSize;
+// RX buffer must fit the largest current on-air frame.
+// kMaxFrameSize = kHeaderSize(2) + kMaxPayloadLen(63) = 65 B — covers all packet types.
+constexpr size_t kRxBufSize = protocol::kMaxFrameSize;
 constexpr uint32_t kSenseTimeoutMs = 20U;
 constexpr size_t kMaxRxPerTick = 4;
 
 const char* packet_log_type_str(domain::PacketLogType t) {
   switch (t) {
-    case domain::PacketLogType::CORE: return "CORE";
+    case domain::PacketLogType::CORE:  return "CORE";
     case domain::PacketLogType::TAIL1: return "TAIL1";
     case domain::PacketLogType::TAIL2: return "TAIL2";
     case domain::PacketLogType::ALIVE: return "ALIVE";
+    case domain::PacketLogType::INFO:  return "INFO";
   }
   return "?";
 }
 
 bool is_tail_type(domain::PacketLogType t) {
-  return t == domain::PacketLogType::TAIL1 || t == domain::PacketLogType::TAIL2;
+  return t == domain::PacketLogType::TAIL1 ||
+         t == domain::PacketLogType::TAIL2 ||
+         t == domain::PacketLogType::INFO;
 }
 
 } // namespace
@@ -166,17 +170,23 @@ void M1Runtime::log_peer_dump(uint32_t now_ms) {
 
 void M1Runtime::handle_tx(uint32_t now_ms) {
   if (!send_policy_.has_pending()) {
+    // Formation pass: update the TX queue with current self state and telemetry.
+    beacon_logic_.update_tx_queue(now_ms, self_fields_, self_telemetry_, allow_core_send_);
+    if (allow_core_send_) {
+      allow_core_send_ = false;  // consumed; next CORE only after next position update
+    }
+
+    // Dequeue the best pending frame.
     size_t out_len = 0;
     domain::PacketLogType tx_type = domain::PacketLogType::CORE;
     uint16_t tx_core_seq = 0;
-    if (!beacon_logic_.build_tx(now_ms, self_fields_, pending_payload_, sizeof(pending_payload_),
-                                &out_len, &tx_type, &tx_core_seq, allow_core_send_)) {
+    if (!beacon_logic_.dequeue_tx(pending_payload_, sizeof(pending_payload_),
+                                  &out_len, &tx_type, &tx_core_seq)) {
       return;
     }
     pending_len_ = out_len;
     last_tx_type_ = tx_type;
     last_tx_core_seq_ = tx_core_seq;
-    allow_core_send_ = false;  // consumed; next CORE only after next position update
     send_policy_.on_payload_built(now_ms);
   }
 

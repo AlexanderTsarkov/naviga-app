@@ -17,6 +17,14 @@ using naviga::domain::BeaconLogic;
 using naviga::domain::NodeTable;
 using naviga::domain::NodeEntry;
 using naviga::domain::PacketLogType;
+using naviga::domain::SelfTelemetry;
+using naviga::domain::TxPriority;
+using naviga::domain::TxBestEffortClass;
+using naviga::domain::kSlotCore;
+using naviga::domain::kSlotAlive;
+using naviga::domain::kSlotTail1;
+using naviga::domain::kSlotTail2;
+using naviga::domain::kSlotInfo;
 using naviga::protocol::AliveFields;
 using naviga::protocol::GeoBeaconFields;
 using naviga::protocol::Tail1Fields;
@@ -1079,6 +1087,628 @@ void test_tail_never_overwrites_position() {
   TEST_ASSERT_EQUAL_INT32(saved_lon, after.lon_e7);
 }
 
+// ── TX queue: helpers ────────────────────────────────────────────────────────
+
+static GeoBeaconFields make_self_fields(uint64_t node_id, bool pos_valid,
+                                        double lat = 55.0, double lon = 37.0) {
+  GeoBeaconFields f{};
+  f.node_id   = node_id;
+  f.pos_valid = pos_valid ? 1 : 0;
+  f.lat_deg   = lat;
+  f.lon_deg   = lon;
+  return f;
+}
+
+// Decode the seq16 from a Core frame (payload offset 7–8, frame offset 9–10).
+static uint16_t core_frame_seq16(const uint8_t* frame) {
+  return static_cast<uint16_t>(frame[9] | (static_cast<uint16_t>(frame[10]) << 8));
+}
+
+// Decode the seq16 from a Tail-1 frame (payload offset 7–8, frame offset 9–10).
+static uint16_t tail1_frame_seq16(const uint8_t* frame) {
+  return static_cast<uint16_t>(frame[9] | (static_cast<uint16_t>(frame[10]) << 8));
+}
+
+// Decode the ref_core_seq16 from a Tail-1 frame (payload offset 9–10, frame offset 11–12).
+static uint16_t tail1_frame_ref_core_seq16(const uint8_t* frame) {
+  return static_cast<uint16_t>(frame[11] | (static_cast<uint16_t>(frame[12]) << 8));
+}
+
+// ── TX queue: formation tests ────────────────────────────────────────────────
+
+void test_txq_core_enqueues_tail_with_correct_ref() {
+  // When Core_Pos is enqueued, Core_Tail must be enqueued with ref_core_seq16 == core.seq16.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(30000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+
+  logic.update_tx_queue(1000, self, telem, true);
+
+  // Core slot must be present.
+  TEST_ASSERT_TRUE(logic.slot(kSlotCore).present);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE),
+                    static_cast<int>(logic.slot(kSlotCore).pkt_type));
+
+  // Tail-1 slot must be present.
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL1),
+                    static_cast<int>(logic.slot(kSlotTail1).pkt_type));
+
+  // Decode Core seq16 from the Core frame.
+  const uint16_t core_seq = core_frame_seq16(logic.slot(kSlotCore).frame);
+
+  // Decode Tail-1 seq16 and ref_core_seq16 from the Tail-1 frame.
+  const uint16_t tail_seq     = tail1_frame_seq16(logic.slot(kSlotTail1).frame);
+  const uint16_t tail_ref_seq = tail1_frame_ref_core_seq16(logic.slot(kSlotTail1).frame);
+
+  // ref_core_seq16 must equal Core's seq16.
+  TEST_ASSERT_EQUAL_UINT16(core_seq, tail_ref_seq);
+
+  // Tail's own seq16 must differ from Core's seq16 (both consume global counter).
+  TEST_ASSERT_NOT_EQUAL(core_seq, tail_seq);
+
+  // Tail's seq16 must be core_seq + 1 (next global counter value).
+  TEST_ASSERT_EQUAL_UINT16(static_cast<uint16_t>(core_seq + 1u), tail_seq);
+
+  // ref_core_seq16 in slot metadata must match.
+  TEST_ASSERT_EQUAL_UINT16(core_seq, logic.slot(kSlotTail1).ref_core_seq16);
+}
+
+void test_txq_core_replacement_replaces_tail_too() {
+  // If Core is re-formed before being sent, both Core and Tail slots are replaced.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(30000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+
+  // First formation.
+  logic.update_tx_queue(1000, self, telem, true);
+  const uint16_t first_core_seq = core_frame_seq16(logic.slot(kSlotCore).frame);
+  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotCore).replaced_count);
+  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotTail1).replaced_count);
+
+  // Second formation (position updated, allow_core=true again).
+  self.lat_deg += 0.001;
+  logic.update_tx_queue(2000, self, telem, true);
+  const uint16_t second_core_seq = core_frame_seq16(logic.slot(kSlotCore).frame);
+
+  // Core slot replaced_count must be 1.
+  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotCore).replaced_count);
+  // Tail slot replaced_count must be 1.
+  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotTail1).replaced_count);
+
+  // New Core seq must be newer than first.
+  TEST_ASSERT_NOT_EQUAL(first_core_seq, second_core_seq);
+
+  // New Tail ref_core_seq16 must point to new Core seq.
+  const uint16_t new_tail_ref = tail1_frame_ref_core_seq16(logic.slot(kSlotTail1).frame);
+  TEST_ASSERT_EQUAL_UINT16(second_core_seq, new_tail_ref);
+}
+
+void test_txq_alive_enqueued_when_no_fix_at_max_silence() {
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(2000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, false);  // no fix
+  SelfTelemetry telem{};
+
+  // Before max_silence: no Alive.
+  logic.update_tx_queue(1000, self, telem, false);
+  TEST_ASSERT_FALSE(logic.slot(kSlotAlive).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
+
+  // At max_silence: Alive enqueued.
+  logic.update_tx_queue(2000, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotAlive).present);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::ALIVE),
+                    static_cast<int>(logic.slot(kSlotAlive).pkt_type));
+  // Core must NOT be enqueued (no fix).
+  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
+}
+
+void test_txq_operational_enqueued_independently() {
+  BeaconLogic logic;
+  logic.set_min_interval_ms(60000);  // Core not due
+  logic.set_max_silence_ms(120000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.has_battery     = true;
+  telem.battery_percent = 85;
+
+  logic.update_tx_queue(1000, self, telem, false);  // allow_core=false
+
+  // Core not enqueued (not due + allow_core=false).
+  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
+  // Operational enqueued independently.
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL2),
+                    static_cast<int>(logic.slot(kSlotTail2).pkt_type));
+}
+
+void test_txq_informative_enqueued_independently() {
+  BeaconLogic logic;
+  logic.set_min_interval_ms(60000);
+  logic.set_max_silence_ms(120000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.has_max_silence = true;
+  telem.max_silence_10s = 9;
+
+  logic.update_tx_queue(1000, self, telem, false);
+
+  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::INFO),
+                    static_cast<int>(logic.slot(kSlotInfo).pkt_type));
+}
+
+// ── TX queue: dequeue / priority / fairness tests ────────────────────────────
+
+void test_txq_dequeue_empty_returns_false() {
+  BeaconLogic logic;
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  TEST_ASSERT_FALSE(logic.dequeue_tx(buf, sizeof(buf), &out_len));
+  TEST_ASSERT_EQUAL_UINT32(0, out_len);
+}
+
+void test_txq_dequeue_core_before_operational() {
+  // Core (P0) must be dequeued before Operational (P2).
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(30000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.has_battery     = true;
+  telem.battery_percent = 90;
+
+  logic.update_tx_queue(1000, self, telem, true);
+
+  // Both Core and Operational should be present.
+  TEST_ASSERT_TRUE(logic.slot(kSlotCore).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  PacketLogType ptype = PacketLogType::TAIL2;
+  TEST_ASSERT_TRUE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype));
+  // Core dequeued first (highest priority).
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));
+  // Core slot cleared.
+  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
+  // Operational still pending.
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+}
+
+void test_txq_dequeue_tail1_before_operational() {
+  // Tail-1 (P2/BE_HIGH) must be dequeued before Operational (P2/BE_LOW).
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(30000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.has_battery     = true;
+  telem.battery_percent = 90;
+
+  logic.update_tx_queue(1000, self, telem, true);
+
+  // Dequeue Core first (P0).
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  PacketLogType ptype = PacketLogType::CORE;
+  logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));
+
+  // Now Tail-1 (P1) and Operational (P2) remain. Tail-1 should be next.
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+
+  logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL1), static_cast<int>(ptype));
+  TEST_ASSERT_FALSE(logic.slot(kSlotTail1).present);
+}
+
+void test_txq_fairness_higher_replaced_count_wins() {
+  // Within same priority (P2), the slot with higher replaced_count is dequeued first.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(60000);
+  logic.set_max_silence_ms(120000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+
+  // Enqueue Operational once (replaced_count=0).
+  SelfTelemetry telem_op{};
+  telem_op.has_battery     = true;
+  telem_op.battery_percent = 80;
+  logic.update_tx_queue(1000, self, telem_op, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotTail2).replaced_count);
+
+  // Enqueue Informative once (replaced_count=0).
+  SelfTelemetry telem_info{};
+  telem_info.has_max_silence = true;
+  telem_info.max_silence_10s = 9;
+  logic.update_tx_queue(1100, self, telem_info, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
+  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotInfo).replaced_count);
+
+  // Replace Operational again (replaced_count becomes 1).
+  telem_op.battery_percent = 75;
+  logic.update_tx_queue(1200, self, telem_op, false);
+  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotTail2).replaced_count);
+
+  // Both P2 slots present. Operational has replaced_count=1, Info has replaced_count=0.
+  // Operational should be dequeued first (higher replaced_count = more starved).
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  PacketLogType ptype = PacketLogType::INFO;
+  TEST_ASSERT_TRUE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL2), static_cast<int>(ptype));
+
+  // Info dequeued next.
+  TEST_ASSERT_TRUE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::INFO), static_cast<int>(ptype));
+}
+
+void test_txq_fairness_older_created_at_wins_on_tie() {
+  // Within same priority and same replaced_count, older created_at_ms wins.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(60000);
+  logic.set_max_silence_ms(120000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+
+  // Enqueue Operational at t=1000 (older).
+  SelfTelemetry telem_op{};
+  telem_op.has_battery     = true;
+  telem_op.battery_percent = 80;
+  logic.update_tx_queue(1000, self, telem_op, false);
+
+  // Enqueue Informative at t=2000 (newer).
+  SelfTelemetry telem_info{};
+  telem_info.has_max_silence = true;
+  telem_info.max_silence_10s = 9;
+  logic.update_tx_queue(2000, self, telem_info, false);
+
+  // Both replaced_count=0, same priority. Operational (older) should win.
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  PacketLogType ptype = PacketLogType::INFO;
+  TEST_ASSERT_TRUE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL2), static_cast<int>(ptype));
+}
+
+void test_txq_slot_replacement_increments_count() {
+  // Replacing a slot increments replaced_count; created_at_ms is preserved.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(60000);
+  logic.set_max_silence_ms(120000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.has_battery     = true;
+  telem.battery_percent = 90;
+
+  logic.update_tx_queue(1000, self, telem, false);
+  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotTail2).replaced_count);
+  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotTail2).created_at_ms);
+
+  telem.battery_percent = 80;
+  logic.update_tx_queue(2000, self, telem, false);
+  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotTail2).replaced_count);
+  // created_at_ms preserved from first enqueue.
+  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotTail2).created_at_ms);
+
+  telem.battery_percent = 70;
+  logic.update_tx_queue(3000, self, telem, false);
+  TEST_ASSERT_EQUAL_UINT32(2, logic.slot(kSlotTail2).replaced_count);
+  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotTail2).created_at_ms);
+}
+
+void test_txq_dequeue_clears_slot() {
+  BeaconLogic logic;
+  logic.set_min_interval_ms(60000);
+  logic.set_max_silence_ms(120000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.has_battery     = true;
+  telem.battery_percent = 90;
+
+  logic.update_tx_queue(1000, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  logic.dequeue_tx(buf, sizeof(buf), &out_len);
+  // Slot must be cleared after dequeue.
+  TEST_ASSERT_FALSE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_FALSE(logic.has_pending_tx());
+}
+
+void test_txq_no_core_when_allow_core_false() {
+  // Core must not be enqueued when allow_core=false, even if time_for_min.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(30000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+
+  logic.update_tx_queue(1000, self, telem, false);  // allow_core=false
+  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotTail1).present);
+}
+
+void test_txq_core_enqueues_at_max_silence_even_without_allow_core() {
+  // At max_silence, Core is enqueued regardless of allow_core (silence override).
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(2000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+
+  logic.update_tx_queue(2000, self, telem, false);  // allow_core=false but max_silence hit
+  TEST_ASSERT_TRUE(logic.slot(kSlotCore).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);
+}
+
+// ── TX queue: Alive replacement + dequeue ────────────────────────────────────
+
+void test_txq_alive_replacement_increments_count() {
+  // Alive slot replacement increments replaced_count and preserves created_at_ms.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(2000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, false);  // no fix
+  SelfTelemetry telem{};
+
+  // First Alive at t=2000 (max_silence hit).
+  logic.update_tx_queue(2000, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotAlive).present);
+  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotAlive).replaced_count);
+  TEST_ASSERT_EQUAL_UINT32(2000, logic.slot(kSlotAlive).created_at_ms);
+
+  // Second Alive at t=4000 (max_silence hit again; slot not yet dequeued).
+  logic.update_tx_queue(4000, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotAlive).present);
+  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotAlive).replaced_count);
+  // created_at_ms preserved from first enqueue.
+  TEST_ASSERT_EQUAL_UINT32(2000, logic.slot(kSlotAlive).created_at_ms);
+}
+
+void test_txq_alive_dequeued_correctly() {
+  // Alive slot is dequeued as ALIVE type with correct frame.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(2000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, false);  // no fix
+  SelfTelemetry telem{};
+
+  logic.update_tx_queue(2000, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotAlive).present);
+
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  PacketLogType ptype = PacketLogType::CORE;
+  uint16_t core_seq = 0xFFFF;
+  TEST_ASSERT_TRUE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype, &core_seq));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::ALIVE), static_cast<int>(ptype));
+  TEST_ASSERT_EQUAL_UINT16(0, core_seq);  // Alive has no ref_core_seq16
+  TEST_ASSERT_TRUE(out_len >= naviga::protocol::kAliveFrameMin);
+  // Slot cleared.
+  TEST_ASSERT_FALSE(logic.slot(kSlotAlive).present);
+  TEST_ASSERT_FALSE(logic.has_pending_tx());
+}
+
+// ── TX queue: Informative replacement + dequeue ──────────────────────────────
+
+void test_txq_informative_replacement_increments_count() {
+  // Informative slot replacement increments replaced_count and preserves created_at_ms.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(60000);
+  logic.set_max_silence_ms(120000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+
+  SelfTelemetry telem{};
+  telem.has_max_silence = true;
+  telem.max_silence_10s = 9;
+
+  logic.update_tx_queue(1000, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
+  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotInfo).replaced_count);
+  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotInfo).created_at_ms);
+
+  // Replace with new value.
+  telem.max_silence_10s = 18;
+  logic.update_tx_queue(2000, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
+  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotInfo).replaced_count);
+  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotInfo).created_at_ms);
+}
+
+void test_txq_informative_dequeued_correctly() {
+  // Informative slot is dequeued as INFO type with correct frame.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(60000);
+  logic.set_max_silence_ms(120000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+
+  SelfTelemetry telem{};
+  telem.has_max_silence = true;
+  telem.max_silence_10s = 9;
+
+  logic.update_tx_queue(1000, self, telem, false);
+
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  PacketLogType ptype = PacketLogType::CORE;
+  uint16_t core_seq = 0xFFFF;
+  TEST_ASSERT_TRUE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype, &core_seq));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::INFO), static_cast<int>(ptype));
+  TEST_ASSERT_EQUAL_UINT16(0, core_seq);  // Info has no ref_core_seq16
+  TEST_ASSERT_TRUE(out_len >= naviga::protocol::kInfoFrameMin);
+  TEST_ASSERT_FALSE(logic.slot(kSlotInfo).present);
+  TEST_ASSERT_FALSE(logic.has_pending_tx());
+}
+
+// ── TX queue: P1 reserved + full priority ordering ───────────────────────────
+
+void test_txq_p1_never_assigned_in_formation() {
+  // P1_SESSION_MESH is reserved for future Session/Mesh packets.
+  // The formation pass MUST NOT assign P1 to any current OOTB packet type.
+  // Verify that after a full formation pass (all 5 slots), no slot has P1.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(30000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.has_battery     = true;
+  telem.battery_percent = 90;
+  telem.has_max_silence = true;
+  telem.max_silence_10s = 9;
+
+  logic.update_tx_queue(1000, self, telem, true);
+
+  for (size_t i = 0; i < naviga::domain::kTxSlotCount; ++i) {
+    if (logic.slot(i).present) {
+      TEST_ASSERT_NOT_EQUAL(static_cast<int>(TxPriority::P1_SESSION_MESH),
+                            static_cast<int>(logic.slot(i).priority));
+    }
+  }
+}
+
+void test_txq_be_high_beats_be_low_within_p2() {
+  // Within P2_BEST_EFFORT, Core_Tail (BE_HIGH) must be dequeued before
+  // Operational (BE_LOW) and Informative (BE_LOW), regardless of creation order.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(60000);
+  logic.set_max_silence_ms(120000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+
+  // Enqueue Operational and Informative first (older created_at_ms).
+  SelfTelemetry telem{};
+  telem.has_battery     = true;
+  telem.battery_percent = 90;
+  telem.has_max_silence = true;
+  telem.max_silence_10s = 9;
+  logic.update_tx_queue(500, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotTail1).present);
+
+  // Now enqueue Core_Tail directly by triggering a Core formation.
+  // Use a fresh logic instance to isolate; instead, manually verify be_rank.
+  // Verify the slot's be_rank directly.
+  TEST_ASSERT_EQUAL(static_cast<int>(TxBestEffortClass::BE_LOW),
+                    static_cast<int>(logic.slot(kSlotTail2).be_rank));
+  TEST_ASSERT_EQUAL(static_cast<int>(TxBestEffortClass::BE_LOW),
+                    static_cast<int>(logic.slot(kSlotInfo).be_rank));
+
+  // Now also enqueue a Core (and thus Core_Tail) at t=1000.
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(30000);
+  SelfTelemetry telem2{};
+  logic.update_tx_queue(1000, self, telem2, true);
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);
+  TEST_ASSERT_EQUAL(static_cast<int>(TxBestEffortClass::BE_HIGH),
+                    static_cast<int>(logic.slot(kSlotTail1).be_rank));
+
+  // Dequeue Core (P0) first.
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  PacketLogType ptype = PacketLogType::INFO;
+  logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));
+
+  // Next: Core_Tail (P2/BE_HIGH) even though Operational/Info have older created_at_ms.
+  logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL1), static_cast<int>(ptype));
+}
+
+void test_txq_priority_ordering_p0_beats_all() {
+  // Verify full ordering: P0 > P2/BE_HIGH > P2/BE_LOW with all 5 slots present.
+  // P1 and P3 are reserved and not assigned by formation.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(30000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.has_battery     = true;
+  telem.battery_percent = 90;
+  telem.has_max_silence = true;
+  telem.max_silence_10s = 9;
+
+  // All 5 slots enqueued in one pass.
+  logic.update_tx_queue(1000, self, telem, true);
+
+  TEST_ASSERT_TRUE(logic.slot(kSlotCore).present);   // P0
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);  // P2/BE_HIGH
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);  // P2/BE_LOW
+  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);   // P2/BE_LOW
+
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  PacketLogType ptype = PacketLogType::INFO;
+
+  // 1st dequeue: Core (P0_MUST_PERIODIC).
+  logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));
+
+  // 2nd dequeue: Core_Tail (P2_BEST_EFFORT / BE_HIGH).
+  logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL1), static_cast<int>(ptype));
+
+  // 3rd and 4th dequeue: P2/BE_LOW (Operational and Informative, order by fairness).
+  logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
+  const bool third_is_be_low = (ptype == PacketLogType::TAIL2 || ptype == PacketLogType::INFO);
+  TEST_ASSERT_TRUE(third_is_be_low);
+
+  logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
+  const bool fourth_is_be_low = (ptype == PacketLogType::TAIL2 || ptype == PacketLogType::INFO);
+  TEST_ASSERT_TRUE(fourth_is_be_low);
+
+  TEST_ASSERT_FALSE(logic.has_pending_tx());
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_tx_cadence);
@@ -1131,5 +1761,31 @@ int main(int argc, char** argv) {
   RUN_TEST(test_rx_dedupe_info_same_seq16_ignored);
   // Position invariant
   RUN_TEST(test_tail_never_overwrites_position);
+  // TX queue: formation
+  RUN_TEST(test_txq_core_enqueues_tail_with_correct_ref);
+  RUN_TEST(test_txq_core_replacement_replaces_tail_too);
+  RUN_TEST(test_txq_alive_enqueued_when_no_fix_at_max_silence);
+  RUN_TEST(test_txq_operational_enqueued_independently);
+  RUN_TEST(test_txq_informative_enqueued_independently);
+  // TX queue: dequeue / priority / fairness
+  RUN_TEST(test_txq_dequeue_empty_returns_false);
+  RUN_TEST(test_txq_dequeue_core_before_operational);
+  RUN_TEST(test_txq_dequeue_tail1_before_operational);
+  RUN_TEST(test_txq_fairness_higher_replaced_count_wins);
+  RUN_TEST(test_txq_fairness_older_created_at_wins_on_tie);
+  RUN_TEST(test_txq_slot_replacement_increments_count);
+  RUN_TEST(test_txq_dequeue_clears_slot);
+  RUN_TEST(test_txq_no_core_when_allow_core_false);
+  RUN_TEST(test_txq_core_enqueues_at_max_silence_even_without_allow_core);
+  // TX queue: Alive replacement + dequeue (gap coverage)
+  RUN_TEST(test_txq_alive_replacement_increments_count);
+  RUN_TEST(test_txq_alive_dequeued_correctly);
+  // TX queue: Informative replacement + dequeue (gap coverage)
+  RUN_TEST(test_txq_informative_replacement_increments_count);
+  RUN_TEST(test_txq_informative_dequeued_correctly);
+  // TX queue: P1 reserved; be_rank ordering; full priority ordering
+  RUN_TEST(test_txq_p1_never_assigned_in_formation);
+  RUN_TEST(test_txq_be_high_beats_be_low_within_p2);
+  RUN_TEST(test_txq_priority_ordering_p0_beats_all);
   return UNITY_END();
 }

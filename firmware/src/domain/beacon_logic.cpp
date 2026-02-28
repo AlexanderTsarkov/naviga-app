@@ -1,6 +1,7 @@
 #include "domain/beacon_logic.h"
 
 #include <cmath>
+#include <cstring>
 
 namespace naviga {
 namespace domain {
@@ -14,6 +15,40 @@ void BeaconLogic::set_min_interval_ms(uint32_t min_interval_ms) {
 void BeaconLogic::set_max_silence_ms(uint32_t max_silence_ms) {
   max_silence_ms_ = max_silence_ms;
 }
+
+uint16_t BeaconLogic::next_seq16() {
+  seq_ = static_cast<uint16_t>(seq_ + 1u);
+  return seq_;
+}
+
+void BeaconLogic::enqueue_slot(size_t slot_idx,
+                               TxPriority priority,
+                               TxBestEffortClass be_rank,
+                               PacketLogType pkt_type,
+                               const uint8_t* frame,
+                               size_t frame_len,
+                               uint32_t now_ms,
+                               uint16_t ref_core_seq16) {
+  TxSlot& slot = slots_[slot_idx];
+  if (slot.present) {
+    slot.replaced_count++;
+    // created_at_ms preserved intentionally (fairness: age from first enqueue)
+  } else {
+    slot.created_at_ms  = now_ms;
+    slot.replaced_count = 0;
+  }
+  slot.present        = true;
+  slot.priority       = priority;
+  slot.be_rank        = be_rank;
+  slot.pkt_type       = pkt_type;
+  slot.ref_core_seq16 = ref_core_seq16;
+  slot.frame_len      = frame_len;
+  if (frame_len > 0 && frame_len <= protocol::kMaxFrameSize) {
+    std::memcpy(slot.frame, frame, frame_len);
+  }
+}
+
+// ── Legacy single-packet TX API ──────────────────────────────────────────────
 
 bool BeaconLogic::build_tx(uint32_t now_ms,
                            const protocol::GeoBeaconFields& self_fields,
@@ -41,20 +76,20 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
     return false;
   }
 
-  const uint16_t next_seq = static_cast<uint16_t>(seq_ + 1u);
+  const uint16_t core_seq = next_seq16();
 
   if (self_fields.pos_valid != 0) {
     // Position valid → send BeaconCore (msg_type=0x01).
     protocol::GeoBeaconFields fields = self_fields;
-    fields.seq = next_seq;
+    fields.seq = core_seq;
     const size_t written = protocol::encode_geo_beacon(
         fields, protocol::ByteSpan{out, out_cap});
     if (written == 0) {
+      seq_ = static_cast<uint16_t>(seq_ - 1u);  // roll back unused seq
       *out_len = 0;
       return false;
     }
     *out_len = written;
-    seq_ = next_seq;
     last_tx_ms_ = now_ms;
     if (out_type)     { *out_type = PacketLogType::CORE; }
     if (out_core_seq) { *out_core_seq = 0; }
@@ -63,6 +98,7 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
 
   // No fix → send Alive only at maxSilence (field_cadence_v0).
   if (!time_for_silence) {
+    seq_ = static_cast<uint16_t>(seq_ - 1u);  // roll back unused seq
     *out_len = 0;
     return false;
   }
@@ -70,20 +106,201 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
   // Send Alive (msg_type=0x02).
   protocol::AliveFields alive{};
   alive.node_id    = self_fields.node_id;
-  alive.seq        = next_seq;
+  alive.seq        = core_seq;
   alive.has_status = false;
   const size_t written = protocol::encode_alive_frame(alive, out, out_cap);
   if (written == 0) {
+    seq_ = static_cast<uint16_t>(seq_ - 1u);  // roll back unused seq
     *out_len = 0;
     return false;
   }
   *out_len = written;
-  seq_ = next_seq;
   last_tx_ms_ = now_ms;
   if (out_type)     { *out_type = PacketLogType::ALIVE; }
   if (out_core_seq) { *out_core_seq = 0; }
   return true;
 }
+
+// ── Slot-based TX queue API ──────────────────────────────────────────────────
+
+void BeaconLogic::update_tx_queue(uint32_t now_ms,
+                                  const protocol::GeoBeaconFields& self_fields,
+                                  const SelfTelemetry& telemetry,
+                                  bool allow_core) {
+  const uint32_t elapsed = (last_tx_ms_ == 0) ? now_ms : (now_ms - last_tx_ms_);
+  const bool time_for_min     = elapsed >= min_interval_ms_;
+  const bool time_for_silence = max_silence_ms_ > 0 && elapsed >= max_silence_ms_;
+
+  // ── Core_Pos / Alive formation ────────────────────────────────────────────
+  if (self_fields.pos_valid != 0) {
+    // Core_Pos: enqueue when time_for_min (with allow_core gate) or time_for_silence.
+    const bool should_core = (time_for_min && allow_core) || time_for_silence;
+    if (should_core) {
+      const uint16_t core_seq = next_seq16();
+
+      // Encode Core_Pos frame.
+      protocol::GeoBeaconFields fields = self_fields;
+      fields.seq = core_seq;
+      uint8_t core_frame[protocol::kGeoBeaconFrameSize] = {};
+      const size_t core_len = protocol::encode_geo_beacon(
+          fields, protocol::ByteSpan{core_frame, sizeof(core_frame)});
+      if (core_len > 0) {
+        enqueue_slot(kSlotCore, TxPriority::P0_MUST_PERIODIC, TxBestEffortClass::BE_LOW,
+                     PacketLogType::CORE, core_frame, core_len, now_ms, 0);
+        last_tx_ms_ = now_ms;
+
+        // Core_Tail: formed immediately after Core_Pos, using next seq16.
+        // ref_core_seq16 = core_seq; tail's own seq16 = core_seq + 1.
+        const uint16_t tail_seq = next_seq16();
+        protocol::Tail1Fields tail{};
+        tail.node_id        = self_fields.node_id;
+        tail.seq16          = tail_seq;
+        tail.ref_core_seq16 = core_seq;
+        uint8_t tail_frame[protocol::kTail1FrameMin] = {};
+        const size_t tail_len = protocol::encode_tail1_frame(tail, tail_frame, sizeof(tail_frame));
+        if (tail_len > 0) {
+          // Core_Tail is P2_BEST_EFFORT / BE_HIGH: best-effort but above Op/Info.
+          enqueue_slot(kSlotTail1, TxPriority::P2_BEST_EFFORT, TxBestEffortClass::BE_HIGH,
+                       PacketLogType::TAIL1, tail_frame, tail_len, now_ms, core_seq);
+        }
+      }
+    }
+  } else {
+    // No fix: Alive only at maxSilence.
+    if (time_for_silence) {
+      const uint16_t alive_seq = next_seq16();
+      protocol::AliveFields alive{};
+      alive.node_id    = self_fields.node_id;
+      alive.seq        = alive_seq;
+      alive.has_status = false;
+      uint8_t alive_frame[protocol::kAliveFrameMin] = {};
+      const size_t alive_len = protocol::encode_alive_frame(alive, alive_frame, sizeof(alive_frame));
+      if (alive_len > 0) {
+        enqueue_slot(kSlotAlive, TxPriority::P0_MUST_PERIODIC, TxBestEffortClass::BE_LOW,
+                     PacketLogType::ALIVE, alive_frame, alive_len, now_ms, 0);
+        last_tx_ms_ = now_ms;
+      }
+    }
+  }
+
+  // ── Operational (0x04) formation ─────────────────────────────────────────
+  if (telemetry.has_battery || telemetry.has_uptime) {
+    const uint16_t op_seq = next_seq16();
+    protocol::Tail2Fields op{};
+    op.node_id         = self_fields.node_id;
+    op.seq16           = op_seq;
+    op.has_battery     = telemetry.has_battery;
+    op.battery_percent = telemetry.battery_percent;
+    op.has_uptime      = telemetry.has_uptime;
+    op.uptime_sec      = telemetry.uptime_sec;
+    uint8_t op_frame[protocol::kTail2FrameMax] = {};
+    const size_t op_len = protocol::encode_tail2_frame(op, op_frame, sizeof(op_frame));
+    if (op_len > 0) {
+      enqueue_slot(kSlotTail2, TxPriority::P2_BEST_EFFORT, TxBestEffortClass::BE_LOW,
+                   PacketLogType::TAIL2, op_frame, op_len, now_ms, 0);
+    }
+  }
+
+  // ── Informative (0x05) formation ─────────────────────────────────────────
+  if (telemetry.has_max_silence || telemetry.has_hw_profile || telemetry.has_fw_version) {
+    const uint16_t info_seq = next_seq16();
+    protocol::InfoFields info{};
+    info.node_id         = self_fields.node_id;
+    info.seq16           = info_seq;
+    info.has_max_silence = telemetry.has_max_silence;
+    info.max_silence_10s = telemetry.max_silence_10s;
+    info.has_hw_profile  = telemetry.has_hw_profile;
+    info.hw_profile_id   = telemetry.hw_profile_id;
+    info.has_fw_version  = telemetry.has_fw_version;
+    info.fw_version_id   = telemetry.fw_version_id;
+    uint8_t info_frame[protocol::kInfoFrameMax] = {};
+    const size_t info_len = protocol::encode_info_frame(info, info_frame, sizeof(info_frame));
+    if (info_len > 0) {
+      enqueue_slot(kSlotInfo, TxPriority::P2_BEST_EFFORT, TxBestEffortClass::BE_LOW,
+                   PacketLogType::INFO, info_frame, info_len, now_ms, 0);
+    }
+  }
+}
+
+bool BeaconLogic::dequeue_tx(uint8_t* out,
+                             size_t out_cap,
+                             size_t* out_len,
+                             PacketLogType* out_type,
+                             uint16_t* out_core_seq) {
+  if (!out || !out_len) {
+    return false;
+  }
+  *out_len = 0;
+
+  // Selection order (lower value = higher priority in each dimension):
+  //   1. TxPriority (primary)
+  //   2. TxBestEffortClass be_rank (secondary; only meaningful within P2_BEST_EFFORT)
+  //   3. replaced_count descending (most-starved first)
+  //   4. created_at_ms ascending (oldest first)
+  int best = -1;
+  for (size_t i = 0; i < kTxSlotCount; ++i) {
+    if (!slots_[i].present) {
+      continue;
+    }
+    if (best < 0) {
+      best = static_cast<int>(i);
+      continue;
+    }
+    const TxSlot& b = slots_[static_cast<size_t>(best)];
+    const TxSlot& c = slots_[i];
+
+    const uint8_t bp = static_cast<uint8_t>(b.priority);
+    const uint8_t cp = static_cast<uint8_t>(c.priority);
+    if (cp < bp) {
+      best = static_cast<int>(i);
+    } else if (cp == bp) {
+      const uint8_t bb = static_cast<uint8_t>(b.be_rank);
+      const uint8_t cb = static_cast<uint8_t>(c.be_rank);
+      if (cb < bb) {
+        best = static_cast<int>(i);
+      } else if (cb == bb) {
+        if (c.replaced_count > b.replaced_count) {
+          best = static_cast<int>(i);
+        } else if (c.replaced_count == b.replaced_count) {
+          // Older created_at_ms wins (smaller value = older).
+          if (c.created_at_ms < b.created_at_ms) {
+            best = static_cast<int>(i);
+          }
+        }
+      }
+    }
+  }
+
+  if (best < 0) {
+    return false;
+  }
+
+  TxSlot& slot = slots_[static_cast<size_t>(best)];
+  if (slot.frame_len > out_cap) {
+    return false;
+  }
+
+  std::memcpy(out, slot.frame, slot.frame_len);
+  *out_len = slot.frame_len;
+  if (out_type)     { *out_type     = slot.pkt_type; }
+  if (out_core_seq) { *out_core_seq = slot.ref_core_seq16; }
+
+  // Clear the slot.
+  slot = TxSlot{};
+
+  return true;
+}
+
+bool BeaconLogic::has_pending_tx() const {
+  for (size_t i = 0; i < kTxSlotCount; ++i) {
+    if (slots_[i].present) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// ── RX dispatch ─────────────────────────────────────────────────────────────
 
 bool BeaconLogic::on_rx(uint32_t now_ms,
                         const uint8_t* frame,
