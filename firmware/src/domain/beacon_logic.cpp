@@ -23,6 +23,7 @@ uint16_t BeaconLogic::next_seq16() {
 
 void BeaconLogic::enqueue_slot(size_t slot_idx,
                                TxPriority priority,
+                               TxBestEffortClass be_rank,
                                PacketLogType pkt_type,
                                const uint8_t* frame,
                                size_t frame_len,
@@ -38,6 +39,7 @@ void BeaconLogic::enqueue_slot(size_t slot_idx,
   }
   slot.present        = true;
   slot.priority       = priority;
+  slot.be_rank        = be_rank;
   slot.pkt_type       = pkt_type;
   slot.ref_core_seq16 = ref_core_seq16;
   slot.frame_len      = frame_len;
@@ -143,8 +145,8 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
       const size_t core_len = protocol::encode_geo_beacon(
           fields, protocol::ByteSpan{core_frame, sizeof(core_frame)});
       if (core_len > 0) {
-        enqueue_slot(kSlotCore, TxPriority::P0_HIGH, PacketLogType::CORE,
-                     core_frame, core_len, now_ms, 0);
+        enqueue_slot(kSlotCore, TxPriority::P0_MUST_PERIODIC, TxBestEffortClass::BE_LOW,
+                     PacketLogType::CORE, core_frame, core_len, now_ms, 0);
         last_tx_ms_ = now_ms;
 
         // Core_Tail: formed immediately after Core_Pos, using next seq16.
@@ -157,8 +159,9 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
         uint8_t tail_frame[protocol::kTail1FrameMin] = {};
         const size_t tail_len = protocol::encode_tail1_frame(tail, tail_frame, sizeof(tail_frame));
         if (tail_len > 0) {
-          enqueue_slot(kSlotTail1, TxPriority::P1_MID, PacketLogType::TAIL1,
-                       tail_frame, tail_len, now_ms, core_seq);
+          // Core_Tail is P2_BEST_EFFORT / BE_HIGH: best-effort but above Op/Info.
+          enqueue_slot(kSlotTail1, TxPriority::P2_BEST_EFFORT, TxBestEffortClass::BE_HIGH,
+                       PacketLogType::TAIL1, tail_frame, tail_len, now_ms, core_seq);
         }
       }
     }
@@ -173,8 +176,8 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
       uint8_t alive_frame[protocol::kAliveFrameMin] = {};
       const size_t alive_len = protocol::encode_alive_frame(alive, alive_frame, sizeof(alive_frame));
       if (alive_len > 0) {
-        enqueue_slot(kSlotAlive, TxPriority::P0_HIGH, PacketLogType::ALIVE,
-                     alive_frame, alive_len, now_ms, 0);
+        enqueue_slot(kSlotAlive, TxPriority::P0_MUST_PERIODIC, TxBestEffortClass::BE_LOW,
+                     PacketLogType::ALIVE, alive_frame, alive_len, now_ms, 0);
         last_tx_ms_ = now_ms;
       }
     }
@@ -193,8 +196,8 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
     uint8_t op_frame[protocol::kTail2FrameMax] = {};
     const size_t op_len = protocol::encode_tail2_frame(op, op_frame, sizeof(op_frame));
     if (op_len > 0) {
-      enqueue_slot(kSlotTail2, TxPriority::P2_LOW, PacketLogType::TAIL2,
-                   op_frame, op_len, now_ms, 0);
+      enqueue_slot(kSlotTail2, TxPriority::P2_BEST_EFFORT, TxBestEffortClass::BE_LOW,
+                   PacketLogType::TAIL2, op_frame, op_len, now_ms, 0);
     }
   }
 
@@ -213,8 +216,8 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
     uint8_t info_frame[protocol::kInfoFrameMax] = {};
     const size_t info_len = protocol::encode_info_frame(info, info_frame, sizeof(info_frame));
     if (info_len > 0) {
-      enqueue_slot(kSlotInfo, TxPriority::P2_LOW, PacketLogType::INFO,
-                   info_frame, info_len, now_ms, 0);
+      enqueue_slot(kSlotInfo, TxPriority::P2_BEST_EFFORT, TxBestEffortClass::BE_LOW,
+                   PacketLogType::INFO, info_frame, info_len, now_ms, 0);
     }
   }
 }
@@ -229,7 +232,11 @@ bool BeaconLogic::dequeue_tx(uint8_t* out,
   }
   *out_len = 0;
 
-  // Find the best slot: highest priority, then highest replaced_count, then oldest created_at_ms.
+  // Selection order (lower value = higher priority in each dimension):
+  //   1. TxPriority (primary)
+  //   2. TxBestEffortClass be_rank (secondary; only meaningful within P2_BEST_EFFORT)
+  //   3. replaced_count descending (most-starved first)
+  //   4. created_at_ms ascending (oldest first)
   int best = -1;
   for (size_t i = 0; i < kTxSlotCount; ++i) {
     if (!slots_[i].present) {
@@ -241,15 +248,24 @@ bool BeaconLogic::dequeue_tx(uint8_t* out,
     }
     const TxSlot& b = slots_[static_cast<size_t>(best)];
     const TxSlot& c = slots_[i];
-    if (static_cast<uint8_t>(c.priority) < static_cast<uint8_t>(b.priority)) {
+
+    const uint8_t bp = static_cast<uint8_t>(b.priority);
+    const uint8_t cp = static_cast<uint8_t>(c.priority);
+    if (cp < bp) {
       best = static_cast<int>(i);
-    } else if (c.priority == b.priority) {
-      if (c.replaced_count > b.replaced_count) {
+    } else if (cp == bp) {
+      const uint8_t bb = static_cast<uint8_t>(b.be_rank);
+      const uint8_t cb = static_cast<uint8_t>(c.be_rank);
+      if (cb < bb) {
         best = static_cast<int>(i);
-      } else if (c.replaced_count == b.replaced_count) {
-        // Older created_at_ms wins (smaller value = older).
-        if (c.created_at_ms < b.created_at_ms) {
+      } else if (cb == bb) {
+        if (c.replaced_count > b.replaced_count) {
           best = static_cast<int>(i);
+        } else if (c.replaced_count == b.replaced_count) {
+          // Older created_at_ms wins (smaller value = older).
+          if (c.created_at_ms < b.created_at_ms) {
+            best = static_cast<int>(i);
+          }
         }
       }
     }

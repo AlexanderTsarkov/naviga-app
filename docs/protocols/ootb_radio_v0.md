@@ -186,22 +186,53 @@ All packets fit within the LongDist budget (24 B) at minimum size. Minimum paylo
 
 ### 4.4. TX queue priority classes (normative)
 
-The firmware TX queue assigns each pending packet type a **priority class**. At most one frame is sent per tick; the slot with the highest priority is selected first. Within the same priority class, the slot with the **highest `replaced_count`** is selected (most-starved-first fairness); ties are broken by **oldest `created_at_ms`** (FIFO).
+The firmware TX queue assigns each pending packet type a **priority class**. At most one frame is sent per tick; the slot with the highest priority is selected first.
 
-| Priority | Level name | Packet types | Rationale |
-|----------|------------|--------------|-----------|
-| **P0** | `P0_HIGH` | `Node_OOTB_Core_Pos` (0x01), `Node_OOTB_I_Am_Alive` (0x02) | Must send; drives liveness and position. Starvation of P0 is not permitted. |
-| **P1** | `P1_MID` | `Node_OOTB_Core_Tail` (0x03) | Best-effort, time-bound to the Core sample it qualifies. Sent before P2 to maximise Core_Tail usefulness. |
-| **P2** | `P2_LOW` | `Node_OOTB_Operational` (0x04), `Node_OOTB_Informative` (0x05) | Best-effort slow state. Both are equal priority; fairness via `replaced_count` prevents starvation of either. |
-| **P3** | `P3_OPPORTUNISTIC` | *(reserved; no current packet type)* | Reserved for future opportunistic or diagnostic packet types (e.g. `Node_OOTB_Diag`). Sent only when no P0–P2 slots are pending. |
+#### Priority class definitions
 
-**Slot model invariants:**
+| Class | Code name | Meaning | Current packet types |
+|-------|-----------|---------|----------------------|
+| **P0** | `P0_MUST_PERIODIC` | Mandatory periodic. Must not be starved. Drives liveness and position. | `Node_OOTB_Core_Pos` (0x01), `Node_OOTB_I_Am_Alive` (0x02) |
+| **P1** | `P1_SESSION_MESH` | **Reserved.** Future Session/Mesh control packets (e.g. `Node_Session_*`, Mesh relay control). NOT used by any current OOTB packet type. | *(none today)* |
+| **P2** | `P2_BEST_EFFORT` | Best-effort delivery. Sub-ordered by `TxBestEffortClass` (see below). | `Node_OOTB_Core_Tail` (0x03), `Node_OOTB_Operational` (0x04), `Node_OOTB_Informative` (0x05) |
+| **P3** | `P3_THROTTLED` | **Reserved.** Opportunistic / channel-utilization-throttled traffic. Sent only when no P0–P2 slots are pending and channel budget allows. | *(none today)* |
+
+> **Current OOTB packets use P0 and P2 only.** P1 is reserved for future Session/Mesh control packets. P3 is reserved for throttled opportunistic traffic.
+
+#### Best-effort sub-priority (`TxBestEffortClass`)
+
+Within `P2_BEST_EFFORT`, slots are further ordered by `be_rank`:
+
+| `be_rank` | Code name | Packet types | Rationale |
+|-----------|-----------|--------------|-----------|
+| **BE_HIGH** | `BE_HIGH` | `Node_OOTB_Core_Tail` (0x03) | Time-bound to its Core sample; send before Operational/Informative to maximise Core_Tail usefulness. |
+| **BE_LOW** | `BE_LOW` | `Node_OOTB_Operational` (0x04), `Node_OOTB_Informative` (0x05) | Slow-state; equal sub-priority; fairness via `replaced_count` / `created_at_ms`. |
+
+#### Full selection order (dequeue)
+
+1. `TxPriority` (lower value = higher priority)
+2. `TxBestEffortClass be_rank` (lower value = higher sub-priority; only meaningful within `P2_BEST_EFFORT`)
+3. `replaced_count` descending (most-starved-first fairness)
+4. `created_at_ms` ascending (oldest-first tie-break)
+
+#### Slot model invariants
+
 - One slot per packet type (5 slots total for v0).
 - Replacement (re-enqueue before send) increments `replaced_count` and **preserves** `created_at_ms` (fairness: age from first enqueue).
 - `Core_Tail` slot is always replaced together with `Core_Pos` when a new Core is formed before the old one is sent.
 - Global `seq16` is assigned at **formation time** (enqueue), not at dequeue time. Every enqueued packet consumes the next counter value.
 
-**Relation to field_cadence_v0 tiers:** The priority classes above map to the delivery tiers in [field_cadence_v0.md](../product/areas/nodetable/policy/field_cadence_v0.md) as follows: Tier A → P0 (Core/Alive), Tier B → P1 (Core_Tail), Tier C → P2 (Operational/Informative). The degrade-under-load order in field_cadence_v0 §4 (keep Tier A, reduce Tier B, drop Tier C first) is enforced by this priority ordering.
+#### Relation to field_cadence_v0 tiers
+
+The priority classes map to the delivery tiers in [field_cadence_v0.md](../product/areas/nodetable/policy/field_cadence_v0.md) as follows:
+
+| field_cadence_v0 tier | TX queue mapping |
+|-----------------------|-----------------|
+| Tier A (Core/Alive) | P0_MUST_PERIODIC |
+| Tier B (Core_Tail) | P2_BEST_EFFORT / BE_HIGH |
+| Tier C (Operational, Informative) | P2_BEST_EFFORT / BE_LOW |
+
+The degrade-under-load order in field_cadence_v0 §4 (keep Tier A, reduce Tier B, drop Tier C first) is enforced by this priority + be_rank ordering.
 
 ---
 
