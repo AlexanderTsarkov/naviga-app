@@ -10,12 +10,12 @@ This contract defines the **v0 BeaconTail-1 payload**: byte layout, field semant
 
 ## 0) Frame header (framing layer — not part of this contract)
 
-Every on-air BeaconTail-1 frame is preceded by a **2-byte frame header** defined in [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0).
+Every on-air `Node_OOTB_Core_Tail` frame is preceded by a **2-byte frame header** defined in [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0).
 
-- **`msg_type` for BeaconTail-1:** `0x03` (`BEACON_TAIL1`). Dispatched independently at the framing layer.
-- **`payload_len`** in the header = number of payload bytes (9 minimum; see §3 below). Does not include the 2-byte header.
+- **`msg_type` for Node_OOTB_Core_Tail:** `0x03` (`BEACON_TAIL1`). Dispatched independently at the framing layer.
+- **`payload_len`** in the header = number of payload bytes (11 minimum; see §3 below). Does not include the 2-byte header.
 - **`payloadVersion`** is the **first byte of the payload** (byte 0 of the payload body). It is not a header field.
-- **On-air total size:** 2 (header) + 9 (min payload) = **11 bytes minimum**; 2 + 11 (with posFlags+sats) = **13 bytes**. Both fit within LongDist budget (24 B).
+- **On-air total size:** 2 (header) + 11 (min payload) = **13 bytes minimum**; 2 + 13 (with posFlags+sats) = **15 bytes**. Both fit within LongDist budget (24 B).
 
 ---
 
@@ -47,10 +47,11 @@ After the Common prefix, each packet type has its own **Useful payload** (bytes 
 
 ## 1) Role and invariants
 
-- **BeaconTail-1 is sample-attached:** It qualifies exactly one BeaconCore sample, identified by `ref_core_seq16`.
-- **Optional and loss-tolerant:** Tail-1 packets may be missing, reordered, or dropped. The product MUST remain fully functional (position tracking, liveness) with zero Tail-1 packets received.
-- **Never moves position:** Tail-1 MUST NOT update `lat`, `lon`, `alt`, or any position-derived field. Position is owned exclusively by BeaconCore.
-- **Does not revoke Core position:** A Tail-1 with `posFlags = 0` (or any other value) MUST NOT clear or invalidate position already received in BeaconCore for that node. Position is overwritten only by a newer BeaconCore.
+- **`Node_OOTB_Core_Tail` is sample-attached:** It qualifies exactly one `Node_OOTB_Core_Pos` sample, identified by `ref_core_seq16`.
+- **One tail per Core sample (TX invariant):** The sender MUST generate **at most one** `Node_OOTB_Core_Tail` per `Node_OOTB_Core_Pos` sample. Core_Tail is generated once, immediately after the corresponding Core_Pos, to capture `ref_core_seq16`. In the TX queue, a pending Core_Tail for a given `ref_core_seq16` MAY be replaced (e.g. if a newer Core_Pos is sent before the Tail is transmitted), but MUST NOT be duplicated. The receiver MUST treat any second `Node_OOTB_Core_Tail` referencing the same `ref_core_seq16` as an unexpected duplicate and ignore its payload (see [rx_semantics_v0.md §1](../policy/rx_semantics_v0.md)).
+- **Optional and loss-tolerant:** `Node_OOTB_Core_Tail` packets may be missing, reordered, or dropped. The product MUST remain fully functional (position tracking, liveness) with zero packets received.
+- **Never moves position:** MUST NOT update `lat`, `lon`, `alt`, or any position-derived field. Position is owned exclusively by `Node_OOTB_Core_Pos`.
+- **Does not revoke Core position:** A Core_Tail with `posFlags = 0` (or any other value) MUST NOT clear or invalidate position already received in `Node_OOTB_Core_Pos` for that node. Position is overwritten only by a newer `Node_OOTB_Core_Pos`.
 
 ---
 
@@ -112,7 +113,7 @@ Tail-1 MUST NOT update `lat`, `lon`, `alt`, or any position-derived field, regar
 | Condition | Action |
 |-----------|--------|
 | `payloadVersion != 0x00` | Drop and log; do not attempt partial decode |
-| `payload_len < 9` (minimum) | Drop packet |
+| `payload_len < 11` (minimum: Common + ref_core_seq16) | Drop packet |
 | `payload_len` shorter than offset of a field being decoded | Treat field as absent (sentinel / not present) |
 
 ### 4.4 lastRxAt and link metrics
@@ -123,9 +124,9 @@ Even when Tail-1 payload is **not** applied (`ref_core_seq16` mismatch), the rec
 
 ## 5) Loss-tolerance invariant
 
-> The product MUST function correctly (position tracking, liveness, activity derivation) with **zero** BeaconTail-1 packets received.
+> The product MUST function correctly (position tracking, liveness, activity derivation) with **zero** `Node_OOTB_Core_Tail` packets received.
 >
-> Tail-1 absence is the normal operating condition for low-bandwidth or congested channels. Receivers MUST NOT require Tail-1 for any correctness guarantee.
+> Core_Tail absence is the normal operating condition for low-bandwidth or congested channels. Receivers MUST NOT require Core_Tail for any correctness guarantee.
 
 ---
 

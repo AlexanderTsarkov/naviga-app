@@ -12,19 +12,19 @@ This policy defines how the receiver interprets and applies incoming packets (`N
 
 | Term | Meaning |
 |------|---------|
-| **Accepted packet** | A packet that passes version and nodeId checks and any payload checks the receiver applies; it is used to update NodeTable (at least lastRxAt and, where applicable, position/telemetry/link metrics). BeaconCore, BeaconTail-1, BeaconTail-2, and Alive can all be accepted. |
-| **Duplicate** | A packet that carries the same logical sample as one already applied (e.g. same nodeId and seq16 for Core or Alive). Receiver may refresh lastRxAt but MUST NOT treat it as a new sample for position/telemetry (no overwrite with same data). For Tail-1, duplicate means same `(nodeId, ref_core_seq16)` — applying it twice is idempotent (same posFlags/sats for the same Core sample). |
-| **Out-of-order (ooo)** | A packet whose seq16 (for Core/Alive) is older than the last accepted seq for that node. Receiver MUST NOT use it to overwrite newer position or telemetry ("no time travel"); MAY ignore for payload or accept only for lastRxAt within a small tolerance (implementation-defined). For Tail-1, OOO is handled by the `ref_core_seq16 == lastCoreSeq` gate — a stale Tail-1 is dropped silently. |
-| **seq16 wrap** | seq16 is a 16-bit counter; it wraps. Ordering is defined by modulo subtraction: `delta = (incoming − last) mod 2¹⁶`. If `delta = 0` → Duplicate. If `delta ∈ [1, 32767]` → Newer. If `delta ∈ [32768, 65535]` → Older (out-of-order). Implementations MUST use this rule consistently for Core and Alive duplicate / new / ooo decisions. |
+| **Accepted packet** | A packet that passes version and nodeId checks and any payload checks the receiver applies; it is used to update NodeTable (at least lastRxAt and, where applicable, position/telemetry/link metrics). All `Node_*` packet types can be accepted. |
+| **Duplicate** | A packet whose `(nodeId48, seq16)` pair matches one already seen for that node. Receiver may refresh lastRxAt but MUST NOT treat it as a new sample for position/telemetry. For `Node_OOTB_Core_Tail`, a second packet referencing the same `ref_core_seq16` is also treated as a duplicate (unexpected; TX MUST NOT generate them — see [tail1_packet_encoding_v0 §1](../contract/tail1_packet_encoding_v0.md)). |
+| **Out-of-order (ooo)** | A packet whose `seq16` is older than the last accepted seq for that node (by the wrap rule). Receiver MUST NOT use it to overwrite newer position or telemetry ("no time travel"); MAY accept only for lastRxAt within a small tolerance (implementation-defined). For `Node_OOTB_Core_Tail`, OOO is handled by the `ref_core_seq16 == lastCoreSeq` gate — a stale Core_Tail is dropped silently. |
+| **seq16 wrap** | seq16 is a 16-bit counter; it wraps. Ordering is defined by modulo subtraction: `delta = (incoming − last) mod 2¹⁶`. If `delta = 0` → Duplicate. If `delta ∈ [1, 32767]` → Newer. If `delta ∈ [32768, 65535]` → Older (out-of-order). Implementations MUST use this rule consistently for all `Node_*` packet types. |
 
-**seq16 scope — sender counter:** The sender maintains **one seq16 counter per node**, incremented on every transmitted packet regardless of type (BeaconCore, BeaconAlive, and Tails when implemented). This counter is shared across all packet types during uptime.
+**seq16 scope — sender counter:** The sender maintains **one global seq16 counter per node**, incremented on every transmitted packet regardless of type. This counter is shared across all `Node_*` packet types during uptime.
 
 **seq16 scope — payload presence:** `seq16` is part of the **Common prefix** of every `Node_*` packet (see [ootb_radio_v0.md §3.0](../../../../protocols/ootb_radio_v0.md#30-packet-anatomy--invariants)). All packet types embed the current counter value as `seq16` at payload bytes 7–8. **Dedupe key: `(nodeId48, seq16)` — payload-agnostic.** Exception: `Node_OOTB_Core_Tail` additionally carries `ref_core_seq16` in its Useful payload (bytes 9–10) as a Core linkage key; this is distinct from `seq16`.
 
 **Duplicate / OOO handling per packet type:**
 - **`Node_OOTB_Core_Pos` / `Node_OOTB_I_Am_Alive`:** Use the seq16 wrap rule (modulo subtraction) for duplicate and OOO detection. The seen seq16 set is per-node global across all packet types.
-- **`Node_OOTB_Core_Tail`:** Primary dedupe is `(nodeId48, seq16)` from Common. Payload application is additionally gated by `ref_core_seq16 == lastCoreSeq`. Two Core_Tail packets with the same `ref_core_seq16` are idempotent. A stale Core_Tail (referencing an old Core) is dropped by the gate.
-- **`Node_OOTB_Operational` / `Node_OOTB_Informative`:** Dedupe by `(nodeId48, seq16)`. Applied unconditionally when version and nodeId are valid (no CoreRef).
+- **`Node_OOTB_Core_Tail`:** Primary dedupe is `(nodeId48, seq16)` from Common. Payload application is additionally gated by `ref_core_seq16 == lastCoreSeq`. **One tail per Core sample (normative):** TX MUST generate at most one Core_Tail per Core_Pos sample (see [tail1_packet_encoding_v0 §1](../contract/tail1_packet_encoding_v0.md)). If a receiver sees a second Core_Tail referencing the same `ref_core_seq16`, it MUST treat it as an unexpected duplicate: ignore payload, optionally update lastRxAt/link metrics. A stale Core_Tail (referencing an older Core) is dropped by the `ref_core_seq16 == lastCoreSeq` gate.
+- **`Node_OOTB_Operational` / `Node_OOTB_Informative`:** Dedupe by `(nodeId48, seq16)`. When version and nodeId are valid and `seq16` is new (not a duplicate by the wrap rule), apply carried fields to NodeTable. No CoreRef gate.
 
 ---
 
@@ -42,8 +42,8 @@ This policy defines how the receiver interprets and applies incoming packets (`N
 
 ### 3.1 lastRxAt / telemetryAt
 
-- On **any** accepted packet (BeaconCore, BeaconTail-1, BeaconTail-2, or Alive), the receiver **MUST** update **lastRxAt** for that node to the current reception time.
-- **telemetryAt** (receiver-side time when telemetry was last observed) is updated when the accepted packet carries or implies telemetry (Core position, Tail-1/Tail-2 fields); for Alive-only, lastRxAt is updated but telemetryAt need not change if no telemetry is present.
+- On **any** accepted `Node_*` packet, the receiver **MUST** update **lastRxAt** for that node to the current reception time.
+- **telemetryAt** (receiver-side time when telemetry was last observed) is updated when the accepted packet carries or implies telemetry (Core_Pos position, Core_Tail/Operational/Informative fields); for `Node_OOTB_I_Am_Alive`-only, lastRxAt is updated but telemetryAt need not change if no telemetry is present.
 
 ### 3.2 Link metrics (rssiLast, snrLast, etc.)
 
@@ -56,10 +56,10 @@ This policy defines how the receiver interprets and applies incoming packets (`N
 
 ---
 
-## 4) Tail-1 and position: no revocation of Core
+## 4) Core_Tail and position: no revocation of Core
 
-- **Baseline** (first Core sent) is defined in [field_cadence_v0](field_cadence_v0.md) §2.1; once a node has sent at least one BeaconCore, it has a baseline. **BeaconCore** is position-bearing; when a receiver has accepted a BeaconCore with valid lat/lon, that position is **authoritative** for that node until a **new** BeaconCore with a newer seq16 updates it.
-- **Tail-1** carries posFlags/sats that **qualify** the **same** Core sample (same `ref_core_seq16`). Tail-1 **MUST NOT** be interpreted as revoking or invalidating position already received in BeaconCore. In particular: if the receiver already has position from Core for that node, a subsequent Tail-1 with posFlags = 0 (or "no fix") **does not** clear or invalidate that position; it only qualifies the metadata for that sample. Position is overwritten only by a newer BeaconCore.
+- **Baseline** (first Core sent) is defined in [field_cadence_v0](field_cadence_v0.md) §2.1; once a node has sent at least one `Node_OOTB_Core_Pos`, it has a baseline. `Node_OOTB_Core_Pos` is position-bearing; when a receiver has accepted a Core_Pos with valid lat/lon, that position is **authoritative** for that node until a **new** Core_Pos with a newer seq16 updates it.
+- **`Node_OOTB_Core_Tail`** carries posFlags/sats that **qualify** the **same** Core sample (same `ref_core_seq16`). Core_Tail **MUST NOT** be interpreted as revoking or invalidating position already received in Core_Pos. In particular: if the receiver already has position from Core_Pos for that node, a subsequent Core_Tail with posFlags = 0 (or "no fix") **does not** clear or invalidate that position; it only qualifies the metadata for that sample. Position is overwritten only by a newer `Node_OOTB_Core_Pos`.
 
 ---
 
