@@ -59,34 +59,37 @@ The following **MUST NOT** appear inside the v0 beacon payload:
 
 Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../policy/field_cadence_v0.md) §2. This section defines the **v0 byte layouts** only.
 
-### Common prefix (all beacon-family packets)
+### Common prefix (all Node_* packets)
 
-Every beacon-family payload (BeaconCore, BeaconAlive, BeaconTail-1, BeaconTail-2) begins with the same **7-byte Common prefix**:
+Every `Node_*` payload begins with the same **9-byte Common prefix**. See [ootb_radio_v0.md §3.0](../../../../protocols/ootb_radio_v0.md#30-packet-anatomy--invariants) for the full anatomy and `seq16` invariants.
 
 | Offset | Field | Bytes | Notes |
 |--------|-------|-------|-------|
 | 0 | `payloadVersion` | 1 | Version byte; determines entire payload layout for this `msg_type`. |
 | 1–6 | `nodeId48` | 6 | NodeID48 (6-byte LE MAC48); sender identity. |
+| 7–8 | `seq16` | 2 | Global per-node sequence counter (uint16 LE). One counter shared across all `Node_*` packet types. Dedupe key: `(nodeId48, seq16)`. |
 
-After the Common prefix, each packet type has its own **Functional payload** (bytes 7+):
+After the Common prefix, each packet type has its own **Useful payload** (bytes 9+):
 
-| Packet type | Functional payload (bytes 7+) | Seq-like field |
-|-------------|-------------------------------|---------------|
-| BeaconCore | `seq16(2)` + `lat_u24(3)` + `lon_u24(3)` | `seq16` — per-frame freshness counter |
-| BeaconAlive | `seq16(2)` + optional `aliveStatus(1)` | `seq16` — per-frame freshness counter |
-| BeaconTail-1 | `ref_core_seq16(2)` + optional `posFlags(1)` + optional `sats(1)` | `ref_core_seq16` — Core linkage key (back-reference, not a freshness counter) |
-| BeaconTail-2 | optional fields only | none |
+| Canonical alias | Useful payload (bytes 9+) | Notes |
+|---|---|---|
+| `Node_OOTB_Core_Pos` | `lat_u24(3)` + `lon_u24(3)` | `seq16` in Common is the freshness counter |
+| `Node_OOTB_I_Am_Alive` | optional `aliveStatus(1)` | `seq16` in Common is the freshness counter |
+| `Node_OOTB_Core_Tail` | `ref_core_seq16(2)` + optional `posFlags(1)` + optional `sats(1)` | `ref_core_seq16` in payload is a Core linkage key (back-reference to Core_Pos `seq16`); distinct from `seq16` in Common |
+| `Node_OOTB_Operational` | optional `batteryPercent(1)`, `uptimeSec(4)` | Operational/dynamic runtime fields |
+| `Node_OOTB_Informative` | optional `maxSilence10s(1)`, `hwProfileId(2)`, `fwVersionId(2)` | Static/config fields |
 
-**`ref_core_seq16` vs `seq16`:** BeaconTail-1 carries `ref_core_seq16` — a back-reference to the `seq16` of the specific BeaconCore sample it qualifies. This is a Core linkage key, not the sender's current counter value. BeaconTail-1 does **not** carry a per-frame freshness counter. See [rx_semantics_v0.md §1](../policy/rx_semantics_v0.md) for duplicate/OOO handling per packet type.
+**`ref_core_seq16` vs `seq16`:** `Node_OOTB_Core_Tail` carries both: `seq16` in Common (its own unique packet id, increments the global counter) and `ref_core_seq16` in Useful payload (back-reference to the `seq16` of the specific `Node_OOTB_Core_Pos` sample it qualifies). These are distinct fields; `seq16 ≠ ref_core_seq16`. See [rx_semantics_v0.md §1](../policy/rx_semantics_v0.md) for duplicate/OOO handling.
 
-| Type | Purpose | MUST fields | Optional fields | Notes |
-|------|---------|-------------|-----------------|--------|
-| **BeaconCore** | Minimal sample: WHO + WHERE + freshness. Strict cadence; MUST deliver. | payloadVersion(1), nodeId48(6), seq16(2), lat_u24(3), lon_u24(3) | — | Smallest possible; **15 B fixed** (+ 2B frame header = 17 B on-air). lat/lon MUST be valid coordinates; Core MUST NOT be transmitted without valid fix (§3.1). |
-| **BeaconTail-1** | Attached-to-Core extension; qualifies one Core sample. Optional, loss-tolerant. | payloadVersion(1), nodeId48(6), ref_core_seq16(2) | posFlags(1), sats(1) | Receiver applies only if **ref_core_seq16 == lastCoreSeq**; else ignore. MUST NOT update position. `ref_core_seq16` is a Core linkage key (back-reference), not a per-frame freshness counter. Full contract: [tail1_packet_encoding_v0.md](tail1_packet_encoding_v0.md). |
-| **BeaconTail-2** | Uncoupled slow state; no CoreRef. Optional, loss-tolerant. | payloadVersion(1), nodeId48(6) | maxSilence10s(1), batteryPercent(1), hwProfileId(2), fwVersionId(2), uptimeSec(4) | No CoreRef; apply unconditionally. MUST NOT update position. Two scheduling classes: Operational and Informative. Full contract: [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md). |
+| Canonical alias | Legacy enum | Purpose | MUST fields | Optional fields | Notes |
+|---|---|---|---|---|---|
+| **`Node_OOTB_Core_Pos`** | `BEACON_CORE` | Minimal sample: WHO + WHERE + freshness. Strict cadence; MUST deliver. | payloadVersion(1), nodeId48(6), seq16(2), lat_u24(3), lon_u24(3) | — | **15 B fixed** (+ 2B header = 17 B on-air). lat/lon MUST be valid; Core MUST NOT be transmitted without valid fix (§3.1). |
+| **`Node_OOTB_Core_Tail`** | `BEACON_TAIL1` | Core-attached extension; qualifies one Core sample. Optional, loss-tolerant. | payloadVersion(1), nodeId48(6), seq16(2), ref_core_seq16(2) | posFlags(1), sats(1) | Apply only if `ref_core_seq16 == lastCoreSeq`; else ignore. MUST NOT update position. Full contract: [tail1_packet_encoding_v0.md](tail1_packet_encoding_v0.md). |
+| **`Node_OOTB_Operational`** | `BEACON_TAIL2` | Operational slow state; dynamic runtime fields. Optional, loss-tolerant. | payloadVersion(1), nodeId48(6), seq16(2) | batteryPercent(1), uptimeSec(4) | No CoreRef; apply unconditionally. MUST NOT update position. Full contract: [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md). |
+| **`Node_OOTB_Informative`** | `BEACON_INFO` | Static/config fields; rarely changes. Optional, loss-tolerant. | payloadVersion(1), nodeId48(6), seq16(2) | maxSilence10s(1), hwProfileId(2), fwVersionId(2) | No CoreRef; apply unconditionally. MUST NOT update position. Full contract: [info_packet_encoding_v0.md](info_packet_encoding_v0.md). |
 
 - **Byte order:** Little-endian for all multi-byte integers.
-- **Frame header:** Every on-air frame is preceded by a 2-byte header (7+3+6 bit layout) defined in [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0). `msg_type` values: BeaconCore = `0x01`, BeaconTail-1 = `0x03`, BeaconTail-2 = `0x04`. The header is **not part of this contract**; payload byte offsets below start at byte 0 of the payload body.
+- **Frame header:** Every on-air frame is preceded by a 2-byte header (7+3+6 bit layout) defined in [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0). See registry in [ootb_radio_v0.md §3.2](../../../../protocols/ootb_radio_v0.md#32-msg_type-registry-v0). The header is **not part of this contract**; payload byte offsets below start at byte 0 of the payload body.
 - **Layer separation:** `msg_type` lives in the **frame header** (separate from payload; not part of this contract). `payloadVersion` is the **first byte of the payload** and determines the **entire payload layout** for that `msg_type`. Unknown `payloadVersion` → discard (per §7).
 - **Version tag:** `payloadVersion` = `0x00` for v0. This is a payload-layer version, not a header/frame version.
 
@@ -127,30 +130,44 @@ After the Common prefix, each packet type has its own **Functional payload** (by
 
 **Size:** **15 bytes** (payload only). With 2-byte frame header ([ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0)): **17 bytes on-air**. Fits within LongDist (24), Default (32), Fast (40).
 
-### 4.2 BeaconTail-1
+### 4.2 Node_OOTB_Core_Tail (BeaconTail-1)
 
 **Dedicated contract:** [tail1_packet_encoding_v0.md](tail1_packet_encoding_v0.md) — full byte layout, field definitions, units, ranges, and normative RX rules. Canonized in [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307).
 
 **Summary:**
-- `msg_type = 0x03`, `payloadVersion = 0x00`
-- **Minimum (MUST):** `payloadVersion(1) | nodeId48(6) | ref_core_seq16(2)` = **9 bytes**
-- **Optional:** `posFlags(1)`, `sats(1)` — up to **11 bytes**
-- **`ref_core_seq16`:** Core linkage key — the `seq16` of the BeaconCore sample this Tail-1 qualifies. This is a back-reference, not a per-frame freshness counter. BeaconTail-1 does **not** carry the sender's current seq16 counter value.
+- `msg_type = 0x03` (`BEACON_TAIL1`), `payloadVersion = 0x00`
+- **Minimum (MUST):** `payloadVersion(1) | nodeId48(6) | seq16(2) | ref_core_seq16(2)` = **11 bytes**
+- **Optional:** `posFlags(1)`, `sats(1)` — up to **13 bytes**
+- **`seq16`:** In Common prefix — the sender's own global counter value for this packet (unique packet id).
+- **`ref_core_seq16`:** In Useful payload — Core linkage key: the `seq16` of the `Node_OOTB_Core_Pos` sample this Tail qualifies. A back-reference; `ref_core_seq16 ≠ seq16`.
 - **RX rule (normative):** Apply payload **only if** `ref_core_seq16 == last_core_seq16[N]` for that node; otherwise **MUST** ignore. See [rx_semantics_v0](../policy/rx_semantics_v0.md) §2 and §4.
-- **Invariants:** Tail-1 MUST NOT update position. Tail-1 is optional and loss-tolerant; product MUST function with zero Tail-1 packets received.
+- **Invariants:** Core_Tail MUST NOT update position. Optional and loss-tolerant; product MUST function with zero packets received.
 
-### 4.3 BeaconTail-2
+### 4.3 Node_OOTB_Operational (BeaconTail-2)
 
 **Dedicated contract:** [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md) — full byte layout, field definitions, sentinel values, and normative RX rules. Canonized in [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307).
 
 **Summary:**
-- `msg_type = 0x04`, `payloadVersion = 0x00`
-- **Minimum (MUST):** `payloadVersion(1) | nodeId48(6)` = **7 bytes**
-- **Optional (in order):** `maxSilence10s(1)`, `batteryPercent(1)`, `hwProfileId(2)`, `fwVersionId(2)`, `uptimeSec(4)` — up to **17 bytes**
-- **Sentinel values:** `batteryPercent=0xFF`, `hwProfileId=0xFFFF`, `fwVersionId=0xFFFF`, `uptimeSec=0xFFFFFFFF` = not present
+- `msg_type = 0x04` (`BEACON_TAIL2`), `payloadVersion = 0x00`
+- **Minimum (MUST):** `payloadVersion(1) | nodeId48(6) | seq16(2)` = **9 bytes**
+- **Useful payload (optional, in order):** `batteryPercent(1)`, `uptimeSec(4)` — up to **14 bytes**
+- **Sentinel values:** `batteryPercent=0xFF`, `uptimeSec=0xFFFFFFFF` = not present
+- **Semantic:** Operational/dynamic runtime fields (change during normal node operation). Cadence: on Operational field change + at forced Core.
 - **RX rule:** No CoreRef; apply unconditionally when version and length valid. See [rx_semantics_v0](../policy/rx_semantics_v0.md) §2.
-- **Scheduling:** `maxSilence10s` is Informative — MUST NOT be included on every operational Tail-2 send unless value changed. See [field_cadence_v0](../policy/field_cadence_v0.md) §2.2.
-- **Invariants:** Tail-2 MUST NOT update position. Tail-2 is optional and loss-tolerant; product MUST function with zero Tail-2 packets received.
+- **Invariants:** MUST NOT update position. Optional and loss-tolerant; product MUST function with zero packets received.
+
+### 4.4 Node_OOTB_Informative (BeaconInfo)
+
+**Dedicated contract:** [info_packet_encoding_v0.md](info_packet_encoding_v0.md) — full byte layout, field definitions, sentinel values, and normative RX rules.
+
+**Summary:**
+- `msg_type = 0x05` (`BEACON_INFO`), `payloadVersion = 0x00`
+- **Minimum (MUST):** `payloadVersion(1) | nodeId48(6) | seq16(2)` = **9 bytes**
+- **Useful payload (optional, in order):** `maxSilence10s(1)`, `hwProfileId(2)`, `fwVersionId(2)` — up to **14 bytes**
+- **Sentinel values:** `hwProfileId=0xFFFF`, `fwVersionId=0xFFFF` = not present; `maxSilence10s=0x00` = absent/unknown
+- **Semantic:** Static/config fields (rarely change; set at manufacture or on OTA). Cadence: on static/config field change + fixed slow cadence (default 10 min). MUST NOT be sent on every Operational send.
+- **RX rule:** No CoreRef; apply unconditionally when version and length valid.
+- **Invariants:** MUST NOT update position. Optional and loss-tolerant; product MUST function with zero packets received.
 
 ---
 
@@ -168,40 +185,45 @@ After the Common prefix, each packet type has its own **Functional payload** (by
 
 **Full hex (15 bytes):** `00 FF EE DD CC BB AA 01 00 10 4C CF 05 C0 9A`
 
-### 5.2 BeaconTail-1 (11 B): ref_core_seq16 + posFlags + sats
+### 5.2 Node_OOTB_Core_Tail (13 B): seq16 + ref_core_seq16 + posFlags + sats
 
-| Field | Value | Bytes (hex) |
-|-------|--------|-------------|
-| payloadVersion | 0 | 00 |
-| nodeId | 0x0000_AABB_CCDD_EEFF | FF EE DD CC BB AA |
-| ref_core_seq16 | 1 (matches last Core) | 01 00 |
-| posFlags | 0x01 (position valid) | 01 |
-| sats | 8 | 08 |
+| Field | Section | Value | Bytes (hex) |
+|-------|---------|--------|-------------|
+| payloadVersion | Common | 0 | `00` |
+| nodeId | Common | 0x0000_AABB_CCDD_EEFF | `FF EE DD CC BB AA` |
+| seq16 | Common | 5 (own packet id) | `05 00` |
+| ref_core_seq16 | Useful payload | 1 (matches last Core) | `01 00` |
+| posFlags | Useful payload | 0x01 (position valid) | `01` |
+| sats | Useful payload | 8 | `08` |
 
-**Full hex:** `00 FF EE DD CC BB AA 01 00 01 08`
+**Full hex (13 bytes):** `00 FF EE DD CC BB AA 05 00 01 00 01 08`
 
-### 5.3 BeaconTail-2 (8 B): with maxSilence10s
+### 5.3 Node_OOTB_Operational (14 B): with batteryPercent + uptimeSec
 
-| Field | Value | Bytes (hex) |
-|-------|--------|-------------|
-| payloadVersion | 0 | 00 |
-| nodeId | 0x0000_AABB_CCDD_EEFF | FF EE DD CC BB AA |
-| maxSilence10s | 9 (90 s) | 09 |
+| Field | Section | Value | Bytes (hex) |
+|-------|---------|--------|-------------|
+| payloadVersion | Common | 0 | `00` |
+| nodeId | Common | 0x0000_AABB_CCDD_EEFF | `FF EE DD CC BB AA` |
+| seq16 | Common | 7 | `07 00` |
+| batteryPercent | Useful payload | 85 | `55` |
+| uptimeSec | Useful payload | 3600 | `10 0E 00 00` |
 
-**Full hex:** `00 FF EE DD CC BB AA 09`
+**Full hex (14 bytes):** `00 FF EE DD CC BB AA 07 00 55 10 0E 00 00`
 
-### 5.4 BeaconTail-2 (9 B): with battery
+### 5.4 Node_OOTB_Informative (14 B): with maxSilence10s + hwProfileId + fwVersionId
 
-| Field | Value | Bytes (hex) |
-|-------|--------|-------------|
-| payloadVersion | 0 | 00 |
-| nodeId | 0x0000_AABB_CCDD_EEFF | FF EE DD CC BB AA |
-| maxSilence10s | 6 (60 s) | 06 |
-| batteryPercent | 85 | 55 |
+| Field | Section | Value | Bytes (hex) |
+|-------|---------|--------|-------------|
+| payloadVersion | Common | 0 | `00` |
+| nodeId | Common | 0x0000_AABB_CCDD_EEFF | `FF EE DD CC BB AA` |
+| seq16 | Common | 8 | `08 00` |
+| maxSilence10s | Useful payload | 9 (90 s) | `09` |
+| hwProfileId | Useful payload | 0x0001 | `01 00` |
+| fwVersionId | Useful payload | 0x0042 | `42 00` |
 
-**Full hex:** `00 FF EE DD CC BB AA 06 55`
+**Full hex (14 bytes):** `00 FF EE DD CC BB AA 08 00 09 01 00 42 00`
 
-For full examples including device identity fields, see [tail2_packet_encoding_v0.md §6](tail2_packet_encoding_v0.md).
+For full examples, see [tail2_packet_encoding_v0.md §6](tail2_packet_encoding_v0.md) and [info_packet_encoding_v0.md §6](info_packet_encoding_v0.md).
 
 ---
 
@@ -231,11 +253,13 @@ Payload size (in bytes) **MUST NOT** exceed the budget for the **RadioProfile cl
 
 ## 8) Related
 
-- **BeaconTail-1 contract (full layout + RX rules):** [tail1_packet_encoding_v0.md](tail1_packet_encoding_v0.md) — [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307)
-- **BeaconTail-2 contract (full layout + RX rules):** [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md) — [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307)
+- **Node_OOTB_Core_Tail contract (full layout + RX rules):** [tail1_packet_encoding_v0.md](tail1_packet_encoding_v0.md) — [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307)
+- **Node_OOTB_Operational contract (full layout + RX rules):** [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md) — [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307)
+- **Node_OOTB_Informative contract (full layout + RX rules):** [info_packet_encoding_v0.md](info_packet_encoding_v0.md) — [#314](https://github.com/AlexanderTsarkov/naviga-app/issues/314)
 - **Alive packet (no-fix liveness):** [alive_packet_encoding_v0.md](alive_packet_encoding_v0.md) — Alive packet encoding; position-bearing vs alive-bearing in §3.1 above.
-- **Field cadence (Core/Tail semantics):** [../policy/field_cadence_v0.md](../policy/field_cadence_v0.md) — §2 Beacon split definitions; receiver rule for Tail-1.
-- **RX semantics (CoreRef-lite, Tail apply rules):** [../policy/rx_semantics_v0.md](../policy/rx_semantics_v0.md) — §2 Tail-1/Tail-2 acceptance; §4 no revocation of Core.
+- **Packet anatomy & naming:** [ootb_radio_v0.md §3.0](../../../../protocols/ootb_radio_v0.md#30-packet-anatomy--invariants) — Common prefix invariants, seq16 rules, canonical alias table.
+- **Field cadence (Core/Tail semantics):** [../policy/field_cadence_v0.md](../policy/field_cadence_v0.md) — §2 Beacon split definitions; Operational vs Informative packets.
+- **RX semantics (CoreRef-lite, Tail apply rules):** [../policy/rx_semantics_v0.md](../policy/rx_semantics_v0.md) — §2 Tail acceptance; §4 no revocation of Core.
 - **Minset (field semantics):** [link-telemetry-minset-v0.md](link-telemetry-minset-v0.md) — [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158)
 - **RadioProfiles & ChannelPlan:** [../../../radio/policy/registry_radio_profiles_v0.md](../../../radio/policy/registry_radio_profiles_v0.md) — [#159](https://github.com/AlexanderTsarkov/naviga-app/issues/159)
 - **NodeTable hub:** [../index.md](../index.md) — [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)

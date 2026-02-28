@@ -30,6 +30,47 @@
 
 > **Historical note:** An earlier draft of this section described a 3-byte header (`msg_type | ver | flags`). That draft was never implemented on-air. The canonical header is the 2-byte layout defined below. The `ver` and `flags` fields from the draft are retired; forward-compat is handled via the `reserved` bits and `payloadVersion` inside the payload.
 
+### 3.0. Packet anatomy & invariants
+
+Every on-air frame follows this structure:
+
+```
+[2-byte header] [Common(always)] [Useful payload]
+```
+
+**Common(always)** — present in every `Node_*` packet, at the start of every payload:
+
+| Offset | Field | Bytes | Notes |
+|--------|-------|-------|-------|
+| 0 | `payloadVersion` | 1 | Payload format version; `0x00` = v0. Unknown → discard. |
+| 1–6 | `nodeId48` | 6 | NodeID48 (6-byte LE MAC48); sender identity. |
+| 7–8 | `seq16` | 2 | Global per-node sequence counter (uint16 LE); see below. |
+
+**`seq16` invariants (normative):**
+- `seq16` is **one global per-node counter** shared across ALL `Node_*` packet types. Every packet a node transmits — regardless of `msg_type` — increments the same counter.
+- **Dedupe key:** `(nodeId48, seq16)`. Receivers MUST deduplicate on this pair only. Dedupe MUST NOT inspect payload type or content.
+- `Node_OOTB_Core_Tail` (`0x03`) carries **two** seq fields: its own `seq16` in Common (unique packet id) **and** `ref_core_seq16` in its Useful payload (references the `seq16` of the `Node_OOTB_Core_Pos` packet it supplements). These are distinct fields; `seq16 ≠ ref_core_seq16`.
+
+**Minimum payload size:** 9 bytes (Common only). On-air minimum: 11 bytes (2-byte header + 9-byte payload).
+
+### 3.0a. Canonical packet naming
+
+Canonical alias format: **`<Originator>_<Scope>_<Intent>`**
+
+| `msg_type` | Canonical alias | Legacy wire enum | Notes |
+|---|---|---|---|
+| `0x01` | `Node_OOTB_Core_Pos` | `BEACON_CORE` | Position-bearing; 15 B payload |
+| `0x02` | `Node_OOTB_I_Am_Alive` | `BEACON_ALIVE` | Alive-bearing, non-position; 9–10 B payload |
+| `0x03` | `Node_OOTB_Core_Tail` | `BEACON_TAIL1` | Core-attached extension; 11 B min payload |
+| `0x04` | `Node_OOTB_Operational` | `BEACON_TAIL2` | Operational slow state; 11 B min payload |
+| `0x05` | `Node_OOTB_Informative` | `BEACON_INFO` | Informative/static config; 11 B min payload |
+
+**Naming rules:**
+- Canon docs and policy MUST use the `<Originator>_<Scope>_<Intent>` alias as the primary name.
+- Legacy `BEACON_*` wire enum names may appear parenthetically for firmware/wire traceability.
+- Do not invent new `BEACON_*` names beyond those in this registry.
+- Originator: `Node` | `Mesh`. Scope: `OOTB` | `Session` | `User` (+ `Diag`/`Debug` optional). Intent: action or meaning word.
+
 ### 3.1. Header (every frame)
 
 Every on-air frame = **[header: 2 bytes][payload: 0–63 bytes]**.
@@ -84,14 +125,15 @@ Wire: [0x0F, 0x02]
 
 ### 3.2. msg_type registry (v0)
 
-| `msg_type` | Name | Payload contract | Notes |
-|-----------|------|-----------------|-------|
-| `0x00` | (reserved) | — | MUST NOT be used; drop on receive |
-| `0x01` | `BEACON_CORE` | [beacon_payload_encoding_v0 §4.1](../product/areas/nodetable/contract/beacon_payload_encoding_v0.md) | Position-bearing; 15 B fixed payload |
-| `0x02` | `BEACON_ALIVE` | [alive_packet_encoding_v0 §3](../product/areas/nodetable/contract/alive_packet_encoding_v0.md) | Alive-bearing, non-position; 9–10 B payload |
-| `0x03` | `BEACON_TAIL1` | [beacon_payload_encoding_v0 §4.2](../product/areas/nodetable/contract/beacon_payload_encoding_v0.md) | Tail-1 operational; 9 B min payload |
-| `0x04` | `BEACON_TAIL2` | [beacon_payload_encoding_v0 §4.3](../product/areas/nodetable/contract/beacon_payload_encoding_v0.md) | Tail-2 slow state; 7 B min payload |
-| `0x05`–`0x7F` | (reserved) | — | Reserved for future types; drop on receive |
+| `msg_type` | Canonical alias | Legacy wire enum | Payload contract | Notes |
+|---|---|---|---|---|
+| `0x00` | (reserved) | — | — | MUST NOT be used; drop on receive |
+| `0x01` | `Node_OOTB_Core_Pos` | `BEACON_CORE` | [beacon_payload_encoding_v0 §4.1](../product/areas/nodetable/contract/beacon_payload_encoding_v0.md) | Position-bearing; 15 B payload |
+| `0x02` | `Node_OOTB_I_Am_Alive` | `BEACON_ALIVE` | [alive_packet_encoding_v0 §3](../product/areas/nodetable/contract/alive_packet_encoding_v0.md) | Alive-bearing, non-position; 9–10 B payload |
+| `0x03` | `Node_OOTB_Core_Tail` | `BEACON_TAIL1` | [tail1_packet_encoding_v0 §3](../product/areas/nodetable/contract/tail1_packet_encoding_v0.md) | Core-attached extension; 11 B min payload |
+| `0x04` | `Node_OOTB_Operational` | `BEACON_TAIL2` | [tail2_packet_encoding_v0 §3](../product/areas/nodetable/contract/tail2_packet_encoding_v0.md) | Operational slow state (dynamic runtime); 11 B min payload |
+| `0x05` | `Node_OOTB_Informative` | `BEACON_INFO` | [info_packet_encoding_v0 §3](../product/areas/nodetable/contract/info_packet_encoding_v0.md) | Informative/static config; 11 B min payload |
+| `0x06`–`0x7F` | (reserved) | — | — | Reserved for future types; drop on receive |
 
 ### 3.3. Layer separation
 
@@ -104,14 +146,15 @@ Unknown `msg_type` → drop the entire frame. Unknown `payloadVersion` for a kno
 
 ### 3.4. On-air size summary
 
-| Packet | Header (B) | Payload min (B) | Total min on-air (B) | LongDist budget (B) |
-|--------|-----------|----------------|---------------------|---------------------|
-| BEACON_CORE | 2 | 15 | **17** | 24 ✓ |
-| BEACON_ALIVE | 2 | 9 | **11** | 24 ✓ |
-| BEACON_TAIL1 | 2 | 9 | **11** | 24 ✓ |
-| BEACON_TAIL2 | 2 | 7 | **9** | 24 ✓ |
+| Canonical alias | Legacy enum | Header (B) | Payload min (B) | Total min on-air (B) | LongDist budget (B) |
+|---|---|---|---|---|---|
+| `Node_OOTB_Core_Pos` | `BEACON_CORE` | 2 | 15 | **17** | 24 ✓ |
+| `Node_OOTB_I_Am_Alive` | `BEACON_ALIVE` | 2 | 9 | **11** | 24 ✓ |
+| `Node_OOTB_Core_Tail` | `BEACON_TAIL1` | 2 | 11 | **13** | 24 ✓ |
+| `Node_OOTB_Operational` | `BEACON_TAIL2` | 2 | 11 | **13** | 24 ✓ |
+| `Node_OOTB_Informative` | `BEACON_INFO` | 2 | 11 | **13** | 24 ✓ |
 
-All packets fit within the LongDist budget (24 B) at minimum size. Tail-2 full payload (17 B) → 19 B on-air, also within LongDist.
+All packets fit within the LongDist budget (24 B) at minimum size. Minimum payload is 9 B (Common only: payloadVersion + nodeId48 + seq16); minimum on-air is 11 B.
 
 ---
 

@@ -62,7 +62,7 @@ No magic numbers: implementations and product policy choose T_active, T_stale, T
 
 ### 4.1 Updating lastRxAt
 
-- On **any** received packet from a node (BeaconCore, BeaconTail-1, BeaconTail-2, or **Alive**) that is accepted (valid version, valid nodeId, and any payload checks the receiver applies), the receiver **MUST** update **lastRxAt** for that node to the current reception time.
+- On **any** received packet from a node (`Node_OOTB_Core_Pos`, `Node_OOTB_Core_Tail`, `Node_OOTB_Operational`, `Node_OOTB_Informative`, or `Node_OOTB_I_Am_Alive`) that is accepted (valid version, valid nodeId, and any payload checks the receiver applies), the receiver **MUST** update **lastRxAt** for that node to the current reception time.
 - **ageSec** (lastSeenAge) is then derived as: current_time − lastRxAt (in seconds, or the receiver’s chosen unit). Activity state is derived from ageSec and the chosen thresholds.
 - **Alive packet** is alive-bearing; when the node has no fix it sends Alive instead of BeaconCore. Receiving an Alive packet satisfies the “alive within maxSilence window” for Activity derivation. See [rx_semantics_v0](rx_semantics_v0.md) and [alive_packet_encoding_v0](../contract/alive_packet_encoding_v0.md).
 
@@ -93,7 +93,7 @@ No magic numbers: implementations and product policy choose T_active, T_stale, T
 
 ## 6) Open questions
 
-- **maxSilence10s (Tail-2):** When available from BeaconTail-2, a receiver could use **maxSilence10s** to adapt T_stale / T_lost per node (e.g. if the node declares a longer silence bound). Not in v0 scope; placeholder for later.
+- **maxSilence10s (`Node_OOTB_Informative`):** When available from `Node_OOTB_Informative` (`0x05`), a receiver could use **maxSilence10s** to adapt T_stale / T_lost per node (e.g. if the node declares a longer silence bound). Not in v0 scope; placeholder for later.
 - **Role-based thresholds:** T_active / T_stale / T_lost may eventually differ by role (e.g. DOG_COLLAR vs HUMAN) or by tracking profile. Policy and [field_cadence_v0](field_cadence_v0.md) (role modifiers) can be extended to supply per-role or per-profile thresholds; this doc stays parameterized.
 
 ---
@@ -102,6 +102,6 @@ No magic numbers: implementations and product policy choose T_active, T_stale, T
 
 - **Field cadence:** [field_cadence_v0](field_cadence_v0.md) — Core/Tail tiers, Core only with valid fix; maxSilence via Alive when no fix.
 - **RX semantics:** [rx_semantics_v0](rx_semantics_v0.md) — accepted/duplicate/ooo; lastRxAt and Activity on Alive.
-- **Beacon encoding:** [beacon_payload_encoding_v0](../contract/beacon_payload_encoding_v0.md) — seq16 in Core §4.1; Tail-1 `ref_core_seq16` (Core linkage key). **Alive:** [alive_packet_encoding_v0](../contract/alive_packet_encoding_v0.md).
+- **Beacon encoding:** [beacon_payload_encoding_v0](../contract/beacon_payload_encoding_v0.md) — seq16 in Common prefix; Core_Tail `ref_core_seq16` (Core linkage key). **Alive:** [alive_packet_encoding_v0](../contract/alive_packet_encoding_v0.md). **Informative (maxSilence10s):** [info_packet_encoding_v0](../contract/info_packet_encoding_v0.md).
 - **Traffic model:** [traffic_model_v0](../../../wip/areas/radio/policy/traffic_model_v0.md) — frame limits, beacon-only forwarding.
 - **NodeTable hub:** [../index.md](../index.md) §5 — Activity (derived states, lastSeenAge, policy-supplied boundary).

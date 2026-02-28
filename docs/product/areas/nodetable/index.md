@@ -16,10 +16,11 @@ NodeTable is the **single source of truth for node-level knowledge** (including 
 
 Canon semantics are in the linked contract and policy docs; this list is a strict short summary. Do not extend or contradict these in the hub.
 
-- **Core only with valid fix.** BeaconCore is transmitted only when the sender has a valid GNSS fix. Core implies a valid lat/lon sample. When the node has no fix, it does not send Core.
-- **No-fix liveness via Alive.** The maxSilence liveness requirement is satisfied by an **Alive** packet when the node has no valid fix. Alive is **alive-bearing, non-position-bearing**; it carries identity + seq16 (same per-node counter as Core/Tails).
-- **seq16 scope.** seq16 is a **single per-node counter** across all packet types (BeaconCore, Tail-1, Tail-2, Alive) during uptime. RX semantics: accepted / duplicate / out-of-order / wrap are defined per-node globally, not per packet type.
-- **Tail-1 never revokes Core.** Tail-1 qualifies the **same** Core sample (`ref_core_seq16`). Tail-1 **MUST NOT** revoke or invalidate position already received in BeaconCore. CoreRef-lite: Tail-1 payload is applied **only if** `ref_core_seq16` matches lastCoreSeq for that node; otherwise payload is ignored (lastRxAt/link metrics may still be updated).
+- **Core only with valid fix.** `Node_OOTB_Core_Pos` is transmitted only when the sender has a valid GNSS fix. Core implies a valid lat/lon sample. When the node has no fix, it does not send Core.
+- **No-fix liveness via Alive.** The maxSilence liveness requirement is satisfied by `Node_OOTB_I_Am_Alive` when the node has no valid fix. Alive is **alive-bearing, non-position-bearing**; it carries identity + seq16 (same global per-node counter as all `Node_*` packets).
+- **seq16 scope.** `seq16` is a **single global per-node counter** across ALL `Node_*` packet types during uptime. It is part of the **Common prefix** of every packet. Dedupe key: `(nodeId48, seq16)` — payload-agnostic. RX semantics: accepted / duplicate / out-of-order / wrap are defined per-node globally.
+- **Core_Tail never revokes Core.** `Node_OOTB_Core_Tail` qualifies the **same** Core sample (`ref_core_seq16` in Useful payload). Core_Tail carries its own `seq16` in Common (unique packet id) AND `ref_core_seq16` in Useful payload (Core linkage key); these are distinct fields. Core_Tail payload is applied **only if** `ref_core_seq16` matches lastCoreSeq for that node; otherwise payload is ignored.
+- **Operational vs Informative split.** `Node_OOTB_Operational` (`0x04`) carries dynamic runtime fields (`batteryPercent`, `uptimeSec`). `Node_OOTB_Informative` (`0x05`) carries static/config fields (`maxSilence10s`, `hwProfileId`, `fwVersionId`). These are independent TX paths.
 
 ---
 
@@ -27,8 +28,11 @@ Canon semantics are in the linked contract and policy docs; this list is a stric
 
 | Doc | Description |
 |-----|-------------|
-| [beacon_payload_encoding_v0](contract/beacon_payload_encoding_v0.md) | Beacon byte layout: Core (19 B) / Tail-1 / Tail-2; payload budgets; Core only with valid fix; position-bearing vs Alive-bearing. |
-| [alive_packet_encoding_v0](contract/alive_packet_encoding_v0.md) | Alive packet: no-fix liveness; same per-node seq16; alive-bearing, non-position-bearing. |
+| [beacon_payload_encoding_v0](contract/beacon_payload_encoding_v0.md) | Beacon byte layout hub: Common prefix (payloadVersion + nodeId48 + seq16); Core_Pos / Core_Tail / Operational / Informative; payload budgets; Core only with valid fix. |
+| [alive_packet_encoding_v0](contract/alive_packet_encoding_v0.md) | `Node_OOTB_I_Am_Alive` (`0x02`): no-fix liveness; same global per-node seq16; alive-bearing, non-position-bearing. |
+| [tail1_packet_encoding_v0](contract/tail1_packet_encoding_v0.md) | `Node_OOTB_Core_Tail` (`0x03`): Core-attached extension; dual-seq (seq16 in Common + ref_core_seq16 in payload). |
+| [tail2_packet_encoding_v0](contract/tail2_packet_encoding_v0.md) | `Node_OOTB_Operational` (`0x04`): dynamic runtime fields (`batteryPercent`, `uptimeSec`); no CoreRef. |
+| [info_packet_encoding_v0](contract/info_packet_encoding_v0.md) | `Node_OOTB_Informative` (`0x05`): static/config fields (`maxSilence10s`, `hwProfileId`, `fwVersionId`); no CoreRef. |
 | [link-telemetry-minset-v0](contract/link-telemetry-minset-v0.md) | Link/Metrics & Telemetry/Health minset (field set and coupling). |
 
 ---
