@@ -81,11 +81,13 @@ class M1Runtime {
   uint32_t last_ble_update_ms_ = 0;
 
   RadioSmokeStats stats_{};
-  uint8_t pending_payload_[protocol::kGeoBeaconSize] = {};
+  // TX frame buffer: sized for the largest possible on-air frame.
+  uint8_t pending_payload_[protocol::kMaxFrameSize] = {};
   size_t pending_len_ = 0;
   domain::PacketLogType last_tx_type_ = domain::PacketLogType::CORE;
   uint16_t last_tx_core_seq_ = 0;
   bool allow_core_send_ = false;
+  domain::SelfTelemetry self_telemetry_{};
 
   void (*instrumentation_log_fn_)(const char* line, void* ctx) = nullptr;
   void* instrumentation_ctx_ = nullptr;
