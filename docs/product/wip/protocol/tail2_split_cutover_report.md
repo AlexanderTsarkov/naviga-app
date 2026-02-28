@@ -200,7 +200,7 @@ All `Node_*` packets share the same Common prefix (see §1 invariants). Offsets 
 | 7–8 | `seq16` | Common | uint16 LE; global per-node counter |
 | 9 | `batteryPercent` | Useful payload | uint8; `0xFF` = absent |
 | 10–13 | `uptimeSec` | Useful payload | uint32 LE; `0xFFFFFFFF` = absent |
-| *(future)* | `txPowerStep` | Useful payload | planned; not in canon yet |
+| *(future)* | `txPower` | Useful payload | **planned** (S03): dynamic adaptive tx power step; requires radio layer to expose current tx power; not in canon yet |
 
 Min payload: 9 B (Common only). On-air min: 11 B. Fits LongDist budget (24 B).
 
@@ -249,6 +249,7 @@ Min payload: 9 B (Common only). On-air min: 11 B. Fits all profile budgets.
 | `maxSilence10s` | `0x04` | **`0x05`** | **Informative** | Static/config: user-set liveness hint |
 | `hwProfileId` | `0x04` | **`0x05`** | **Informative** | Static: hardware identity, set at manufacture |
 | `fwVersionId` | `0x04` | **`0x05`** | **Informative** | Static: firmware version, changes only on OTA |
+| `txPower` | *(absent today)* | `0x04` | **Operational (planned)** | Dynamic adaptive: node-self-changing; S03 once radio exposes tx power step |
 
 ### 7B) Core_Tail sequencing invariant
 
@@ -289,6 +290,7 @@ Min payload: 9 B (Common only). On-air min: 11 B. Fits all profile budgets.
 - `firmware/src/domain/node_table.h` (line 120) — Remove `has_max_silence`/`max_silence_10s`, `has_hw_profile`/`hw_profile_id`, `has_fw_version`/`fw_version_id` from `apply_tail2`; add `apply_info(node_id, seq16, has_max_silence, max_silence_10s, has_hw_profile, hw_profile_id, has_fw_version, fw_version_id, rssi_dbm, now_ms)`.
 - `firmware/src/domain/node_table.cpp` — Implement `apply_info`; update `apply_tail2` to remove moved fields.
 - `firmware/src/app/m1_runtime.cpp` (line 22) — Add `PacketLogType::INFO → "INFO"` to `packet_log_type_str()`; update `is_tail_type()` if needed.
+- *(S03 follow-up)* `firmware/protocol/tail2_codec.h` + radio platform layer — Add `txPower` field to `Tail2Fields` and `0x04` encoding once the radio adapter exposes the current tx power step; include in `build_tail2_tx` as an Operational on-change field.
 
 ### #316 — TX policy / queue fairness
 
