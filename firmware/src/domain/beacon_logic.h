@@ -8,6 +8,7 @@
 #include "../../protocol/alive_codec.h"
 #include "../../protocol/tail1_codec.h"
 #include "../../protocol/tail2_codec.h"
+#include "../../protocol/info_codec.h"
 
 namespace naviga {
 namespace domain {
@@ -18,6 +19,7 @@ enum class PacketLogType {
   TAIL1,
   TAIL2,
   ALIVE,
+  INFO,
 };
 
 class BeaconLogic {

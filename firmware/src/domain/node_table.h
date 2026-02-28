@@ -34,17 +34,19 @@ struct NodeEntry {
   bool    has_sats      = false;
   uint8_t sats          = 0x00;
 
-  // Tail-2 optional fields (slow-state / diagnostic).
-  bool     has_max_silence   = false;
-  uint8_t  max_silence_10s   = 0;       ///< 0 = absent/unknown; unit = 10 s.
+  // Node_OOTB_Operational (0x04) fields — dynamic runtime.
   bool     has_battery       = false;
   uint8_t  battery_percent   = 0xFF;    ///< 0xFF = not present.
+  bool     has_uptime        = false;
+  uint32_t uptime_sec        = 0xFFFFFFFFu; ///< 0xFFFFFFFF = not present.
+
+  // Node_OOTB_Informative (0x05) fields — static / user-config.
+  bool     has_max_silence   = false;
+  uint8_t  max_silence_10s   = 0;       ///< 0 = absent/unknown; unit = 10 s.
   bool     has_hw_profile    = false;
   uint16_t hw_profile_id     = 0xFFFF;  ///< 0xFFFF = not present.
   bool     has_fw_version    = false;
   uint16_t fw_version_id     = 0xFFFF;  ///< 0xFFFF = not present.
-  bool     has_uptime        = false;
-  uint32_t uptime_sec        = 0xFFFFFFFFu; ///< 0xFFFFFFFF = not present.
 };
 
 class NodeTable {
@@ -71,7 +73,7 @@ class NodeTable {
                      uint32_t now_ms);
 
   /**
-   * Apply Tail-1 fields to an existing NodeTable entry.
+   * Apply Tail-1 (Node_OOTB_Core_Tail) fields to an existing NodeTable entry.
    *
    * Enforces the ref_core_seq16 match rule per tail1_packet_encoding_v0 §4.1:
    * - Returns false (silent drop) if no Core has been received for node_id.
@@ -79,7 +81,12 @@ class NodeTable {
    * - Returns true and applies posFlags/sats only on match.
    * - MUST NOT update position fields.
    *
+   * Per rx_semantics_v0: dedupe key is (nodeId48, seq16). If a second Tail-1
+   * arrives with the same seq16 for this node, it is treated as a duplicate
+   * and ignored (seq16 check happens before ref_core_seq16 check).
+   *
    * @param node_id         NodeID48 from the Tail-1 payload.
+   * @param seq16           Tail-1's own global per-node counter (for dedupe).
    * @param ref_core_seq16  ref_core_seq16 from the Tail-1 payload (Core linkage key).
    * @param has_pos_flags   Whether posFlags is present.
    * @param pos_flags       posFlags value (ignored if !has_pos_flags).
@@ -87,9 +94,10 @@ class NodeTable {
    * @param sats            sats value (ignored if !has_sats).
    * @param rssi_dbm        Link metric from the received frame.
    * @param now_ms          Current time for lastRxAt update.
-   * @return true if applied; false if dropped (mismatch or no prior Core).
+   * @return true if applied; false if dropped (duplicate, mismatch, or no prior Core).
    */
   bool apply_tail1(uint64_t node_id,
+                   uint16_t seq16,
                    uint16_t ref_core_seq16,
                    bool has_pos_flags, uint8_t pos_flags,
                    bool has_sats, uint8_t sats,
@@ -97,20 +105,15 @@ class NodeTable {
                    uint32_t now_ms);
 
   /**
-   * Apply Tail-2 fields to a NodeTable entry (create if not found).
+   * Apply Tail-2 (Node_OOTB_Operational) fields to a NodeTable entry (create if not found).
    *
-   * No CoreRef binding — applied unconditionally per tail2_packet_encoding_v0 §4.1.
+   * Deduplication by (nodeId48, seq16) per rx_semantics_v0.
    * MUST NOT update position fields.
    *
    * @param node_id          NodeID48 from the Tail-2 payload.
-   * @param has_max_silence  Whether maxSilence10s is present.
-   * @param max_silence_10s  maxSilence10s value (ignored if !has_max_silence).
+   * @param seq16            Global per-node counter from Common prefix (for dedupe).
    * @param has_battery      Whether batteryPercent is present.
    * @param battery_percent  batteryPercent value (ignored if !has_battery).
-   * @param has_hw_profile   Whether hwProfileId is present.
-   * @param hw_profile_id    hwProfileId value (ignored if !has_hw_profile).
-   * @param has_fw_version   Whether fwVersionId is present.
-   * @param fw_version_id    fwVersionId value (ignored if !has_fw_version).
    * @param has_uptime       Whether uptimeSec is present.
    * @param uptime_sec       uptimeSec value (ignored if !has_uptime).
    * @param rssi_dbm         Link metric from the received frame.
@@ -118,13 +121,37 @@ class NodeTable {
    * @return true on success; false only on table-full eviction failure.
    */
   bool apply_tail2(uint64_t node_id,
-                   bool has_max_silence, uint8_t max_silence_10s,
+                   uint16_t seq16,
                    bool has_battery, uint8_t battery_percent,
-                   bool has_hw_profile, uint16_t hw_profile_id,
-                   bool has_fw_version, uint16_t fw_version_id,
                    bool has_uptime, uint32_t uptime_sec,
                    int8_t rssi_dbm,
                    uint32_t now_ms);
+
+  /**
+   * Apply Info (Node_OOTB_Informative, 0x05) fields to a NodeTable entry (create if not found).
+   *
+   * Deduplication by (nodeId48, seq16) per rx_semantics_v0.
+   * MUST NOT update position fields.
+   *
+   * @param node_id          NodeID48 from the Info payload.
+   * @param seq16            Global per-node counter from Common prefix (for dedupe).
+   * @param has_max_silence  Whether maxSilence10s is present.
+   * @param max_silence_10s  maxSilence10s value (ignored if !has_max_silence).
+   * @param has_hw_profile   Whether hwProfileId is present.
+   * @param hw_profile_id    hwProfileId value (ignored if !has_hw_profile).
+   * @param has_fw_version   Whether fwVersionId is present.
+   * @param fw_version_id    fwVersionId value (ignored if !has_fw_version).
+   * @param rssi_dbm         Link metric from the received frame.
+   * @param now_ms           Current time for lastRxAt update.
+   * @return true on success; false only on table-full eviction failure.
+   */
+  bool apply_info(uint64_t node_id,
+                  uint16_t seq16,
+                  bool has_max_silence, uint8_t max_silence_10s,
+                  bool has_hw_profile, uint16_t hw_profile_id,
+                  bool has_fw_version, uint16_t fw_version_id,
+                  int8_t rssi_dbm,
+                  uint32_t now_ms);
 
 #if defined(NAVIGA_TEST)
   /** Test-only: copy the NodeEntry for node_id into *out. Returns false if not found.
