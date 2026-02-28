@@ -26,14 +26,22 @@ enum class PacketLogType {
 /**
  * TX slot priority levels (lower value = higher priority).
  *
- * P0: Core_Pos / I_Am_Alive  — must send; drives liveness and position.
- * P1: Core_Tail              — best-effort but time-bound to Core sample.
- * P2: Operational / Info     — best-effort slow state; equal priority, fairness via replaced_count.
+ * Mapping (canon: ootb_radio_v0.md §4.4):
+ *   P0_HIGH         — Node_OOTB_Core_Pos (0x01), Node_OOTB_I_Am_Alive (0x02).
+ *                     Must send; drives liveness and position.
+ *   P1_MID          — Node_OOTB_Core_Tail (0x03).
+ *                     Best-effort but time-bound to the Core sample it qualifies.
+ *   P2_LOW          — Node_OOTB_Operational (0x04), Node_OOTB_Informative (0x05).
+ *                     Best-effort slow state; equal priority, fairness via replaced_count.
+ *   P3_OPPORTUNISTIC — Reserved for future opportunistic / diagnostic packet types
+ *                     (e.g. Node_OOTB_Diag, mesh relay hints). Not used by any current
+ *                     packet type. Lowest priority; sent only when no P0–P2 slots pending.
  */
 enum class TxPriority : uint8_t {
-  P0_HIGH  = 0,
-  P1_MID   = 1,
-  P2_LOW   = 2,
+  P0_HIGH          = 0,
+  P1_MID           = 1,
+  P2_LOW           = 2,
+  P3_OPPORTUNISTIC = 3,  ///< Reserved; no current packet type uses this level.
 };
 
 /**

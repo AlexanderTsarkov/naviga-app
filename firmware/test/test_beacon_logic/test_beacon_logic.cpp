@@ -1475,6 +1475,162 @@ void test_txq_core_enqueues_at_max_silence_even_without_allow_core() {
   TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);
 }
 
+// ── TX queue: Alive replacement + dequeue ────────────────────────────────────
+
+void test_txq_alive_replacement_increments_count() {
+  // Alive slot replacement increments replaced_count and preserves created_at_ms.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(2000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, false);  // no fix
+  SelfTelemetry telem{};
+
+  // First Alive at t=2000 (max_silence hit).
+  logic.update_tx_queue(2000, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotAlive).present);
+  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotAlive).replaced_count);
+  TEST_ASSERT_EQUAL_UINT32(2000, logic.slot(kSlotAlive).created_at_ms);
+
+  // Second Alive at t=4000 (max_silence hit again; slot not yet dequeued).
+  logic.update_tx_queue(4000, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotAlive).present);
+  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotAlive).replaced_count);
+  // created_at_ms preserved from first enqueue.
+  TEST_ASSERT_EQUAL_UINT32(2000, logic.slot(kSlotAlive).created_at_ms);
+}
+
+void test_txq_alive_dequeued_correctly() {
+  // Alive slot is dequeued as ALIVE type with correct frame.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(2000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, false);  // no fix
+  SelfTelemetry telem{};
+
+  logic.update_tx_queue(2000, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotAlive).present);
+
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  PacketLogType ptype = PacketLogType::CORE;
+  uint16_t core_seq = 0xFFFF;
+  TEST_ASSERT_TRUE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype, &core_seq));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::ALIVE), static_cast<int>(ptype));
+  TEST_ASSERT_EQUAL_UINT16(0, core_seq);  // Alive has no ref_core_seq16
+  TEST_ASSERT_TRUE(out_len >= naviga::protocol::kAliveFrameMin);
+  // Slot cleared.
+  TEST_ASSERT_FALSE(logic.slot(kSlotAlive).present);
+  TEST_ASSERT_FALSE(logic.has_pending_tx());
+}
+
+// ── TX queue: Informative replacement + dequeue ──────────────────────────────
+
+void test_txq_informative_replacement_increments_count() {
+  // Informative slot replacement increments replaced_count and preserves created_at_ms.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(60000);
+  logic.set_max_silence_ms(120000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+
+  SelfTelemetry telem{};
+  telem.has_max_silence = true;
+  telem.max_silence_10s = 9;
+
+  logic.update_tx_queue(1000, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
+  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotInfo).replaced_count);
+  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotInfo).created_at_ms);
+
+  // Replace with new value.
+  telem.max_silence_10s = 18;
+  logic.update_tx_queue(2000, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
+  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotInfo).replaced_count);
+  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotInfo).created_at_ms);
+}
+
+void test_txq_informative_dequeued_correctly() {
+  // Informative slot is dequeued as INFO type with correct frame.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(60000);
+  logic.set_max_silence_ms(120000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+
+  SelfTelemetry telem{};
+  telem.has_max_silence = true;
+  telem.max_silence_10s = 9;
+
+  logic.update_tx_queue(1000, self, telem, false);
+
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  PacketLogType ptype = PacketLogType::CORE;
+  uint16_t core_seq = 0xFFFF;
+  TEST_ASSERT_TRUE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype, &core_seq));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::INFO), static_cast<int>(ptype));
+  TEST_ASSERT_EQUAL_UINT16(0, core_seq);  // Info has no ref_core_seq16
+  TEST_ASSERT_TRUE(out_len >= naviga::protocol::kInfoFrameMin);
+  TEST_ASSERT_FALSE(logic.slot(kSlotInfo).present);
+  TEST_ASSERT_FALSE(logic.has_pending_tx());
+}
+
+// ── TX queue: P3_OPPORTUNISTIC ordering ──────────────────────────────────────
+
+void test_txq_priority_ordering_p0_beats_all() {
+  // Verify P0 > P1 > P2 ordering explicitly with all three levels present.
+  // (P3 is reserved; this test confirms the 3-level ordering is stable.)
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(30000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.has_battery     = true;
+  telem.battery_percent = 90;
+  telem.has_max_silence = true;
+  telem.max_silence_10s = 9;
+
+  // All 5 slots enqueued in one pass.
+  logic.update_tx_queue(1000, self, telem, true);
+
+  TEST_ASSERT_TRUE(logic.slot(kSlotCore).present);   // P0
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);  // P1
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);  // P2
+  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);   // P2
+
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  PacketLogType ptype = PacketLogType::INFO;
+
+  // 1st dequeue: Core (P0).
+  logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));
+
+  // 2nd dequeue: Tail1 (P1).
+  logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL1), static_cast<int>(ptype));
+
+  // 3rd and 4th dequeue: P2 (Operational and Informative, order by fairness).
+  logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
+  const bool third_is_p2 = (ptype == PacketLogType::TAIL2 || ptype == PacketLogType::INFO);
+  TEST_ASSERT_TRUE(third_is_p2);
+
+  logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
+  const bool fourth_is_p2 = (ptype == PacketLogType::TAIL2 || ptype == PacketLogType::INFO);
+  TEST_ASSERT_TRUE(fourth_is_p2);
+
+  TEST_ASSERT_FALSE(logic.has_pending_tx());
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_tx_cadence);
@@ -1543,5 +1699,13 @@ int main(int argc, char** argv) {
   RUN_TEST(test_txq_dequeue_clears_slot);
   RUN_TEST(test_txq_no_core_when_allow_core_false);
   RUN_TEST(test_txq_core_enqueues_at_max_silence_even_without_allow_core);
+  // TX queue: Alive replacement + dequeue (gap coverage)
+  RUN_TEST(test_txq_alive_replacement_increments_count);
+  RUN_TEST(test_txq_alive_dequeued_correctly);
+  // TX queue: Informative replacement + dequeue (gap coverage)
+  RUN_TEST(test_txq_informative_replacement_increments_count);
+  RUN_TEST(test_txq_informative_dequeued_correctly);
+  // TX queue: full priority ordering (P0 > P1 > P2)
+  RUN_TEST(test_txq_priority_ordering_p0_beats_all);
   return UNITY_END();
 }
