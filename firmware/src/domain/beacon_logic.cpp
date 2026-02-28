@@ -168,15 +168,17 @@ bool BeaconLogic::on_rx(uint32_t now_ms,
       return false;
     }
     if (out_node_id)  { *out_node_id  = tail1.node_id; }
-    if (out_seq)      { *out_seq      = tail1.ref_core_seq16; }
+    if (out_seq)      { *out_seq      = tail1.seq16; }
     if (out_pos_valid){ *out_pos_valid = false; }
     if (out_type)     { *out_type     = PacketLogType::TAIL1; }
     if (out_core_seq) { *out_core_seq = tail1.ref_core_seq16; }
 
     // Apply Tail-1: ref_core_seq16 match enforced inside apply_tail1.
+    // seq16 is the packet's own global counter; ref_core_seq16 is the Core linkage key.
     // Return value indicates match (true) or silent drop (false).
     // Either way we return true to the caller — the frame was valid.
     table.apply_tail1(tail1.node_id,
+                      tail1.seq16,
                       tail1.ref_core_seq16,
                       tail1.has_pos_flags, tail1.pos_flags,
                       tail1.has_sats, tail1.sats,
@@ -193,19 +195,39 @@ bool BeaconLogic::on_rx(uint32_t now_ms,
       return false;
     }
     if (out_node_id)  { *out_node_id  = tail2.node_id; }
-    if (out_seq)      { *out_seq      = 0; }
+    if (out_seq)      { *out_seq      = tail2.seq16; }
     if (out_pos_valid){ *out_pos_valid = false; }
     if (out_type)     { *out_type     = PacketLogType::TAIL2; }
     if (out_core_seq) { *out_core_seq = 0; }
 
     return table.apply_tail2(tail2.node_id,
-                             tail2.has_max_silence, tail2.max_silence_10s,
-                             tail2.has_battery,     tail2.battery_percent,
-                             tail2.has_hw_profile,  tail2.hw_profile_id,
-                             tail2.has_fw_version,  tail2.fw_version_id,
-                             tail2.has_uptime,      tail2.uptime_sec,
+                             tail2.seq16,
+                             tail2.has_battery,  tail2.battery_percent,
+                             tail2.has_uptime,   tail2.uptime_sec,
                              rssi_dbm,
                              now_ms);
+  }
+
+  if (hdr.msg_type == protocol::MsgType::BeaconInfo) {
+    protocol::InfoFields info{};
+    const protocol::InfoDecodeError err =
+        protocol::decode_info_payload(payload, payload_len, &info);
+    if (err != protocol::InfoDecodeError::Ok) {
+      return false;
+    }
+    if (out_node_id)  { *out_node_id  = info.node_id; }
+    if (out_seq)      { *out_seq      = info.seq16; }
+    if (out_pos_valid){ *out_pos_valid = false; }
+    if (out_type)     { *out_type     = PacketLogType::INFO; }
+    if (out_core_seq) { *out_core_seq = 0; }
+
+    return table.apply_info(info.node_id,
+                            info.seq16,
+                            info.has_max_silence, info.max_silence_10s,
+                            info.has_hw_profile,  info.hw_profile_id,
+                            info.has_fw_version,  info.fw_version_id,
+                            rssi_dbm,
+                            now_ms);
   }
 
   // Unknown/future msg_type → drop.

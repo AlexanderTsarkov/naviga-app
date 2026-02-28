@@ -237,6 +237,7 @@ bool NodeTable::upsert_remote(uint64_t node_id,
 }
 
 bool NodeTable::apply_tail1(uint64_t node_id,
+                            uint16_t seq16,
                             uint16_t ref_core_seq16,
                             bool has_pos_flags, uint8_t pos_flags,
                             bool has_sats, uint8_t sats,
@@ -248,6 +249,15 @@ bool NodeTable::apply_tail1(uint64_t node_id,
     return false;
   }
   NodeEntry& entry = entries_[static_cast<size_t>(idx)];
+
+  // Dedupe by (nodeId48, seq16): same or older seq16 → refresh link metrics only.
+  const Seq16Order order = seq16_order(seq16, entry.last_seq);
+  if (order == Seq16Order::Same || order == Seq16Order::Older) {
+    entry.last_seen_ms = now_ms;
+    entry.last_rx_rssi = rssi_dbm;
+    return false;
+  }
+
   if (!entry.has_core_seq16 || entry.last_core_seq16 != ref_core_seq16) {
     // ref_core_seq16 mismatch (stale, reordered, or no Core yet) — drop silently.
     // Still update link metrics per tail1_packet_encoding_v0 §4.4.
@@ -255,7 +265,21 @@ bool NodeTable::apply_tail1(uint64_t node_id,
     entry.last_rx_rssi = rssi_dbm;
     return false;
   }
+
+  // Variant 2 invariant: at most one Core_Tail per Core_Pos sample.
+  // If a Tail-1 for this ref_core_seq16 has already been applied (even with a
+  // different seq16), treat this as an unexpected duplicate and drop.
+  if (entry.has_applied_tail_ref_core_seq16 &&
+      entry.last_applied_tail_ref_core_seq16 == ref_core_seq16) {
+    entry.last_seen_ms = now_ms;
+    entry.last_rx_rssi = rssi_dbm;
+    return false;
+  }
+
   // Match: apply Tail-1 fields. MUST NOT touch position.
+  entry.last_seq = seq16;
+  entry.last_applied_tail_ref_core_seq16 = ref_core_seq16;
+  entry.has_applied_tail_ref_core_seq16  = true;
   if (has_pos_flags) {
     entry.has_pos_flags = true;
     entry.pos_flags     = pos_flags;
@@ -270,16 +294,14 @@ bool NodeTable::apply_tail1(uint64_t node_id,
 }
 
 bool NodeTable::apply_tail2(uint64_t node_id,
-                            bool has_max_silence, uint8_t max_silence_10s,
+                            uint16_t seq16,
                             bool has_battery, uint8_t battery_percent,
-                            bool has_hw_profile, uint16_t hw_profile_id,
-                            bool has_fw_version, uint16_t fw_version_id,
                             bool has_uptime, uint32_t uptime_sec,
                             int8_t rssi_dbm,
                             uint32_t now_ms) {
   int idx = find_entry_index(node_id);
   if (idx < 0) {
-    // Unknown node: create entry (Tail-2 may arrive before Core).
+    // Unknown node: create entry (Operational may arrive before Core).
     int free_idx = find_free_index();
     if (free_idx < 0) {
       if (!evict_oldest_grey(now_ms)) {
@@ -304,14 +326,78 @@ bool NodeTable::apply_tail2(uint64_t node_id,
   }
 
   NodeEntry& entry = entries_[static_cast<size_t>(idx)];
-  // Apply Tail-2 fields. MUST NOT touch position.
+
+  // Dedupe by (nodeId48, seq16): same or older seq16 → refresh link metrics only.
+  const Seq16Order order = seq16_order(seq16, entry.last_seq);
+  if (order == Seq16Order::Same || order == Seq16Order::Older) {
+    entry.last_seen_ms = now_ms;
+    entry.last_rx_rssi = rssi_dbm;
+    return true;
+  }
+
+  // Accepted: apply Operational fields. MUST NOT touch position.
+  entry.last_seq = seq16;
+  if (has_battery) {
+    entry.has_battery     = true;
+    entry.battery_percent = battery_percent;
+  }
+  if (has_uptime) {
+    entry.has_uptime = true;
+    entry.uptime_sec = uptime_sec;
+  }
+  entry.last_seen_ms = now_ms;
+  entry.last_rx_rssi = rssi_dbm;
+  return true;
+}
+
+bool NodeTable::apply_info(uint64_t node_id,
+                           uint16_t seq16,
+                           bool has_max_silence, uint8_t max_silence_10s,
+                           bool has_hw_profile, uint16_t hw_profile_id,
+                           bool has_fw_version, uint16_t fw_version_id,
+                           int8_t rssi_dbm,
+                           uint32_t now_ms) {
+  int idx = find_entry_index(node_id);
+  if (idx < 0) {
+    // Unknown node: create entry (Informative may arrive before Core).
+    int free_idx = find_free_index();
+    if (free_idx < 0) {
+      if (!evict_oldest_grey(now_ms)) {
+        return false;
+      }
+      free_idx = find_free_index();
+      if (free_idx < 0) {
+        return false;
+      }
+    }
+    NodeEntry& new_entry = entries_[static_cast<size_t>(free_idx)];
+    new_entry = NodeEntry{};
+    new_entry.node_id      = node_id;
+    new_entry.short_id     = compute_short_id(node_id);
+    new_entry.is_self      = false;
+    new_entry.in_use       = true;
+    new_entry.last_seen_ms = now_ms;
+    new_entry.last_rx_rssi = rssi_dbm;
+    size_++;
+    recompute_collisions();
+    idx = free_idx;
+  }
+
+  NodeEntry& entry = entries_[static_cast<size_t>(idx)];
+
+  // Dedupe by (nodeId48, seq16): same or older seq16 → refresh link metrics only.
+  const Seq16Order order = seq16_order(seq16, entry.last_seq);
+  if (order == Seq16Order::Same || order == Seq16Order::Older) {
+    entry.last_seen_ms = now_ms;
+    entry.last_rx_rssi = rssi_dbm;
+    return true;
+  }
+
+  // Accepted: apply Informative fields. MUST NOT touch position.
+  entry.last_seq = seq16;
   if (has_max_silence) {
     entry.has_max_silence = true;
     entry.max_silence_10s = max_silence_10s;
-  }
-  if (has_battery) {
-    entry.has_battery      = true;
-    entry.battery_percent  = battery_percent;
   }
   if (has_hw_profile) {
     entry.has_hw_profile = true;
@@ -320,10 +406,6 @@ bool NodeTable::apply_tail2(uint64_t node_id,
   if (has_fw_version) {
     entry.has_fw_version = true;
     entry.fw_version_id  = fw_version_id;
-  }
-  if (has_uptime) {
-    entry.has_uptime  = true;
-    entry.uptime_sec  = uptime_sec;
   }
   entry.last_seen_ms = now_ms;
   entry.last_rx_rssi = rssi_dbm;
