@@ -1255,6 +1255,62 @@ void test_txq_informative_enqueued_independently() {
                     static_cast<int>(logic.slot(kSlotInfo).pkt_type));
 }
 
+// ── TX queue: telemetry gate (empty telemetry → no 0x04/0x05) ────────────────
+
+void test_txq_empty_telemetry_no_operational_no_informative() {
+  // Verifies the formation gates: with all has_* = false, neither 0x04 nor 0x05
+  // is enqueued, regardless of Core/Alive state.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(30000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};  // all has_* = false (default)
+
+  logic.update_tx_queue(1000, self, telem, true);
+
+  TEST_ASSERT_FALSE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotInfo).present);
+  // Core and Tail1 may be present (unrelated to telemetry gate).
+}
+
+void test_txq_uptime_only_enqueues_operational_not_informative() {
+  // has_uptime=true → 0x04 enqueued; has_max_silence=false → 0x05 NOT enqueued.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(60000);
+  logic.set_max_silence_ms(120000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.has_uptime  = true;
+  telem.uptime_sec  = 42;
+
+  logic.update_tx_queue(1000, self, telem, false);
+
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotInfo).present);
+}
+
+void test_txq_max_silence_only_enqueues_informative_not_operational() {
+  // has_max_silence=true → 0x05 enqueued; has_battery=false, has_uptime=false → 0x04 NOT enqueued.
+  BeaconLogic logic;
+  logic.set_min_interval_ms(60000);
+  logic.set_max_silence_ms(120000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.has_max_silence = true;
+  telem.max_silence_10s = 9;
+
+  logic.update_tx_queue(1000, self, telem, false);
+
+  TEST_ASSERT_FALSE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
+}
+
 // ── TX queue: dequeue / priority / fairness tests ────────────────────────────
 
 void test_txq_dequeue_empty_returns_false() {
@@ -1767,6 +1823,10 @@ int main(int argc, char** argv) {
   RUN_TEST(test_txq_alive_enqueued_when_no_fix_at_max_silence);
   RUN_TEST(test_txq_operational_enqueued_independently);
   RUN_TEST(test_txq_informative_enqueued_independently);
+  // TX queue: telemetry gate (empty telemetry → no 0x04/0x05)
+  RUN_TEST(test_txq_empty_telemetry_no_operational_no_informative);
+  RUN_TEST(test_txq_uptime_only_enqueues_operational_not_informative);
+  RUN_TEST(test_txq_max_silence_only_enqueues_informative_not_operational);
   // TX queue: dequeue / priority / fairness
   RUN_TEST(test_txq_dequeue_empty_returns_false);
   RUN_TEST(test_txq_dequeue_core_before_operational);

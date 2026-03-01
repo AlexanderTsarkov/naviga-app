@@ -120,6 +120,10 @@ void M1Runtime::set_allow_core_send(bool allow) {
   allow_core_send_ = allow;
 }
 
+void M1Runtime::set_self_telemetry(const domain::SelfTelemetry& telemetry) {
+  self_telemetry_ = telemetry;
+}
+
 void M1Runtime::tick(uint32_t now_ms) {
   if (!radio_ || !radio_ready_) {
     update_ble(now_ms);

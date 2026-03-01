@@ -41,6 +41,9 @@ class M1Runtime {
   /** Set true when SelfUpdatePolicy committed (position update); used for minDisplacement gating. */
   void set_allow_core_send(bool allow);
 
+  /** Update self telemetry used for 0x04/0x05 formation. Call before tick() each cycle. */
+  void set_self_telemetry(const domain::SelfTelemetry& telemetry);
+
   void tick(uint32_t now_ms);
 
   const RadioSmokeStats& stats() const;

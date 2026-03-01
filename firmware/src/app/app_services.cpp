@@ -223,7 +223,8 @@ void AppServices::init() {
     (void)save_current_role_profile_record(profile_record);
   }
   const uint16_t effective_interval_s = profile_record.min_interval_sec;
-  const uint8_t effective_max_silence_10s = profile_record.max_silence_10s;
+  effective_max_silence_10s_ = profile_record.max_silence_10s;
+  const uint8_t effective_max_silence_10s = effective_max_silence_10s_;
   const double effective_min_distance_m = static_cast<double>(profile_record.min_displacement_m);
 
   const uint8_t effective_channel = (effective_radio_id == 0) ? 1 : 1;  // V1-A: only profile 0 → channel 1
@@ -298,6 +299,19 @@ void AppServices::init() {
   provisioning_->set_instrumentation_flag(&instrumentation_enabled_);
   provisioning_->set_gnss_override(&gnss_override_);
   runtime_.set_instrumentation_logger(app_instrumentation_log, this);
+
+  // Populate static self-telemetry fields known at boot (for 0x04/0x05 formation).
+  // Dynamic field uptimeSec is updated each tick().
+  self_telemetry_.has_max_silence = true;
+  self_telemetry_.max_silence_10s = effective_max_silence_10s_;
+  // batteryPercent: USB devkit stub — no real ADC on current hardware.
+  // TODO: replace with real battery service (follow-up issue #324).
+  self_telemetry_.has_battery     = true;
+  self_telemetry_.battery_percent = 100;
+  // hwProfileId / fwVersionId: not yet formalized as uint16.
+  // TODO: wire when hwProfileId/fwVersionId mapping is defined (follow-up issue #325).
+  self_telemetry_.has_hw_profile  = false;
+  self_telemetry_.has_fw_version  = false;
 }
 
 void AppServices::log_instrumentation_line(const char* line) {
@@ -416,6 +430,11 @@ void AppServices::tick(uint32_t now_ms) {
     // Override active but get_snapshot_if_active returned false (shouldn't happen)
     runtime_.set_self_position(false, 0, 0, 0, GNSSFixState::NO_FIX, now_ms);
   }
+
+  // Update dynamic telemetry and push to runtime before formation pass.
+  self_telemetry_.has_uptime = true;
+  self_telemetry_.uptime_sec = now_ms / 1000U;
+  runtime_.set_self_telemetry(self_telemetry_);
 
   runtime_.tick(now_ms);
   OledStatusData oled_data{};
