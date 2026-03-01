@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "app/m1_runtime.h"
+#include "domain/beacon_logic.h"
 #include "domain/logger.h"
 #include "services/gnss_scenario_override.h"
 #include "services/oled_status.h"
@@ -39,6 +40,12 @@ class AppServices {
   OledStatus oled_;
   ProvisioningAdapter* provisioning_ = nullptr;
   GnssScenarioOverride gnss_override_;
+
+  // Self telemetry for 0x04/0x05 formation. Populated in init() (static fields)
+  // and updated each tick() (dynamic fields). Passed to runtime_ before tick().
+  domain::SelfTelemetry self_telemetry_{};
+  // maxSilence10s from the active role profile; persisted from init() for tick() use.
+  uint8_t effective_max_silence_10s_ = 0;
 };
 
 }  // namespace naviga
