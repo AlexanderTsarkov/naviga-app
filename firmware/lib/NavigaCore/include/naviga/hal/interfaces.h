@@ -19,12 +19,21 @@ struct GnssSnapshot {
   uint32_t last_fix_ms; // monotonic uptime ms of last valid fix; 0 when never fixed
 };
 
+enum class RadioBootConfigResult : uint8_t {
+  Ok          = 0,
+  Repaired    = 1,
+  RepairFailed = 2,
+};
+
 class IRadio {
  public:
   virtual ~IRadio() = default;
   virtual bool send(const uint8_t* data, size_t len) = 0;
   virtual bool recv(uint8_t* out, size_t max_len, size_t* out_len) = 0;
   virtual int8_t last_rssi_dbm() const = 0;
+  virtual bool rssi_available() const = 0;
+  virtual RadioBootConfigResult boot_config_result() const = 0;
+  virtual const char* boot_config_message() const = 0;
 };
 
 enum class ChannelSenseState : uint8_t {
