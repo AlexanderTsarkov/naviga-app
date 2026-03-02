@@ -1,0 +1,165 @@
+E220 boot: config ok
+[   830][E][Preferences.cpp:202] putUInt(): nvs_set_u32 fail: role_silence_10s KEY_TOO_LONG
+Phase B: role=0 profile=0 source=persisted
+Applied: interval_s=18 maxSilence10s=9 channel=1 (role=0 radio=0) cadence=regis
+=== Node identity ===
+full_id_u64: 0x00003CDC756F23BC
+full_id_mac: 3CDC756F23BC
+short_id: 0168
+GNSS_UBX rx=1 ok=0 bad=0 last=0 fix=NO_FIX lat=0 lon=0
+tick: 1121
+GNSS_UBX hint=NMEA (parser expects UBX NAV-PVT)
+tick: 2121
+GNSS_UBX rx=1606 ok=4 bad=0 last=2738 fix=NO_FIX lat=0 lon=0
+tick: 3121
+tick: 4121
+nodetable: size=1
+GNSS_UBX rx=2912 ok=6 bad=0 last=4748 fix=NO_FIX lat=0 lon=0
+tick: 5121
+tick: 6121
+GNSS_UBX rx=4236 ok=8 bad=0 last=6741 fix=NO_FIX lat=0 lon=0
+tick: 7121
+tick: 8239
+GNSS_UBX rx=5548 ok=10 bad=0 last=8764 fix=NO_FIX lat=0 lon=0
+tick: 9239
+nodetable: size=1
+tick: 10239
+GNSS_UBX rx=6869 ok=12 bad=0 last=10894 fix=NO_FIX lat=0 lon=0
+tick: 11239
+tick: 12273
+GNSS_UBX rx=8131 ok=14 bad=0 last=12735 fix=NO_FIX lat=0 lon=0
+tick: 13308
+tick: 14329
+nodetable: size=1
+GNSS_UBX rx=9679 ok=16 bad=0 last=14742 fix=NO_FIX lat=0 lon=0
+tick: 15333
+tick: 16333
+GNSS_UBX rx=10987 ok=18 bad=0 last=16751 fix=NO_FIX lat=0 lon=0
+tick: 17333
+tick: 18333
+GNSS_UBX rx=12315 ok=20 bad=0 last=18737 fix=NO_FIX lat=0 lon=0
+tick: 19333
+nodetable: size=1
+tick: 20333
+GNSS_UBX rx=13645 ok=22 bad=0 last=20694 fix=NO_FIX lat=0 lon=0
+tick: 21333
+tick: 22333
+GNSS_UBX rx=14943 ok=24 bad=0 last=22752 fix=NO_FIX lat=0 lon=0
+tick: 23333
+tick: 24333
+nodetable: size=1
+GNSS_UBX rx=16258 ok=26 bad=0 last=24747 fix=NO_FIX lat=0 lon=0
+tick: 25333
+tick: 26333
+GNSS: FIX acquired
+SELF_POS: updated reason=FIRST_FIX lat_e7=572547513 lon_e7=395362698 d=0.00 dt=0
+GNSS_UBX rx=17476 ok=28 bad=0 last=26711 fix=FIX_3D lat=572547513 lon=395362698
+tick: 27359
+tick: 28359
+GNSS_UBX rx=19385 ok=30 bad=0 last=28592 fix=FIX_3D lat=572548297 lon=395351845
+tick: 29359
+nodetable: size=1
+tick: 30359
+GNSS_UBX rx=21055 ok=32 bad=0 last=30622 fix=FIX_3D lat=572550074 lon=395341559
+tick: 31359
+tick: 32359
+GNSS_UBX rx=22715 ok=34 bad=0 last=32599 fix=FIX_3D lat=572552221 lon=395331649
+tick: 33520
+tick: 34520
+nodetable: size=1
+GNSS_UBX rx=24455 ok=36 bad=0 last=34796 fix=FIX_3D lat=572554568 lon=395322314
+tick: 35520
+tick: 36520
+GNSS_UBX rx=26166 ok=38 bad=0 last=36610 fix=FIX_3D lat=572557180 lon=395313420
+tick: 37520
+tick: 38520
+GNSS_UBX rx=27870 ok=40 bad=0 last=38608 fix=FIX_3D lat=572559990 lon=395305284
+tick: 39520
+nodetable: size=1
+tick: 40520
+GNSS_UBX rx=29562 ok=42 bad=0 last=40603 fix=FIX_3D lat=572563013 lon=395297653
+tick: 41520
+tick: 42520
+GNSS_UBX rx=31273 ok=44 bad=0 last=42596 fix=FIX_3D lat=572566190 lon=395290560
+tick: 43520
+tick: 44520
+nodetable: size=1
+GNSS_UBX rx=32976 ok=46 bad=0 last=44590 fix=FIX_3D lat=572569462 lon=395283721
+tick: 45520
+SELF_POS: updated reason=DISTANCE lat_e7=572571167 lon_e7=395280448 d=560.26 dt=18885
+tick: 46520
+GNSS_UBX rx=34657 ok=48 bad=0 last=46586 fix=FIX_3D lat=572572843 lon=395277803
+tick: 47598
+tick: 48598
+GNSS_UBX rx=36143 ok=50 bad=0 last=48584 fix=NO_FIX lat=0 lon=0
+tick: 49625
+nodetable: size=1
+tick: 50659
+GNSS_UBX rx=37850 ok=52 bad=0 last=50659 fix=FIX_3D lat=572580266 lon=395266911
+tick: 51659
+tick: 52666
+GNSS_UBX rx=39551 ok=55 bad=0 last=53607 fix=FIX_3D lat=572586229 lon=395259379
+tick: 53666
+tick: 54674
+nodetable: size=1
+GNSS_UBX rx=41022 ok=57 bad=0 last=55595 fix=FIX_2D lat=572590831 lon=395254717
+tick: 55674
+tick: 56674
+GNSS_UBX rx=42572 ok=59 bad=0 last=57610 fix=FIX_3D lat=572594803 lon=395250966
+tick: 57674
+tick: 58674
+GNSS_UBX rx=44276 ok=61 bad=0 last=59588 fix=NO_FIX lat=0 lon=0
+tick: 59674
+nodetable: size=1
+tick: 60674
+GNSS_UBX rx=45751 ok=63 bad=0 last=61588 fix=NO_FIX lat=0 lon=0
+tick: 61674
+tick: 62685
+GNSS_UBX rx=47349 ok=65 bad=0 last=63588 fix=NO_FIX lat=0 lon=0
+tick: 63685
+SELF_POS: updated reason=DISTANCE lat_e7=572611075 lon_e7=395241901 d=500.66 dt=19000
+tick: 64685
+nodetable: size=1
+GNSS_UBX rx=48813 ok=67 bad=0 last=65594 fix=NO_FIX lat=0 lon=0
+tick: 65685
+tick: 66706
+GNSS_UBX rx=50279 ok=69 bad=0 last=67588 fix=NO_FIX lat=0 lon=0
+tick: 67713
+tick: 68713
+GNSS_UBX rx=51856 ok=71 bad=0 last=69584 fix=NO_FIX lat=0 lon=0
+tick: 69713
+nodetable: size=1
+tick: 70713
+GNSS_UBX rx=53324 ok=73 bad=0 last=71585 fix=NO_FIX lat=0 lon=0
+tick: 71713
+tick: 72741
+GNSS_UBX rx=54779 ok=75 bad=0 last=73611 fix=FIX_3D lat=572633842 lon=395237364
+tick: 73776
+tick: 74776
+nodetable: size=1
+GNSS_UBX rx=56348 ok=77 bad=0 last=75591 fix=NO_FIX lat=0 lon=0
+tick: 75776
+tick: 76884
+GNSS_UBX rx=57806 ok=79 bad=0 last=77593 fix=FIX_2D lat=572644463 lon=395238534
+tick: 78160
+tick: 79195
+GNSS_UBX rx=59381 ok=81 bad=0 last=79596 fix=NO_FIX lat=0 lon=0
+tick: 80195
+nodetable: size=1
+tick: 81202
+GNSS_UBX rx=60835 ok=83 bad=0 last=81596 fix=NO_FIX lat=0 lon=0
+tick: 82202
+tick: 83229
+SELF_POS: updated reason=DISTANCE lat_e7=572659043 lon_e7=395245133 d=533.73 dt=19015
+GNSS_UBX rx=62280 ok=85 bad=0 last=83611 fix=FIX_3D lat=572659043 lon=395245133
+tick: 84309
+tick: 85309
+nodetable: size=1
+GNSS_UBX rx=63965 ok=87 bad=0 last=85608 fix=FIX_3D lat=572663755 lon=395248533
+tick: 86309
+tick: 87309
+GNSS_UBX rx=65536 ok=89 bad=0 last=87613 fix=FIX_3D lat=572668851 lon=395257408
+tick: 88309
+tick: 89309
+GNSS_UBX rx=67305 ok=91 bad=0 last=89607 fix=FIX_3D lat=572673380 lon=395261133
+tick: 90309
