@@ -34,6 +34,7 @@
 - **Canon is normative.** For specification and review, canon overrides legacy and OOTB. In case of conflict, canon wins.
 - **WIP is tentative.** Not cited as implementation requirement until promoted.
 - **Legacy and OOTB are non-normative.** Reference or “as-implemented” only. They may describe current or historical state but must not be treated as source of truth. If a legacy/OOTB doc conflicts with canon, it must explicitly defer to canon (see §5).
+- **Deprecated canon versions** (superseded by a new promoted doc) live under **`docs/product/archive/`** for historical reference; see [docs/product/archive/README.md](../archive/README.md).
 
 ---
 

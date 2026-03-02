@@ -7,6 +7,9 @@ reference/
 
 # Archive of POC state (optional: remove this line if you want to commit archives)
 archive/
+# Canon archive (tracked); see docs/product/archive/README.md
+!docs/product/archive/
+!docs/product/archive/**
 
 # Firmware build artifacts (binaries, PlatformIO)
 firmware-release/
