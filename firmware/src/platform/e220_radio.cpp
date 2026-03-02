@@ -78,6 +78,17 @@ bool E220Radio::begin() {
     return false;
   }
 
+  // #326 fix: pre-assert config mode (M0=M1=HIGH) and hold 200 ms before getConfiguration().
+  // Root cause: the library's setMode(MODE_3_PROGRAM) checks AUX immediately after asserting
+  // M0/M1 HIGH; since AUX is already HIGH at idle the library does not wait for the actual
+  // mode-switch settling time, causing HEAD_NOT_RECOGNIZED / NO_RESPONSE on getConfiguration.
+  // Pre-asserting here gives the module the required settling time before the library call.
+  digitalWrite(static_cast<uint8_t>(pins_.lora_m0), HIGH);
+  digitalWrite(static_cast<uint8_t>(pins_.lora_m1), HIGH);
+  delay(200);
+  serial_.flush();
+  while (serial_.available()) serial_.read();
+
   // Verify-and-repair critical params every boot (module_boot_config_v0).
   ResponseStructContainer config = radio_.getConfiguration();
   if (config.status.code != E220_SUCCESS || !config.data) {
