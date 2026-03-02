@@ -12,7 +12,7 @@ constexpr char kKeyCurrentRadio[] = "prof_cur";
 constexpr char kKeyPreviousRole[] = "role_prev";
 constexpr char kKeyPreviousRadio[] = "prof_prev";
 constexpr char kKeyProfileIntervalSec[] = "role_interval_s";
-constexpr char kKeyProfileSilence10s[] = "role_silence_10s";
+constexpr char kKeyProfileSilence10s[] = "role_silence_10";
 constexpr char kKeyProfileDistM[] = "role_dist_m";
 
 constexpr uint16_t kDefaultMinIntervalSec = 18;
