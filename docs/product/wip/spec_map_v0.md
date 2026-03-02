@@ -2,7 +2,8 @@
 
 **Snapshot:** 2026-02-16  
 **Status:** WIP index only (not implementation requirements).  
-**Canonical specs:** `docs/product/wip/areas/`
+**Canonical specs:** `docs/product/wip/areas/`  
+**Sprint-level release notes:** [current_state.md](../current_state.md).
 
 ---
 
