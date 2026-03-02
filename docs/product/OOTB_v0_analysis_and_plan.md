@@ -1,5 +1,7 @@
 # OOTB v0: анализ документации, план первой итерации и организация работ
 
+**Status:** Non-normative (OOTB). As-implemented v0 reference. May diverge from canon. Canon: (none yet) — see [spec_map](wip/spec_map_v0.md).
+
 Документ: анализ прочитанной продуктовой документации, понимание первой итерации (OOTB v0), подход к организации проекта и приоритизированные задачи для GitHub Projects.
 
 ---

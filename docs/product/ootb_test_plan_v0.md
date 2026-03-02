@@ -1,5 +1,7 @@
 # OOTB Test Plan v0
 
+**Status:** Non-normative (OOTB). As-implemented v0 reference. May diverge from canon. Canon: [field_cadence_v0](areas/nodetable/policy/field_cadence_v0.md); [spec_map](wip/spec_map_v0.md).
+
 **Purpose:** Сценарии проверки OOTB v0; что логировать и собирать для evidence. Issue [#16](https://github.com/AlexanderTsarkov/naviga-app/issues/16).
 
 **Related:** [OOTB plan](OOTB_v0_analysis_and_plan.md), [OOTB Radio v0](../protocols/ootb_radio_v0.md), [POC E220 evidence](../firmware/poc_e220_evidence.md), [Logging v0](logging_v0.md).

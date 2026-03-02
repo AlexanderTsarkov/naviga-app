@@ -1,5 +1,7 @@
 # OOTB NodeTable v0 — спецификация
 
+**Status:** Non-normative (OOTB). As-implemented v0 reference. May diverge from canon. Canon: [NodeTable hub](../product/areas/nodetable/index.md).
+
 **Purpose:** Структура записи о ноде, типы/единицы, правила stale, лимиты и вытеснение. Контракт с приложением по BLE. Issue [#12](https://github.com/AlexanderTsarkov/naviga-app/issues/12).
 
 **Related:** [OOTB plan](../product/OOTB_v0_analysis_and_plan.md), [OOTB BLE v0](../protocols/ootb_ble_v0.md).

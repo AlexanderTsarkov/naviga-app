@@ -1,5 +1,7 @@
 # OOTB BLE v0 — спецификация
 
+**Status:** Non-normative (OOTB). As-implemented v0 reference. May diverge from canon. Canon: (none yet) — see [spec_map](../product/wip/spec_map_v0.md) / [#15](https://github.com/AlexanderTsarkov/naviga-app/issues/15).
+
 **Purpose:** GATT-контракт между донглом и приложением OOTB v0: сервисы, характеристики, форматы. Issue [#15](https://github.com/AlexanderTsarkov/naviga-app/issues/15).
 
 **Related:** [OOTB plan](../product/OOTB_v0_analysis_and_plan.md), [NodeTable v0](../firmware/ootb_node_table_v0.md), [Radio v0](ootb_radio_v0.md).

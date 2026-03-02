@@ -1,5 +1,7 @@
 # OOTB v0 — Gap analysis (пробелы и отложенные темы)
 
+**Status:** Non-normative (OOTB). As-implemented v0 reference. May diverge from canon. Canon: (none yet) — see [spec_map](wip/spec_map_v0.md).
+
 **Purpose:** Что не входит в seed sprint 1, но остаётся в зоне внимания проекта (owned). Issue [#8](https://github.com/AlexanderTsarkov/naviga-app/issues/8) (POC gaps/risks) и связанные.
 
 **Related:** [OOTB plan](OOTB_v0_analysis_and_plan.md), [Test Plan](ootb_test_plan_v0.md), [Workmap](../../_archive/ootb_v1/project/ootb_workmap.md).
