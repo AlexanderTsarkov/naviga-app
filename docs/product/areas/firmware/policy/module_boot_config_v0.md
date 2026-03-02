@@ -17,19 +17,32 @@ This policy defines **device-level** module boot configuration: parameters to se
 
 ## 2) E220 / E22 modem boot config (device-level)
 
-**Critical parameters (verify-and-repair every boot):** The following **MUST** be verified on every boot and repaired on mismatch: **Enable RSSI Byte**, **LBT Enable**, **UART baud/parity**, **sub-packet**, **RSSI ambient/enable**. All other parameters may use one-time init or init-on-change (see table).
+**Critical parameters (verify-and-repair every boot):** The following **MUST** be verified on every boot and repaired on mismatch: **Enable RSSI Byte**, **LBT Enable**, **UART baud/parity**, **air_data_rate (preset)**, **sub-packet**, **RSSI ambient/enable**, **channel**. All other parameters may use one-time init or init-on-change (see table).
 
 | Parameter | Required value / policy | When applied | Rationale | Notes |
 |-----------|-------------------------|--------------|-----------|--------|
 | **Enable RSSI Byte** | ON | **Verify-and-repair every boot** | Link metrics / receiver-side RSSI; required for NodeTable and activity. | Critical. |
 | **LBT Enable** | OFF | **Verify-and-repair every boot** | Policy: sense unsupported; mitigation is jitter-only, no CAD/LBT. | Critical. |
 | **UART baud / parity** | Product-defined; must match host | **Verify-and-repair every boot** | Consistent host–modem link; wrong baud breaks comms. | Critical. |
+| **Air data rate (airRate)** | From active `RadioPreset` (default: 2 = 2.4 kbps); normalized if < 2 | **Verify-and-repair every boot** | Ensures all nodes on same air speed; E22 V2 clamps < 2 to 2 (see §2a). | Critical. Normalized via `normalize_air_rate()` before apply. |
+| **Channel** | From active `RadioPreset` (default: 1) | **Verify-and-repair every boot** | Nodes must be on same channel to communicate. | Critical. |
 | **Sub-packet setting** | Product-defined; consistent for TX/RX | **Verify-and-repair every boot** | Payload and framing must match encoding contract. | Critical. Align with [beacon_payload_encoding](../../nodetable/contract/beacon_payload_encoding_v0.md). |
 | **RSSI ambient noise / enable** | Align with "RSSI Byte ON"; enable RSSI reporting | **Verify-and-repair every boot** | Ensures RSSI byte is valid for link metrics. | Critical. |
 | **WOR cycle** | Set only if WOR used | One-time init or init-on-change | Low-power listen cycle; not required for basic beacon cadence. | Only if used; otherwise leave default or disable. |
 | **Key bytes** (e.g. AES) | Set only if encryption used | One-time init (only if used) | Out of scope for v0 unless product requires. | Mark "only if used"; likely out of scope v0. |
 
-**Boot strategy summary (E220):** Critical parameters (RSSI Byte, LBT, UART, sub-packet, RSSI enable) — **verify-and-repair on every boot**. Optional (WOR, key bytes) — one-time init or product-defined.
+**Boot strategy summary (E220/E22):** Critical parameters (RSSI Byte, LBT, UART, airRate, channel, sub-packet, RSSI enable) — **verify-and-repair on every boot**. Optional (WOR, key bytes) — one-time init or product-defined.
+
+### 2a) Air data rate normalization and readback verify (E22/E220, PR #341)
+
+The boot sequence for `E22Radio::begin(preset)` / `E220Radio::begin(preset)`:
+
+1. **Normalize** requested `airRate`: if `airRate < kMinAirRate` (2), clamp to 2 and log `"air_rate clamped: req=X norm=2"`.
+2. **Apply** full critical config via `setConfiguration()`.
+3. **Readback verify**: call `getConfiguration()` and compare `airRate` + `channel` against normalized target.
+4. **Log outcome**: `"E22 boot: config ok"` (no repair needed) / `"E22 boot: repaired (<detail>)"` / `"E22 boot: repair failed (<detail>)"`.
+
+**E22-400T30D V2 constraint:** Module firmware clamps `airRate` 0 and 1 to 2 (2.4 kbps) in the ACK frame itself. Proven by controlled raw-UART harness (issue [#336](https://github.com/AlexanderTsarkov/naviga-app/issues/336)). `kMinAirRate = 2` is the enforced minimum for this module family.
 
 ---
 

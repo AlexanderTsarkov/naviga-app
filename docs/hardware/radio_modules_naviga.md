@@ -42,6 +42,48 @@
 - **Доступные скорости по мануалам** (over-the-air, не UART baud): 2.4k, 4.8k, 9.6k, 19.2k, 38.4k, 62.5k (значения могут незначительно отличаться между E220/E22 — уточнять по даташиту).
 - **Naviga OOTB по умолчанию:** **2.4 kbps** — приоритет дальности; beacon ~40 B укладывается в бюджет **≤300 ms** по эфиру.
 
+### D.1) Поддерживаемые пресеты в FW (v1-A, UART)
+
+| Preset ID | Имя | airRate | Скорость | Примечание |
+|-----------|-----|---------|----------|------------|
+| 0 | **Default** | 2 | 2.4 kbps | OOTB baseline; применяется по умолчанию при boot. |
+| 1 | **Fast** | 3 | 4.8 kbps | Для лабораторных условий / короткой дистанции. |
+| 2 | **LongRange** | 2 | 2.4 kbps | Совпадает с Default для UART; зарезервирован для SPI (SF10/BW125). |
+
+Выбор пресета — compile-time константа в `radio_factory.cpp` (`RadioPresetId::Default`). Runtime-переключение пресетов через UI/команды — будущая функция.
+
+### D.2) Ограничение E22-400T30D V2 UART (доказано в [#336](https://github.com/AlexanderTsarkov/naviga-app/issues/336))
+
+**E22-400T30D V2 firmware clamps airRate < 2 to 2 (2.4 kbps).**
+
+- При записи airRate=0 (0.3 kbps) или airRate=1 (1.2 kbps) модуль возвращает в ACK-фрейме airRate=2.
+- Доказано контролируемым harness-тестом: raw hex write→ACK→readback для airRate 0/1 возвращает 0x62 (airRate=2); controls для airRate 3/4/5 и CHAN проходят корректно.
+- Firmware нормализует запрошенный airRate < 2 до 2 и логирует `"air_rate clamped: req=X norm=2"`.
+- Источник: `naviga/hal/radio_preset.h` (`kMinAirRate = 2`, `normalize_air_rate()`), PR [#341](https://github.com/AlexanderTsarkov/naviga-app/pull/341).
+
+### D.3) Boot apply + readback verify
+
+На каждом boot firmware:
+1. Нормализует airRate (clamp < 2 → 2).
+2. Применяет пресет через `setConfiguration()`.
+3. Читает конфиг обратно через `getConfiguration()` и проверяет airRate + channel.
+4. Логирует результат: `"E22 boot: config ok"` / `"E22 boot: repaired (<detail>)"` / `"E22 boot: repair failed (<detail>)"`.
+
+Реализовано в `E22Radio::begin(preset)` / `E220Radio::begin(preset)`, PR [#341](https://github.com/AlexanderTsarkov/naviga-app/pull/341).
+
+### D.4) Bench-результаты Default vs Fast ([#339](https://github.com/AlexanderTsarkov/naviga-app/issues/339))
+
+Измерение: inter-TX gap (ms) как proxy airtime (blocking `send()` на E22 UART).
+
+| Preset | pkt_type | wire_B | mean_gap_ms | n |
+|--------|----------|--------|-------------|---|
+| Default (2.4k) | TAIL2 | 13 | 181 | 178 |
+| Default (2.4k) | INFO | 13 | 176 | 175 |
+| Fast (4.8k) | TAIL2 | 13 | 144 | 224 |
+| Fast (4.8k) | INFO | 13 | 145 | 218 |
+
+**Результат:** Default→Fast улучшение ~1.26x для коротких пакетов (13 B). Ожидалось ~2x, но фиксированный overhead модуля (~120–140 ms на пакет: preamble + UART framing + AUX polling) доминирует над переменной частью airtime. Это ожидаемое поведение UART-модулей. Для 2x+ нужны SPI-модули с прямым управлением LoRa SF/BW.
+
 ---
 
 ## E) UART link (связь MCU ↔ модуль)

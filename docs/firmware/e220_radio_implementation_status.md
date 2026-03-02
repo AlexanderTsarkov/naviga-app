@@ -1,8 +1,8 @@
-# Поддержка радиомодуля E220 (UART): текущее состояние реализации
+# Поддержка радиомодулей E220 / E22 (UART): текущее состояние реализации
 
 **Цель документа:** зафиксировать, что именно реализовано и работает, где проходит граница «модем через библиотеку» vs «полноценный радиодрайвер», чтобы устранить путаницу в терминологии перед дальнейшими шагами.
 
-**Дата:** 2026-02-06  
+**Дата:** 2026-02-06 (обновлено 2026-03-02: добавлен E22 adapter, RadioPreset, PR #341)  
 **Источник:** код в `firmware/`, документация POC и smoke-тестов в `docs/`.
 
 ---
@@ -11,12 +11,28 @@
 
 ### Классификация поддержки радио
 
-- **Текущая реализация:** UART-модем (E220) через внешнюю библиотеку. Обмен с модулем — по UART (протокол/команды библиотеки, поверх которых модуль может использовать AT-подобный протокол производителя).
-- **Не реализовано:** прямой SPI-драйвер радиочипа (LLCC68/SX126x и т.п.). К радиочипу внутри E220 мы не обращаемся; весь обмен идёт через модуль как «чёрный ящик» с UART-интерфейсом.
+- **Текущая реализация:** UART-модем (E220 или E22) через внешнюю библиотеку. Обмен с модулем — по UART (протокол/команды библиотеки, поверх которых модуль может использовать AT-подобный протокол производителя).
+- **Не реализовано:** прямой SPI-драйвер радиочипа (LLCC68/SX126x и т.п.). К радиочипу внутри модуля мы не обращаемся; весь обмен идёт через модуль как «чёрный ящик» с UART-интерфейсом.
+
+### Поддерживаемые модули и адаптеры (v1-A)
+
+| Модуль | Чип | Адаптер | Библиотека | HW Profile | Статус |
+|--------|-----|---------|------------|------------|--------|
+| E220-400T30D | LLCC68 | `E220Radio` | `xreef/EByte LoRa E220 library` | `devkit_e220_oled`, `devkit_e220_oled_gnss` | ✅ Работает |
+| E22-400T30D | SX1262 | `E22Radio` | `xreef/EByte LoRa E22 library` | `devkit_e22_oled_gnss` | ✅ Работает (PR [#341](https://github.com/AlexanderTsarkov/naviga-app/pull/341)) |
+
+**Важно:** E220 и E22 библиотеки определяют `ConfigurationMessage` в глобальном пространстве имён — они **не могут быть включены в одну единицу трансляции**. Решение: `radio_factory.cpp` включает ровно одну из них через `#if defined(HW_PROFILE_DEVKIT_E22_OLED_GNSS)`. Файлы `e22_radio.cpp` / `e220_radio.cpp` защищены аналогичными guard-ами.
+
+### RadioPreset и boot apply/verify (PR #341)
+
+- **`RadioPreset`** (`naviga/hal/radio_preset.h`): struct `{air_rate, channel, tx_power_dbm}` + `RadioPresetId` enum (Default/Fast/LongRange).
+- **`normalize_air_rate()`**: clamp `airRate < 2` → 2 (E22 V2 UART enforces minimum 2.4 kbps, issue [#336](https://github.com/AlexanderTsarkov/naviga-app/issues/336)).
+- **`begin(preset)`**: normalize → apply → readback verify → log result. Boot log: `"E22 boot: config ok"` / `"E22 boot: repaired (<detail>)"` / `"E22 boot: repair failed (<detail>)"`.
+- **Default preset**: `RadioPresetId::Default` (airRate=2, channel=1) — compile-time constant in `radio_factory.cpp`.
 
 ### Взаимодействие с интерфейсами проекта
 
-- **IRadio** (`firmware/lib/NavigaCore/include/naviga/hal/interfaces.h`): абстракция «отправить/принять payload + last_rssi». Единственная реализация для железа — **E220Radio** (`firmware/src/platform/e220_radio.cpp`), реализует `send`, `recv`, `last_rssi_dbm()`.
+- **IRadio** (`firmware/lib/NavigaCore/include/naviga/hal/interfaces.h`): абстракция «отправить/принять payload + last_rssi + boot_config_result». Реализации для железа: **E220Radio** (`e220_radio.cpp`) и **E22Radio** (`e22_radio.cpp`). Выбор реализации — через `create_radio()` в `radio_factory.cpp`.
 - **Runtime:** `M1Runtime` (`firmware/src/app/m1_runtime.cpp`) в каждом тике вызывает `IRadio::send` / `IRadio::recv`. Радио получает указатель на `IRadio*` при инициализации; не использует никакой другой радио-интерфейс.
 - **BeaconLogic** (domain): не знает о радио. Строит payload (GEO_BEACON) и принимает декодированный payload при RX; решение «когда отправлять» и вызов `radio->send()` выполняет runtime (через BeaconLogic.build_tx + BeaconSendPolicy).
 - **IChannelSense:** в коде добавлен как опциональный HAL для LBT/CAD. Для E220 **не используется**: в `app_services.cpp` в `runtime_.init(..., nullptr)` передаётся `nullptr` в качестве channel sense. Документация (issue #76) явно указывает: E220 UART — channel sense **UNSUPPORTED** в текущем драйвере.
@@ -53,8 +69,10 @@
 
 | Возможность | Статус | Как реализовано |
 |-------------|--------|------------------|
-| Инициализация модуля | ✔️ | `E220Radio::begin()` → `radio_.begin()` (библиотека). Успех сохраняется в `ready_`. |
-| Установка дефолтных параметров | ✔️ (частично) | Читаем текущий конфиг через `getConfiguration()`, меняем только `enableRSSI = RSSI_ENABLED`, пишем через `setConfiguration(..., WRITE_CFG_PWR_DWN_LOSE)`. Остальные параметры — как выставлены на модуле/библиотекой при begin. |
+| Инициализация модуля (E220) | ✔️ | `E220Radio::begin(preset)` → normalize preset → apply → readback verify → log. |
+| Инициализация модуля (E22) | ✔️ | `E22Radio::begin(preset)` — аналогично. Добавлено в PR [#341](https://github.com/AlexanderTsarkov/naviga-app/pull/341). |
+| RadioPreset apply + readback verify | ✔️ | `normalize_air_rate()` + `apply_critical()` + `verify_preset_readback()`. Лог: `"E22 boot: config ok/repaired/repair failed"`. |
+| Установка дефолтных параметров | ✔️ | Все critical params (RSSI, LBT, UART, airRate, channel, sub-packet) применяются и верифицируются на каждом boot. |
 | Отправка payload | ✔️ | `send(data, len)` → `radio_.sendMessage(data, (uint8_t)len)`. Ограничение длины: `len <= MAX_SIZE_TX_PACKET` (200, константа из библиотеки). |
 | Приём payload | ✔️ | `recv(out, max_len, out_len)` → при `radio_.available() > 0` вызывается `receiveMessageRSSI(max_len)` или `receiveMessage(max_len)`; данные копируются в `out`, длина в `*out_len`. |
 | Получение RSSI | ✔️ | Только при приёме: если при инициализации удалось включить RSSI в конфиге (`rssi_enabled_ == true`), используется `receiveMessageRSSI()`, значение `response.rssi` сохраняется в `last_rssi_dbm_` и возвращается из `last_rssi_dbm()`. Отдельного запроса RSSI/шума без приёма пакета нет. |
