@@ -1,0 +1,1260 @@
+[17:28:28] pkt tx t_ms=467609 type=TAIL2 seq=1257 core_seq=0
+[17:28:28] tick: 467695
+[17:28:28] pkt tx t_ms=467714 type=INFO seq=1258 core_seq=0
+[17:28:28] pkt tx t_ms=467791 type=TAIL2 seq=1259 core_seq=0
+[17:28:28] GNSS_UBX rx=190306 ok=232 bad=0 last=231616 fix=FIX_3D lat=572579823 lon=395276341
+[17:28:28] GNSS override: FIX lat_e7=374400000 lon_e7=-1220800000
+[17:28:28] pkt tx t_ms=468106 type=INFO seq=1260 core_seq=0
+[17:28:28] pkt tx t_ms=468325 type=TAIL2 seq=1261 core_seq=0
+[17:28:28] pkt tx t_ms=468580 type=INFO seq=1262 core_seq=0
+[17:28:29] pkt tx t_ms=468648 type=TAIL2 seq=1263 core_seq=0
+[17:28:29] tick: 468761
+[17:28:29] pkt tx t_ms=468850 type=INFO seq=1264 core_seq=0
+[17:28:29] pkt tx t_ms=469080 type=TAIL2 seq=1265 core_seq=0
+[17:28:29] pkt tx t_ms=469172 type=INFO seq=1266 core_seq=0
+[17:28:29] pkt tx t_ms=469430 type=TAIL2 seq=1267 core_seq=0
+[17:28:30] pkt tx t_ms=469679 type=INFO seq=1268 core_seq=0
+[17:28:30] tick: 469761
+[17:28:30] pkt tx t_ms=469767 type=TAIL2 seq=1269 core_seq=0
+[17:28:30] GNSS_UBX rx=190306 ok=232 bad=0 last=231616 fix=FIX_3D lat=572579823 lon=395276341
+[17:28:30] pkt tx t_ms=469955 type=INFO seq=1270 core_seq=0
+[17:28:30] pkt tx t_ms=470152 type=TAIL2 seq=1271 core_seq=0
+[17:28:30] pkt tx t_ms=470305 type=INFO seq=1272 core_seq=0
+[17:28:30] pkt tx t_ms=470471 type=TAIL2 seq=1273 core_seq=0
+[17:28:31] pkt tx t_ms=470633 type=INFO seq=1274 core_seq=0
+[17:28:31] tick: 470761
+[17:28:31] pkt tx t_ms=470814 type=TAIL2 seq=1275 core_seq=0
+[17:28:31] pkt tx t_ms=470988 type=INFO seq=1276 core_seq=0
+[17:28:31] pkt tx t_ms=471118 type=TAIL2 seq=1277 core_seq=0
+[17:28:31] pkt tx t_ms=471250 type=INFO seq=1278 core_seq=0
+[17:28:31] pkt tx t_ms=471363 type=TAIL2 seq=1279 core_seq=0
+[17:28:32] pkt tx t_ms=471459 type=INFO seq=1280 core_seq=0
+[17:28:32] tick: 471761
+[17:28:32] pkt tx t_ms=471844 type=TAIL2 seq=1281 core_seq=0
+[17:28:32] GNSS_UBX rx=190306 ok=232 bad=0 last=231616 fix=FIX_3D lat=572579823 lon=395276341
+[17:28:32] pkt tx t_ms=471975 type=INFO seq=1282 core_seq=0
+[17:28:32] nodetable: size=2
+[17:28:32] peer shortId=1260 ageS=33 grey=1 seq=2248 rssi=-11 posAgeS=0
+[17:28:32] pkt tx t_ms=472189 type=TAIL2 seq=1283 core_seq=0
+[17:28:32] pkt tx t_ms=472301 type=INFO seq=1284 core_seq=0
+[17:28:32] pkt tx t_ms=472473 type=TAIL2 seq=1285 core_seq=0
+[17:28:33] pkt tx t_ms=472689 type=INFO seq=1286 core_seq=0
+[17:28:33] tick: 472761
+[17:28:33] pkt tx t_ms=472885 type=TAIL2 seq=1287 core_seq=0
+[17:28:33] GNSS override: FIX lat_e7=374400000 lon_e7=-1220800000
+[17:28:33] pkt tx t_ms=473052 type=INFO seq=1288 core_seq=0
+[17:28:33] pkt tx t_ms=473123 type=TAIL2 seq=1289 core_seq=0
+[17:28:33] pkt tx t_ms=473391 type=INFO seq=1290 core_seq=0
+[17:28:34] pkt tx t_ms=473631 type=TAIL2 seq=1291 core_seq=0
+[17:28:34] tick: 473761
+[17:28:34] pkt tx t_ms=473843 type=INFO seq=1292 core_seq=0
+[17:28:34] pkt tx t_ms=473933 type=TAIL2 seq=1293 core_seq=0
+[17:28:34] GNSS_UBX rx=190306 ok=232 bad=0 last=231616 fix=FIX_3D lat=572579823 lon=395276341
+[17:28:34] pkt tx t_ms=474024 type=INFO seq=1294 core_seq=0
+[17:28:34] pkt tx t_ms=474207 type=TAIL2 seq=1295 core_seq=0
+[17:28:34] pkt tx t_ms=474292 type=INFO seq=1296 core_seq=0
+[17:28:34] pkt tx t_ms=474397 type=TAIL2 seq=1297 core_seq=0
+[17:28:35] tick: 474761
+[17:28:35] pkt tx t_ms=474823 type=INFO seq=1298 core_seq=0
+[17:28:35] pkt tx t_ms=474857 type=TAIL2 seq=1299 core_seq=0
+[17:28:35] pkt tx t_ms=475135 type=INFO seq=1300 core_seq=0
+[17:28:35] pkt tx t_ms=475348 type=TAIL2 seq=1301 core_seq=0
+[17:28:35] pkt tx t_ms=475495 type=INFO seq=1302 core_seq=0
+[17:28:35] rebooting...
+[17:28:35] ESP-ROM:esp32s3-20210327
+[17:28:35] Build:Mar 27 2021
+[17:28:35] rst:0xc (RTC_SW_CPU_RST),boot:0x2b (SPI_FAST_FLASH_BOOT)
+[17:28:35] Saved PC:0x420a7e52
+[17:28:35] SPIWP:0xee
+[17:28:35] mode:DIO, clock div:1
+[17:28:35] load:0x3fce3808,len:0x4bc
+[17:28:36] load:0x403c9700,len:0xbd8
+[17:28:36] load:0x403cc700,len:0x2a0c
+[17:28:36] entry 0x403c98d0
+[17:28:36] 
+[17:28:36] === Naviga OOTB skeleton ===
+[17:28:36] fw: ootb-74-m1-runtime
+[17:28:36] hw_profile: devkit_e22_oled_gnss
+[17:28:36] 
+[17:28:36] === Naviga OOTB skeleton ===
+[17:28:36] fw: ootb-74-m1-runtime
+[17:28:36] hw_profile: devkit_e22_oled_gnss
+[17:28:36] gnss_provider: UBLOX
+[17:28:36] role: RESP
+[17:28:36] GNSS boot: ok
+[17:28:36] GNSS_UBX cfg: enable NAV-PVT
+[17:28:36] E22 boot: config ok
+[17:28:36] Phase B: role=0 profile=0 source=persisted
+[17:28:36] Applied: interval_s=18 maxSilence10s=9 channel=1 (role=0 radio=0) cadence=regis
+[17:28:36] === Node identity ===
+[17:28:36] full_id_u64: 0x00003CDC756F23BC
+[17:28:36] full_id_mac: 3CDC756F23BC
+[17:28:36] short_id: 0168
+[17:28:37] GNSS_UBX rx=1 ok=0 bad=0 last=0 fix=NO_FIX lat=0 lon=0
+[17:28:37] tick: 1119
+[17:28:37] GNSS_UBX hint=NMEA (parser expects UBX NAV-PVT)
+[17:28:38] tick: 2286
+[17:28:39] GNSS: FIX acquired
+[17:28:39] SELF_POS: updated reason=FIRST_FIX lat_e7=572627926 lon_e7=395241098 d=0.00 dt=0
+[17:28:39] GNSS_UBX rx=1966 ok=2 bad=0 last=3038 fix=FIX_3D lat=572627926 lon=395241098
+[17:28:39] tick: 3286
+[17:28:40] tick: 4291
+[17:28:41] nodetable: size=2
+[17:28:41] GNSS_UBX rx=3702 ok=4 bad=0 last=5100 fix=FIX_3D lat=572632956 lon=395240227
+[17:28:41] tick: 5339
+[17:28:41] OK; instrumentation on
+[17:28:42] pkt rx t_ms=6096 type=CORE seq=0 from=3600 rssi=-12
+[17:28:42] tick: 6339
+[17:28:42] pkt rx t_ms=6400 type=CORE seq=0 from=3600 rssi=-12
+[17:28:42] OK; gnss override FIX lat_e7=374200000 lon_e7=-1220800000
+[17:28:42] GNSS override: FIX lat_e7=374200000 lon_e7=-1220800000
+[17:28:42] pkt rx t_ms=6704 type=CORE seq=0 from=3600 rssi=-12
+[17:28:43] pkt rx t_ms=7008 type=CORE seq=0 from=3600 rssi=-12
+[17:28:43] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:28:43] pkt rx t_ms=7312 type=CORE seq=0 from=3600 rssi=-12
+[17:28:43] tick: 7441
+[17:28:43] pkt rx t_ms=7615 type=CORE seq=0 from=3600 rssi=-12
+[17:28:44] pkt rx t_ms=7919 type=CORE seq=0 from=3600 rssi=-12
+[17:28:44] pkt rx t_ms=8161 type=INFO seq=2560 core_seq=0 from=1260 rssi=-11
+[17:28:44] OK; gnss override move dlat_e7=200000 dlon_e7=0
+[17:28:44] tick: 8441
+[17:28:44] pkt rx t_ms=8465 type=CORE seq=0 from=3600 rssi=-12
+[17:28:44] pkt rx t_ms=8728 type=TAIL2 seq=2565 core_seq=0 from=1260 rssi=-11
+[17:28:45] pkt rx t_ms=8970 type=INFO seq=2568 core_seq=0 from=1260 rssi=-12
+[17:28:45] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:28:45] pkt rx t_ms=9282 type=CORE seq=0 from=3600 rssi=-12
+[17:28:45] tick: 9441
+[17:28:45] pkt rx t_ms=9619 type=CORE seq=0 from=3600 rssi=-12
+[17:28:45] pkt rx t_ms=9859 type=TAIL2 seq=2577 core_seq=0 from=1260 rssi=-11
+[17:28:46] nodetable: size=2
+[17:28:46] peer shortId=1260 ageS=0 grey=0 seq=2577 rssi=-11 posAgeS=0
+[17:28:46] pkt rx t_ms=10162 type=CORE seq=0 from=3600 rssi=-12
+[17:28:46] tick: 10441
+[17:28:46] pkt rx t_ms=10466 type=CORE seq=0 from=3600 rssi=-12
+[17:28:46] pkt rx t_ms=10770 type=CORE seq=0 from=3600 rssi=-12
+[17:28:47] pkt rx t_ms=11074 type=CORE seq=0 from=3600 rssi=-12
+[17:28:47] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:28:47] pkt rx t_ms=11394 type=CORE seq=0 from=3600 rssi=-12
+[17:28:47] tick: 11523
+[17:28:47] GNSS override: FIX lat_e7=374400000 lon_e7=-1220800000
+[17:28:47] pkt rx t_ms=11636 type=INFO seq=2600 core_seq=0 from=1260 rssi=-12
+[17:28:47] pkt rx t_ms=11899 type=TAIL2 seq=2601 core_seq=0 from=1260 rssi=-11
+[17:28:48] pkt rx t_ms=12203 type=CORE seq=0 from=3600 rssi=-12
+[17:28:48] pkt rx t_ms=12507 type=CORE seq=0 from=3600 rssi=-12
+[17:28:48] tick: 12636
+[17:28:48] pkt rx t_ms=12810 type=CORE seq=0 from=3600 rssi=-12
+[17:28:49] pkt rx t_ms=13113 type=CORE seq=0 from=3600 rssi=-12
+[17:28:49] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:28:49] pkt rx t_ms=13423 type=CORE seq=0 from=3600 rssi=-12
+[17:28:49] tick: 13636
+[17:28:49] pkt rx t_ms=13665 type=INFO seq=2624 core_seq=0 from=1260 rssi=-12
+[17:28:50] pkt rx t_ms=13969 type=CORE seq=0 from=3600 rssi=-12
+[17:28:50] pkt rx t_ms=14232 type=TAIL2 seq=2629 core_seq=0 from=1260 rssi=-11
+[17:28:50] pkt rx t_ms=14536 type=CORE seq=0 from=3600 rssi=-12
+[17:28:50] tick: 14665
+[17:28:50] pkt rx t_ms=14840 type=CORE seq=0 from=3600 rssi=-12
+[17:28:51] pkt rx t_ms=15082 type=INFO seq=2640 core_seq=0 from=1260 rssi=-11
+[17:28:51] nodetable: size=2
+[17:28:51] peer shortId=1260 ageS=0 grey=0 seq=2640 rssi=-11 posAgeS=0
+[17:28:51] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:28:51] pkt rx t_ms=15345 type=TAIL2 seq=2641 core_seq=0 from=1260 rssi=-11
+[17:28:51] pkt rx t_ms=15649 type=CORE seq=0 from=3600 rssi=-12
+[17:28:51] tick: 15778
+[17:28:51] pkt rx t_ms=15891 type=INFO seq=2648 core_seq=0 from=1260 rssi=-11
+[17:28:52] pkt rx t_ms=16195 type=CORE seq=0 from=3600 rssi=-12
+[17:28:52] pkt rx t_ms=16458 type=TAIL2 seq=2653 core_seq=0 from=1260 rssi=-12
+[17:28:52] GNSS override: FIX lat_e7=374400000 lon_e7=-1220800000
+[17:28:52] pkt rx t_ms=16762 type=CORE seq=0 from=3600 rssi=-12
+[17:28:52] tick: 16891
+[17:28:53] pkt rx t_ms=17065 type=CORE seq=0 from=3600 rssi=-12
+[17:28:53] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:28:53] pkt rx t_ms=17307 type=INFO seq=2664 core_seq=0 from=1260 rssi=-11
+[17:28:53] pkt rx t_ms=17570 type=TAIL2 seq=2665 core_seq=0 from=1260 rssi=-11
+[17:28:53] pkt rx t_ms=17812 type=INFO seq=2668 core_seq=0 from=1260 rssi=-12
+[17:28:53] tick: 17925
+[17:28:54] pkt rx t_ms=18075 type=TAIL2 seq=2669 core_seq=0 from=1260 rssi=-11
+[17:28:54] pkt tx t_ms=18246 type=TAIL2 seq=1 core_seq=0
+[17:28:54] pkt tx t_ms=18450 type=INFO seq=2 core_seq=0
+[17:28:54] pkt tx t_ms=18675 type=TAIL2 seq=3 core_seq=0
+[17:28:54] tick: 18925
+[17:28:54] pkt tx t_ms=18950 type=INFO seq=4 core_seq=0
+[17:28:55] pkt tx t_ms=19124 type=TAIL2 seq=5 core_seq=0
+[17:28:55] pkt tx t_ms=19203 type=INFO seq=6 core_seq=0
+[17:28:55] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:28:55] pkt tx t_ms=19450 type=TAIL2 seq=7 core_seq=0
+[17:28:55] pkt tx t_ms=19578 type=INFO seq=8 core_seq=0
+[17:28:55] pkt tx t_ms=19747 type=TAIL2 seq=9 core_seq=0
+[17:28:55] tick: 19925
+[17:28:55] pkt tx t_ms=19950 type=INFO seq=10 core_seq=0
+[17:28:56] pkt tx t_ms=20139 type=TAIL2 seq=11 core_seq=0
+[17:28:56] nodetable: size=2
+[17:28:56] peer shortId=1260 ageS=2 grey=0 seq=2669 rssi=-11 posAgeS=0
+[17:28:56] pkt tx t_ms=20291 type=INFO seq=12 core_seq=0
+[17:28:56] pkt tx t_ms=20500 type=TAIL2 seq=13 core_seq=0
+[17:28:56] pkt tx t_ms=20713 type=INFO seq=14 core_seq=0
+[17:28:56] pkt tx t_ms=20847 type=TAIL2 seq=15 core_seq=0
+[17:28:56] tick: 20989
+[17:28:57] SELF_POS: updated reason=DISTANCE lat_e7=374400000 lon_e7=-1220800000 d=12372305.51 dt=18000
+[17:28:57] pkt tx t_ms=21078 type=INFO seq=16 core_seq=0
+[17:28:57] pkt tx t_ms=21230 type=CORE seq=17
+[17:28:57] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:28:57] pkt tx t_ms=21331 type=TAIL1 seq=18 core_seq=33
+[17:28:57] pkt tx t_ms=21421 type=TAIL2 seq=19 core_seq=0
+[17:28:57] GNSS override: FIX lat_e7=374400000 lon_e7=-1220800000
+[17:28:57] pkt tx t_ms=21746 type=INFO seq=20 core_seq=0
+[17:28:57] tick: 21989
+[17:28:58] pkt rx t_ms=22686 type=CORE seq=0 from=3600 rssi=-12
+[17:28:58] tick: 22989
+[17:28:59] pkt rx t_ms=22990 type=CORE seq=0 from=3600 rssi=-12
+[17:28:59] pkt rx t_ms=23294 type=CORE seq=0 from=3600 rssi=-12
+[17:28:59] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:28:59] pkt rx t_ms=23556 type=TAIL2 seq=2733 core_seq=0 from=1260 rssi=-11
+[17:28:59] pkt rx t_ms=23799 type=INFO seq=2736 core_seq=0 from=1260 rssi=-12
+[17:28:59] tick: 23989
+[17:29:00] pkt rx t_ms=24062 type=CORE seq=2737 from=1260 rssi=-11
+[17:29:00] pkt rx t_ms=24386 type=CORE seq=0 from=3600 rssi=-11
+[17:29:00] pkt rx t_ms=24628 type=INFO seq=2740 core_seq=0 from=1260 rssi=-12
+[17:29:00] tick: 24989
+[17:29:01] nodetable: size=2
+[17:29:01] peer shortId=1260 ageS=0 grey=0 seq=2740 rssi=-12 posAgeS=0
+[17:29:01] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:01] tick: 25989
+[17:29:02] GNSS override: FIX lat_e7=374400000 lon_e7=-1220800000
+[17:29:02] tick: 26989
+[17:29:03] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:03] tick: 27989
+[17:29:04] tick: 28989
+[17:29:05] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:05] tick: 29989
+[17:29:06] nodetable: size=2
+[17:29:06] peer shortId=1260 ageS=5 grey=0 seq=2740 rssi=-12 posAgeS=0
+[17:29:06] tick: 30989
+[17:29:07] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:07] GNSS override: FIX lat_e7=374400000 lon_e7=-1220800000
+[17:29:07] tick: 31989
+[17:29:08] pkt rx t_ms=32733 type=TAIL2 seq=2741 core_seq=0 from=1260 rssi=-12
+[17:29:08] tick: 32989
+[17:29:09] pkt rx t_ms=33037 type=CORE seq=0 from=3600 rssi=-12
+[17:29:09] pkt rx t_ms=33349 type=CORE seq=0 from=3600 rssi=-12
+[17:29:09] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:09] pkt rx t_ms=33592 type=INFO seq=2752 core_seq=0 from=1260 rssi=-11
+[17:29:10] pkt rx t_ms=33903 type=CORE seq=0 from=3600 rssi=-12
+[17:29:10] tick: 34032
+[17:29:10] pkt rx t_ms=34207 type=CORE seq=0 from=3600 rssi=-12
+[17:29:10] pkt rx t_ms=34470 type=TAIL2 seq=2761 core_seq=0 from=1260 rssi=-12
+[17:29:10] pkt rx t_ms=34773 type=CORE seq=0 from=3600 rssi=-12
+[17:29:11] tick: 35032
+[17:29:11] pkt rx t_ms=35077 type=CORE seq=0 from=3600 rssi=-12
+[17:29:11] nodetable: size=2
+[17:29:11] peer shortId=1260 ageS=0 grey=0 seq=2761 rssi=-12 posAgeS=0
+[17:29:11] pkt rx t_ms=35396 type=CORE seq=0 from=3600 rssi=-12
+[17:29:11] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:11] pkt rx t_ms=35732 type=CORE seq=0 from=3600 rssi=-12
+[17:29:12] pkt rx t_ms=36011 type=CORE seq=0 from=3600 rssi=-12
+[17:29:12] tick: 36140
+[17:29:12] pkt rx t_ms=36254 type=INFO seq=2784 core_seq=0 from=1260 rssi=-11
+[17:29:12] pkt rx t_ms=36516 type=TAIL2 seq=2785 core_seq=0 from=1260 rssi=-12
+[17:29:12] GNSS override: FIX lat_e7=374400000 lon_e7=-1220800000
+[17:29:12] pkt rx t_ms=36820 type=CORE seq=0 from=3600 rssi=-12
+[17:29:13] pkt rx t_ms=37123 type=CORE seq=0 from=3600 rssi=-12
+[17:29:13] tick: 37253
+[17:29:13] pkt rx t_ms=37427 type=CORE seq=0 from=3600 rssi=-12
+[17:29:13] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:13] pkt rx t_ms=37731 type=CORE seq=0 from=3600 rssi=-12
+[17:29:14] pkt rx t_ms=37973 type=INFO seq=2804 core_seq=0 from=1260 rssi=-12
+[17:29:14] pkt rx t_ms=38236 type=TAIL2 seq=2805 core_seq=0 from=1260 rssi=-11
+[17:29:14] tick: 38353
+[17:29:14] pkt rx t_ms=38540 type=CORE seq=0 from=3600 rssi=-12
+[17:29:14] pkt rx t_ms=38844 type=CORE seq=0 from=3600 rssi=-12
+[17:29:15] pkt rx t_ms=39148 type=CORE seq=0 from=3600 rssi=-12
+[17:29:15] OK; gnss override move dlat_e7=400000 dlon_e7=0
+[17:29:15] SELF_POS: updated reason=DISTANCE lat_e7=374800000 lon_e7=-1220800000 d=4447.80 dt=18241
+[17:29:15] pkt tx t_ms=39343 type=TAIL2 seq=21 core_seq=0
+[17:29:15] tick: 39363
+[17:29:15] pkt tx t_ms=39452 type=CORE seq=22
+[17:29:15] pkt tx t_ms=39498 type=TAIL1 seq=23 core_seq=39
+[17:29:15] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:15] pkt tx t_ms=39807 type=INFO seq=24 core_seq=0
+[17:29:15] pkt tx t_ms=39854 type=TAIL2 seq=25 core_seq=0
+[17:29:16] nodetable: size=2
+[17:29:16] peer shortId=1260 ageS=1 grey=0 seq=2805 rssi=-11 posAgeS=0
+[17:29:16] tick: 40363
+[17:29:16] pkt rx t_ms=40502 type=INFO seq=2832 core_seq=0 from=1260 rssi=-12
+[17:29:16] pkt rx t_ms=40765 type=TAIL2 seq=2833 core_seq=0 from=1260 rssi=-11
+[17:29:17] pkt rx t_ms=41069 type=CORE seq=0 from=3600 rssi=-12
+[17:29:17] pkt rx t_ms=41311 type=INFO seq=2840 core_seq=0 from=1260 rssi=-11
+[17:29:17] tick: 41424
+[17:29:17] pkt rx t_ms=41574 type=TAIL2 seq=2841 core_seq=0 from=1260 rssi=-11
+[17:29:17] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:17] GNSS override: FIX lat_e7=374800000 lon_e7=-1220800000
+[17:29:17] pkt rx t_ms=41878 type=CORE seq=0 from=3600 rssi=-12
+[17:29:18] pkt rx t_ms=42120 type=INFO seq=2848 core_seq=0 from=1260 rssi=-11
+[17:29:18] tick: 42424
+[17:29:18] pkt rx t_ms=42424 type=CORE seq=0 from=3600 rssi=-12
+[17:29:18] pkt rx t_ms=42728 type=CORE seq=0 from=3600 rssi=-12
+[17:29:19] pkt rx t_ms=43032 type=CORE seq=0 from=3600 rssi=-12
+[17:29:19] pkt rx t_ms=43294 type=TAIL2 seq=2861 core_seq=0 from=1260 rssi=-11
+[17:29:19] tick: 43424
+[17:29:19] pkt rx t_ms=43598 type=CORE seq=0 from=3600 rssi=-12
+[17:29:19] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:20] pkt rx t_ms=43902 type=CORE seq=0 from=3600 rssi=-12
+[17:29:20] pkt rx t_ms=44145 type=INFO seq=2872 core_seq=0 from=1260 rssi=-11
+[17:29:20] tick: 44424
+[17:29:20] pkt rx t_ms=44461 type=CORE seq=0 from=3600 rssi=-12
+[17:29:20] pkt rx t_ms=44724 type=TAIL2 seq=2877 core_seq=0 from=1260 rssi=-11
+[17:29:21] pkt rx t_ms=45030 type=CORE seq=0 from=3600 rssi=-12
+[17:29:21] nodetable: size=2
+[17:29:21] peer shortId=1260 ageS=0 grey=0 seq=2877 rssi=-11 posAgeS=0
+[17:29:21] pkt rx t_ms=45334 type=CORE seq=0 from=3600 rssi=-12
+[17:29:21] tick: 45463
+[17:29:21] pkt rx t_ms=45650 type=CORE seq=0 from=3600 rssi=-12
+[17:29:21] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:22] pkt rx t_ms=45953 type=CORE seq=0 from=3600 rssi=-12
+[17:29:22] pkt rx t_ms=46195 type=INFO seq=2896 core_seq=0 from=1260 rssi=-11
+[17:29:22] pkt rx t_ms=46458 type=TAIL2 seq=2897 core_seq=0 from=1260 rssi=-12
+[17:29:22] tick: 46575
+[17:29:22] GNSS override: FIX lat_e7=374800000 lon_e7=-1220800000
+[17:29:22] pkt rx t_ms=46700 type=INFO seq=2900 core_seq=0 from=1260 rssi=-12
+[17:29:23] pkt rx t_ms=47004 type=CORE seq=0 from=3600 rssi=-12
+[17:29:23] pkt rx t_ms=47267 type=TAIL2 seq=2905 core_seq=0 from=1260 rssi=-11
+[17:29:23] pkt rx t_ms=47509 type=INFO seq=2908 core_seq=0 from=1260 rssi=-11
+[17:29:23] tick: 47622
+[17:29:23] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:23] pkt rx t_ms=47813 type=CORE seq=0 from=3600 rssi=-12
+[17:29:24] pkt rx t_ms=48076 type=TAIL2 seq=2913 core_seq=0 from=1260 rssi=-11
+[17:29:24] pkt rx t_ms=48379 type=CORE seq=0 from=3600 rssi=-12
+[17:29:24] tick: 48622
+[17:29:24] pkt rx t_ms=48622 type=INFO seq=2920 core_seq=0 from=1260 rssi=-11
+[17:29:25] pkt rx t_ms=48926 type=CORE seq=0 from=3600 rssi=-12
+[17:29:25] pkt rx t_ms=49229 type=CORE seq=0 from=3600 rssi=-12
+[17:29:25] pkt rx t_ms=49537 type=CORE seq=0 from=3600 rssi=-12
+[17:29:25] tick: 49666
+[17:29:25] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:25] pkt rx t_ms=49841 type=CORE seq=0 from=3600 rssi=-12
+[17:29:26] pkt rx t_ms=50104 type=TAIL2 seq=2937 core_seq=0 from=1260 rssi=-12
+[17:29:26] nodetable: size=2
+[17:29:26] peer shortId=1260 ageS=0 grey=0 seq=2937 rssi=-12 posAgeS=0
+[17:29:26] pkt rx t_ms=50408 type=CORE seq=0 from=3600 rssi=-12
+[17:29:26] pkt rx t_ms=50650 type=INFO seq=2944 core_seq=0 from=1260 rssi=-11
+[17:29:26] tick: 50762
+[17:29:27] pkt rx t_ms=50954 type=CORE seq=0 from=3600 rssi=-12
+[17:29:27] pkt rx t_ms=51216 type=TAIL2 seq=2949 core_seq=0 from=1260 rssi=-11
+[17:29:27] pkt rx t_ms=51520 type=CORE seq=0 from=3600 rssi=-12
+[17:29:27] GNSS override: FIX lat_e7=374800000 lon_e7=-1220800000
+[17:29:27] tick: 51762
+[17:29:27] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:27] pkt rx t_ms=51824 type=CORE seq=0 from=3600 rssi=-12
+[17:29:28] pkt rx t_ms=52066 type=INFO seq=2960 core_seq=0 from=1260 rssi=-11
+[17:29:28] pkt rx t_ms=52370 type=CORE seq=0 from=3600 rssi=-12
+[17:29:28] pkt rx t_ms=52674 type=CORE seq=0 from=3600 rssi=-12
+[17:29:28] tick: 52803
+[17:29:29] pkt rx t_ms=52978 type=CORE seq=0 from=3600 rssi=-12
+[17:29:29] pkt rx t_ms=53282 type=CORE seq=0 from=3600 rssi=-12
+[17:29:29] pkt rx t_ms=53599 type=CORE seq=0 from=3600 rssi=-12
+[17:29:29] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:29] tick: 53803
+[17:29:29] pkt rx t_ms=53861 type=TAIL2 seq=2981 core_seq=0 from=1260 rssi=-11
+[17:29:30] pkt rx t_ms=54124 type=CORE seq=2983 from=1260 rssi=-11
+[17:29:30] pkt rx t_ms=54428 type=CORE seq=0 from=3600 rssi=-11
+[17:29:30] pkt rx t_ms=54691 type=TAIL2 seq=2985 core_seq=0 from=1260 rssi=-11
+[17:29:30] tick: 54807
+[17:29:31] nodetable: size=2
+[17:29:31] peer shortId=1260 ageS=0 grey=0 seq=2985 rssi=-11 posAgeS=0
+[17:29:31] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:31] tick: 55807
+[17:29:32] GNSS override: FIX lat_e7=374800000 lon_e7=-1220800000
+[17:29:32] tick: 56807
+[17:29:33] pkt tx t_ms=57584 type=TAIL2 seq=26 core_seq=0
+[17:29:33] pkt tx t_ms=57758 type=INFO seq=27 core_seq=0
+[17:29:33] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:33] tick: 57807
+[17:29:34] pkt tx t_ms=58008 type=TAIL2 seq=28 core_seq=0
+[17:29:34] pkt tx t_ms=58102 type=INFO seq=29 core_seq=0
+[17:29:34] pkt tx t_ms=58153 type=TAIL2 seq=30 core_seq=0
+[17:29:34] pkt tx t_ms=58365 type=INFO seq=31 core_seq=0
+[17:29:34] pkt tx t_ms=58625 type=TAIL2 seq=32 core_seq=0
+[17:29:34] tick: 58807
+[17:29:34] pkt tx t_ms=58874 type=INFO seq=33 core_seq=0
+[17:29:34] pkt tx t_ms=58962 type=TAIL2 seq=34 core_seq=0
+[17:29:35] pkt tx t_ms=59028 type=INFO seq=35 core_seq=0
+[17:29:35] pkt tx t_ms=59199 type=TAIL2 seq=36 core_seq=0
+[17:29:35] pkt tx t_ms=59422 type=INFO seq=37 core_seq=0
+[17:29:35] pkt tx t_ms=59579 type=TAIL2 seq=38 core_seq=0
+[17:29:35] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:35] tick: 59807
+[17:29:35] pkt tx t_ms=59814 type=INFO seq=39 core_seq=0
+[17:29:35] pkt tx t_ms=59946 type=TAIL2 seq=40 core_seq=0
+[17:29:36] pkt tx t_ms=60197 type=INFO seq=41 core_seq=0
+[17:29:36] nodetable: size=2
+[17:29:36] peer shortId=1260 ageS=5 grey=0 seq=2985 rssi=-11 posAgeS=0
+[17:29:36] pkt tx t_ms=60309 type=TAIL2 seq=42 core_seq=0
+[17:29:36] pkt tx t_ms=60665 type=INFO seq=43 core_seq=0
+[17:29:36] pkt tx t_ms=60761 type=TAIL2 seq=44 core_seq=0
+[17:29:36] tick: 60807
+[17:29:36] pkt tx t_ms=60870 type=INFO seq=45 core_seq=0
+[17:29:37] pkt tx t_ms=61107 type=TAIL2 seq=46 core_seq=0
+[17:29:37] pkt tx t_ms=61178 type=INFO seq=47 core_seq=0
+[17:29:37] pkt tx t_ms=61485 type=TAIL2 seq=48 core_seq=0
+[17:29:37] pkt tx t_ms=61579 type=INFO seq=49 core_seq=0
+[17:29:37] pkt tx t_ms=61676 type=TAIL2 seq=50 core_seq=0
+[17:29:37] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:37] GNSS override: FIX lat_e7=374800000 lon_e7=-1220800000
+[17:29:37] tick: 61844
+[17:29:37] pkt tx t_ms=61977 type=INFO seq=51 core_seq=0
+[17:29:38] pkt tx t_ms=62101 type=TAIL2 seq=52 core_seq=0
+[17:29:38] pkt tx t_ms=62162 type=INFO seq=53 core_seq=0
+[17:29:38] pkt tx t_ms=62425 type=TAIL2 seq=54 core_seq=0
+[17:29:38] pkt tx t_ms=62579 type=INFO seq=55 core_seq=0
+[17:29:38] pkt tx t_ms=62695 type=TAIL2 seq=56 core_seq=0
+[17:29:38] tick: 62844
+[17:29:38] pkt tx t_ms=62882 type=INFO seq=57 core_seq=0
+[17:29:39] pkt tx t_ms=62915 type=TAIL2 seq=58 core_seq=0
+[17:29:39] pkt tx t_ms=63206 type=INFO seq=59 core_seq=0
+[17:29:39] pkt tx t_ms=63292 type=TAIL2 seq=60 core_seq=0
+[17:29:39] pkt tx t_ms=63396 type=INFO seq=61 core_seq=0
+[17:29:39] pkt tx t_ms=63652 type=TAIL2 seq=62 core_seq=0
+[17:29:39] pkt tx t_ms=63730 type=INFO seq=63 core_seq=0
+[17:29:39] pkt tx t_ms=63788 type=TAIL2 seq=64 core_seq=0
+[17:29:39] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:39] tick: 63995
+[17:29:40] pkt tx t_ms=64065 type=INFO seq=65 core_seq=0
+[17:29:40] pkt tx t_ms=64110 type=TAIL2 seq=66 core_seq=0
+[17:29:40] pkt tx t_ms=64462 type=INFO seq=67 core_seq=0
+[17:29:40] pkt tx t_ms=64670 type=TAIL2 seq=68 core_seq=0
+[17:29:40] pkt tx t_ms=64768 type=INFO seq=69 core_seq=0
+[17:29:40] pkt tx t_ms=64885 type=TAIL2 seq=70 core_seq=0
+[17:29:41] pkt tx t_ms=64910 type=INFO seq=71 core_seq=0
+[17:29:41] tick: 65149
+[17:29:41] nodetable: size=2
+[17:29:41] peer shortId=1260 ageS=10 grey=0 seq=2985 rssi=-11 posAgeS=0
+[17:29:41] pkt tx t_ms=65291 type=TAIL2 seq=72 core_seq=0
+[17:29:41] pkt tx t_ms=65522 type=INFO seq=73 core_seq=0
+[17:29:41] pkt tx t_ms=65587 type=TAIL2 seq=74 core_seq=0
+[17:29:41] pkt tx t_ms=65798 type=INFO seq=75 core_seq=0
+[17:29:41] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:42] pkt tx t_ms=66006 type=TAIL2 seq=76 core_seq=0
+[17:29:42] pkt tx t_ms=66102 type=INFO seq=77 core_seq=0
+[17:29:42] tick: 66261
+[17:29:42] pkt tx t_ms=66294 type=TAIL2 seq=78 core_seq=0
+[17:29:42] pkt tx t_ms=66397 type=INFO seq=79 core_seq=0
+[17:29:42] pkt tx t_ms=66745 type=TAIL2 seq=80 core_seq=0
+[17:29:42] GNSS override: FIX lat_e7=374800000 lon_e7=-1220800000
+[17:29:42] pkt tx t_ms=66980 type=INFO seq=81 core_seq=0
+[17:29:43] pkt tx t_ms=67130 type=TAIL2 seq=82 core_seq=0
+[17:29:43] pkt tx t_ms=67238 type=INFO seq=83 core_seq=0
+[17:29:43] tick: 67374
+[17:29:43] pkt tx t_ms=67602 type=TAIL2 seq=84 core_seq=0
+[17:29:43] pkt tx t_ms=67651 type=INFO seq=85 core_seq=0
+[17:29:43] pkt tx t_ms=67820 type=TAIL2 seq=86 core_seq=0
+[17:29:43] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:44] pkt tx t_ms=68046 type=INFO seq=87 core_seq=0
+[17:29:44] pkt tx t_ms=68179 type=TAIL2 seq=88 core_seq=0
+[17:29:44] tick: 68374
+[17:29:44] pkt tx t_ms=68446 type=INFO seq=89 core_seq=0
+[17:29:44] pkt tx t_ms=68588 type=TAIL2 seq=90 core_seq=0
+[17:29:44] pkt tx t_ms=68739 type=INFO seq=91 core_seq=0
+[17:29:44] pkt tx t_ms=68899 type=TAIL2 seq=92 core_seq=0
+[17:29:45] pkt tx t_ms=69047 type=INFO seq=93 core_seq=0
+[17:29:45] pkt tx t_ms=69261 type=TAIL2 seq=94 core_seq=0
+[17:29:45] tick: 69374
+[17:29:45] pkt tx t_ms=69399 type=INFO seq=95 core_seq=0
+[17:29:45] pkt tx t_ms=69618 type=TAIL2 seq=96 core_seq=0
+[17:29:45] pkt tx t_ms=69771 type=INFO seq=97 core_seq=0
+[17:29:45] OK; gnss override move dlat_e7=600000 dlon_e7=0
+[17:29:45] SELF_POS: updated reason=DISTANCE lat_e7=375400000 lon_e7=-1220800000 d=6671.70 dt=30535
+[17:29:45] pkt tx t_ms=69899 type=TAIL2 seq=98 core_seq=0
+[17:29:45] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:46] pkt tx t_ms=70016 type=CORE seq=99
+[17:29:46] pkt tx t_ms=70162 type=TAIL1 seq=100 core_seq=189
+[17:29:46] nodetable: size=2
+[17:29:46] peer shortId=1260 ageS=15 grey=0 seq=2985 rssi=-11 posAgeS=0
+[17:29:46] tick: 70374
+[17:29:46] pkt tx t_ms=70468 type=INFO seq=101 core_seq=0
+[17:29:46] pkt tx t_ms=70693 type=TAIL2 seq=102 core_seq=0
+[17:29:47] tick: 71374
+[17:29:47] pkt rx t_ms=71399 type=CORE seq=0 from=3600 rssi=-12
+[17:29:47] pkt rx t_ms=71699 type=CORE seq=0 from=3600 rssi=-12
+[17:29:47] GNSS override: FIX lat_e7=375400000 lon_e7=-1220800000
+[17:29:47] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:48] pkt rx t_ms=72003 type=CORE seq=0 from=3600 rssi=-12
+[17:29:48] pkt rx t_ms=72265 type=TAIL2 seq=3091 core_seq=0 from=1260 rssi=-13
+[17:29:48] tick: 72382
+[17:29:48] pkt rx t_ms=72587 type=CORE seq=0 from=3600 rssi=-12
+[17:29:48] pkt rx t_ms=72829 type=INFO seq=3098 core_seq=0 from=1260 rssi=-11
+[17:29:49] pkt rx t_ms=73133 type=CORE seq=0 from=3600 rssi=-12
+[17:29:49] tick: 73382
+[17:29:49] pkt rx t_ms=73396 type=TAIL2 seq=3103 core_seq=0 from=1260 rssi=-11
+[17:29:49] pkt rx t_ms=73700 type=CORE seq=0 from=3600 rssi=-12
+[17:29:50] pkt rx t_ms=73942 type=INFO seq=3110 core_seq=0 from=1260 rssi=-11
+[17:29:50] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:50] pkt rx t_ms=74246 type=CORE seq=0 from=3600 rssi=-12
+[17:29:50] tick: 74382
+[17:29:50] pkt rx t_ms=74550 type=CORE seq=0 from=3600 rssi=-12
+[17:29:50] pkt rx t_ms=74812 type=TAIL2 seq=3119 core_seq=0 from=1260 rssi=-11
+[17:29:51] pkt rx t_ms=75116 type=CORE seq=0 from=3600 rssi=-12
+[17:29:51] nodetable: size=2
+[17:29:51] peer shortId=1260 ageS=0 grey=0 seq=3119 rssi=-11 posAgeS=0
+[17:29:51] tick: 75382
+[17:29:51] pkt rx t_ms=75420 type=CORE seq=0 from=3600 rssi=-12
+[17:29:51] pkt rx t_ms=75724 type=CORE seq=0 from=3600 rssi=-12
+[17:29:52] pkt rx t_ms=76028 type=CORE seq=0 from=3600 rssi=-12
+[17:29:52] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:52] pkt rx t_ms=76331 type=CORE seq=0 from=3600 rssi=-12
+[17:29:52] tick: 76460
+[17:29:52] pkt rx t_ms=76574 type=INFO seq=3142 core_seq=0 from=1260 rssi=-12
+[17:29:52] pkt rx t_ms=76836 type=TAIL2 seq=3143 core_seq=0 from=1260 rssi=-11
+[17:29:52] GNSS override: FIX lat_e7=375400000 lon_e7=-1220800000
+[17:29:53] pkt rx t_ms=77140 type=CORE seq=0 from=3600 rssi=-12
+[17:29:53] pkt rx t_ms=77455 type=CORE seq=0 from=3600 rssi=-12
+[17:29:53] tick: 77584
+[17:29:53] pkt rx t_ms=77759 type=CORE seq=0 from=3600 rssi=-12
+[17:29:54] pkt rx t_ms=78063 type=CORE seq=0 from=3600 rssi=-12
+[17:29:54] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:54] pkt rx t_ms=78305 type=INFO seq=3162 core_seq=0 from=1260 rssi=-12
+[17:29:54] pkt rx t_ms=78568 type=TAIL2 seq=3163 core_seq=0 from=1260 rssi=-12
+[17:29:54] tick: 78685
+[17:29:54] pkt rx t_ms=78872 type=CORE seq=0 from=3600 rssi=-12
+[17:29:55] pkt rx t_ms=79114 type=INFO seq=3170 core_seq=0 from=1260 rssi=-11
+[17:29:55] pkt rx t_ms=79418 type=CORE seq=0 from=3600 rssi=-12
+[17:29:55] pkt rx t_ms=79681 type=TAIL2 seq=3175 core_seq=0 from=1260 rssi=-11
+[17:29:55] tick: 79797
+[17:29:56] pkt rx t_ms=79985 type=CORE seq=0 from=3600 rssi=-12
+[17:29:56] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:56] pkt rx t_ms=80227 type=INFO seq=3182 core_seq=0 from=1260 rssi=-11
+[17:29:56] nodetable: size=2
+[17:29:56] peer shortId=1260 ageS=0 grey=0 seq=3182 rssi=-11 posAgeS=0
+[17:29:56] pkt rx t_ms=80490 type=TAIL2 seq=3183 core_seq=0 from=1260 rssi=-11
+[17:29:56] tick: 80797
+[17:29:56] pkt rx t_ms=80800 type=CORE seq=0 from=3600 rssi=-12
+[17:29:57] pkt rx t_ms=81042 type=INFO seq=3190 core_seq=0 from=1260 rssi=-12
+[17:29:57] pkt rx t_ms=81346 type=CORE seq=0 from=3600 rssi=-12
+[17:29:57] pkt rx t_ms=81651 type=CORE seq=0 from=3600 rssi=-12
+[17:29:57] tick: 81797
+[17:29:58] pkt rx t_ms=81913 type=TAIL2 seq=3199 core_seq=0 from=1260 rssi=-11
+[17:29:58] GNSS override: FIX lat_e7=375400000 lon_e7=-1220800000
+[17:29:58] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:29:58] pkt rx t_ms=82216 type=CORE seq=0 from=3600 rssi=-12
+[17:29:58] pkt rx t_ms=82520 type=CORE seq=0 from=3600 rssi=-12
+[17:29:58] tick: 82797
+[17:29:58] pkt rx t_ms=82830 type=CORE seq=0 from=3600 rssi=-12
+[17:29:59] pkt rx t_ms=83072 type=INFO seq=3214 core_seq=0 from=1260 rssi=-12
+[17:29:59] pkt rx t_ms=83376 type=CORE seq=0 from=3600 rssi=-12
+[17:29:59] pkt rx t_ms=83639 type=TAIL2 seq=3219 core_seq=0 from=1260 rssi=-11
+[17:29:59] tick: 83797
+[17:30:00] pkt rx t_ms=83943 type=CORE seq=0 from=3600 rssi=-12
+[17:30:00] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:00] pkt rx t_ms=84281 type=CORE seq=0 from=3600 rssi=-12
+[17:30:00] pkt rx t_ms=84571 type=CORE seq=0 from=3600 rssi=-12
+[17:30:00] tick: 84797
+[17:30:01] nodetable: size=2
+[17:30:01] peer shortId=1260 ageS=1 grey=0 seq=3219 rssi=-11 posAgeS=0
+[17:30:01] tick: 85797
+[17:30:02] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:02] tick: 86797
+[17:30:03] GNSS override: FIX lat_e7=375400000 lon_e7=-1220800000
+[17:30:03] tick: 87797
+[17:30:04] pkt tx t_ms=88095 type=TAIL2 seq=103 core_seq=0
+[17:30:04] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:04] pkt tx t_ms=88294 type=INFO seq=104 core_seq=0
+[17:30:04] pkt tx t_ms=88448 type=TAIL2 seq=105 core_seq=0
+[17:30:04] pkt tx t_ms=88651 type=INFO seq=106 core_seq=0
+[17:30:04] pkt tx t_ms=88748 type=TAIL2 seq=107 core_seq=0
+[17:30:04] tick: 88902
+[17:30:04] pkt tx t_ms=88931 type=INFO seq=108 core_seq=0
+[17:30:05] pkt tx t_ms=89149 type=TAIL2 seq=109 core_seq=0
+[17:30:05] pkt tx t_ms=89265 type=INFO seq=110 core_seq=0
+[17:30:05] pkt tx t_ms=89353 type=TAIL2 seq=111 core_seq=0
+[17:30:05] pkt tx t_ms=89705 type=INFO seq=112 core_seq=0
+[17:30:05] pkt tx t_ms=89833 type=TAIL2 seq=113 core_seq=0
+[17:30:05] tick: 89902
+[17:30:06] pkt tx t_ms=89934 type=INFO seq=114 core_seq=0
+[17:30:06] pkt tx t_ms=90181 type=TAIL2 seq=115 core_seq=0
+[17:30:06] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:06] pkt tx t_ms=90273 type=INFO seq=116 core_seq=0
+[17:30:06] nodetable: size=2
+[17:30:06] peer shortId=1260 ageS=6 grey=0 seq=3219 rssi=-11 posAgeS=0
+[17:30:06] pkt tx t_ms=90583 type=TAIL2 seq=117 core_seq=0
+[17:30:06] pkt tx t_ms=90607 type=INFO seq=118 core_seq=0
+[17:30:06] pkt tx t_ms=90673 type=TAIL2 seq=119 core_seq=0
+[17:30:06] pkt tx t_ms=90717 type=INFO seq=120 core_seq=0
+[17:30:06] tick: 90967
+[17:30:07] pkt tx t_ms=91199 type=TAIL2 seq=121 core_seq=0
+[17:30:07] pkt tx t_ms=91307 type=INFO seq=122 core_seq=0
+[17:30:07] pkt tx t_ms=91460 type=TAIL2 seq=123 core_seq=0
+[17:30:07] pkt tx t_ms=91662 type=INFO seq=124 core_seq=0
+[17:30:07] pkt tx t_ms=91764 type=TAIL2 seq=125 core_seq=0
+[17:30:07] pkt tx t_ms=91857 type=INFO seq=126 core_seq=0
+[17:30:07] tick: 91967
+[17:30:08] GNSS override: FIX lat_e7=375400000 lon_e7=-1220800000
+[17:30:08] pkt tx t_ms=92081 type=TAIL2 seq=127 core_seq=0
+[17:30:08] pkt tx t_ms=92165 type=INFO seq=128 core_seq=0
+[17:30:08] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:08] pkt tx t_ms=92413 type=TAIL2 seq=129 core_seq=0
+[17:30:08] pkt tx t_ms=92651 type=INFO seq=130 core_seq=0
+[17:30:08] pkt tx t_ms=92731 type=TAIL2 seq=131 core_seq=0
+[17:30:08] pkt tx t_ms=92782 type=INFO seq=132 core_seq=0
+[17:30:09] pkt tx t_ms=92917 type=TAIL2 seq=133 core_seq=0
+[17:30:09] tick: 93074
+[17:30:09] pkt tx t_ms=93214 type=INFO seq=134 core_seq=0
+[17:30:09] pkt tx t_ms=93382 type=TAIL2 seq=135 core_seq=0
+[17:30:09] pkt tx t_ms=93599 type=INFO seq=136 core_seq=0
+[17:30:09] pkt tx t_ms=93683 type=TAIL2 seq=137 core_seq=0
+[17:30:09] pkt tx t_ms=93884 type=INFO seq=138 core_seq=0
+[17:30:10] pkt tx t_ms=94033 type=TAIL2 seq=139 core_seq=0
+[17:30:10] tick: 94187
+[17:30:10] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:10] pkt tx t_ms=94340 type=INFO seq=140 core_seq=0
+[17:30:10] pkt tx t_ms=94573 type=TAIL2 seq=141 core_seq=0
+[17:30:10] pkt tx t_ms=94661 type=INFO seq=142 core_seq=0
+[17:30:10] pkt tx t_ms=94758 type=TAIL2 seq=143 core_seq=0
+[17:30:11] pkt tx t_ms=94892 type=INFO seq=144 core_seq=0
+[17:30:11] tick: 95187
+[17:30:11] pkt tx t_ms=95258 type=TAIL2 seq=145 core_seq=0
+[17:30:11] nodetable: size=2
+[17:30:11] peer shortId=1260 ageS=11 grey=0 seq=3219 rssi=-11 posAgeS=0
+[17:30:11] pkt tx t_ms=95503 type=INFO seq=146 core_seq=0
+[17:30:11] pkt tx t_ms=95555 type=TAIL2 seq=147 core_seq=0
+[17:30:11] pkt tx t_ms=95831 type=INFO seq=148 core_seq=0
+[17:30:11] pkt tx t_ms=95908 type=TAIL2 seq=149 core_seq=0
+[17:30:12] pkt tx t_ms=96147 type=INFO seq=150 core_seq=0
+[17:30:12] tick: 96187
+[17:30:12] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:12] pkt tx t_ms=96413 type=TAIL2 seq=151 core_seq=0
+[17:30:12] pkt tx t_ms=96565 type=INFO seq=152 core_seq=0
+[17:30:12] pkt tx t_ms=96723 type=TAIL2 seq=153 core_seq=0
+[17:30:12] pkt tx t_ms=96921 type=INFO seq=154 core_seq=0
+[17:30:13] pkt tx t_ms=97004 type=TAIL2 seq=155 core_seq=0
+[17:30:13] GNSS override: FIX lat_e7=375400000 lon_e7=-1220800000
+[17:30:13] pkt tx t_ms=97034 type=INFO seq=156 core_seq=0
+[17:30:13] tick: 97262
+[17:30:13] pkt tx t_ms=97291 type=TAIL2 seq=157 core_seq=0
+[17:30:13] pkt tx t_ms=97554 type=INFO seq=158 core_seq=0
+[17:30:13] pkt tx t_ms=97640 type=TAIL2 seq=159 core_seq=0
+[17:30:14] pkt tx t_ms=98018 type=INFO seq=160 core_seq=0
+[17:30:14] pkt tx t_ms=98185 type=TAIL2 seq=161 core_seq=0
+[17:30:14] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:14] tick: 98262
+[17:30:14] pkt tx t_ms=98419 type=INFO seq=162 core_seq=0
+[17:30:14] pkt tx t_ms=98528 type=TAIL2 seq=163 core_seq=0
+[17:30:14] pkt tx t_ms=98685 type=INFO seq=164 core_seq=0
+[17:30:14] pkt tx t_ms=98757 type=TAIL2 seq=165 core_seq=0
+[17:30:15] pkt tx t_ms=99187 type=INFO seq=166 core_seq=0
+[17:30:15] tick: 99262
+[17:30:15] pkt tx t_ms=99354 type=TAIL2 seq=167 core_seq=0
+[17:30:15] pkt tx t_ms=99615 type=INFO seq=168 core_seq=0
+[17:30:15] pkt tx t_ms=99689 type=TAIL2 seq=169 core_seq=0
+[17:30:15] pkt tx t_ms=99850 type=INFO seq=170 core_seq=0
+[17:30:16] pkt tx t_ms=100075 type=TAIL2 seq=171 core_seq=0
+[17:30:16] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:16] tick: 100262
+[17:30:16] pkt tx t_ms=100286 type=INFO seq=172 core_seq=0
+[17:30:16] OK; gnss override move dlat_e7=800000 dlon_e7=0
+[17:30:16] SELF_POS: updated reason=DISTANCE lat_e7=376200000 lon_e7=-1220800000 d=8895.59 dt=30535
+[17:30:16] nodetable: size=2
+[17:30:16] peer shortId=1260 ageS=16 grey=0 seq=3219 rssi=-11 posAgeS=0
+[17:30:16] pkt tx t_ms=100402 type=TAIL2 seq=173 core_seq=0
+[17:30:16] pkt tx t_ms=100802 type=CORE seq=174
+[17:30:16] pkt tx t_ms=100841 type=TAIL1 seq=175 core_seq=335
+[17:30:16] pkt tx t_ms=100976 type=INFO seq=176 core_seq=0
+[17:30:17] pkt tx t_ms=101013 type=TAIL2 seq=177 core_seq=0
+[17:30:17] tick: 101262
+[17:30:17] pkt rx t_ms=101802 type=TAIL2 seq=3321 core_seq=0 from=1260 rssi=-9
+[17:30:18] GNSS override: FIX lat_e7=376200000 lon_e7=-1220800000
+[17:30:18] pkt rx t_ms=102105 type=CORE seq=0 from=3600 rssi=-12
+[17:30:18] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:18] tick: 102270
+[17:30:18] pkt rx t_ms=102348 type=INFO seq=3328 core_seq=0 from=1260 rssi=-12
+[17:30:18] pkt rx t_ms=102651 type=CORE seq=0 from=3600 rssi=-12
+[17:30:19] pkt rx t_ms=102914 type=TAIL2 seq=3333 core_seq=0 from=1260 rssi=-12
+[17:30:19] pkt rx t_ms=103156 type=INFO seq=3336 core_seq=0 from=1260 rssi=-11
+[17:30:19] tick: 103270
+[17:30:19] pkt rx t_ms=103460 type=CORE seq=0 from=3600 rssi=-12
+[17:30:19] pkt rx t_ms=103723 type=TAIL2 seq=3341 core_seq=0 from=1260 rssi=-12
+[17:30:20] pkt rx t_ms=103965 type=INFO seq=3344 core_seq=0 from=1260 rssi=-11
+[17:30:20] pkt rx t_ms=104228 type=TAIL2 seq=3345 core_seq=0 from=1260 rssi=-12
+[17:30:20] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:20] tick: 104345
+[17:30:20] pkt rx t_ms=104532 type=CORE seq=0 from=3600 rssi=-12
+[17:30:20] pkt rx t_ms=104774 type=INFO seq=3352 core_seq=0 from=1260 rssi=-11
+[17:30:21] pkt rx t_ms=105037 type=TAIL2 seq=3353 core_seq=0 from=1260 rssi=-12
+[17:30:21] pkt rx t_ms=105341 type=CORE seq=0 from=3600 rssi=-12
+[17:30:21] tick: 105470
+[17:30:21] nodetable: size=2
+[17:30:21] peer shortId=1260 ageS=0 grey=0 seq=3353 rssi=-12 posAgeS=0
+[17:30:21] pkt rx t_ms=105644 type=CORE seq=0 from=3600 rssi=-12
+[17:30:22] pkt rx t_ms=105948 type=CORE seq=0 from=3600 rssi=-12
+[17:30:22] pkt rx t_ms=106252 type=CORE seq=0 from=3600 rssi=-12
+[17:30:22] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:22] tick: 106470
+[17:30:22] pkt rx t_ms=106494 type=INFO seq=3372 core_seq=0 from=1260 rssi=-11
+[17:30:22] pkt rx t_ms=106757 type=TAIL2 seq=3373 core_seq=0 from=1260 rssi=-11
+[17:30:23] GNSS override: FIX lat_e7=376200000 lon_e7=-1220800000
+[17:30:23] pkt rx t_ms=107061 type=CORE seq=0 from=3600 rssi=-12
+[17:30:23] pkt rx t_ms=107303 type=INFO seq=3380 core_seq=0 from=1260 rssi=-11
+[17:30:23] tick: 107470
+[17:30:23] pkt rx t_ms=107566 type=TAIL2 seq=3381 core_seq=0 from=1260 rssi=-11
+[17:30:23] pkt rx t_ms=107870 type=CORE seq=0 from=3600 rssi=-12
+[17:30:24] pkt rx t_ms=108112 type=INFO seq=3388 core_seq=0 from=1260 rssi=-12
+[17:30:24] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:24] pkt rx t_ms=108416 type=CORE seq=0 from=3600 rssi=-12
+[17:30:24] tick: 108545
+[17:30:24] pkt rx t_ms=108678 type=TAIL2 seq=3393 core_seq=0 from=1260 rssi=-11
+[17:30:25] pkt rx t_ms=108982 type=CORE seq=0 from=3600 rssi=-12
+[17:30:25] pkt rx t_ms=109286 type=CORE seq=0 from=3600 rssi=-12
+[17:30:25] tick: 109545
+[17:30:25] pkt rx t_ms=109590 type=CORE seq=0 from=3600 rssi=-12
+[17:30:25] pkt rx t_ms=109832 type=INFO seq=3408 core_seq=0 from=1260 rssi=-11
+[17:30:26] pkt rx t_ms=110136 type=CORE seq=0 from=3600 rssi=-12
+[17:30:26] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:26] pkt rx t_ms=110439 type=CORE seq=0 from=3600 rssi=-12
+[17:30:26] tick: 110568
+[17:30:26] nodetable: size=2
+[17:30:26] peer shortId=1260 ageS=0 grey=0 seq=3408 rssi=-11 posAgeS=0
+[17:30:26] pkt rx t_ms=110743 type=CORE seq=0 from=3600 rssi=-12
+[17:30:27] pkt rx t_ms=111006 type=TAIL2 seq=3421 core_seq=0 from=1260 rssi=-11
+[17:30:27] pkt rx t_ms=111315 type=CORE seq=0 from=3600 rssi=-10
+[17:30:27] tick: 111568
+[17:30:27] pkt rx t_ms=111619 type=CORE seq=0 from=3600 rssi=-12
+[17:30:28] pkt rx t_ms=111923 type=CORE seq=0 from=3600 rssi=-12
+[17:30:28] GNSS override: FIX lat_e7=376200000 lon_e7=-1220800000
+[17:30:28] pkt rx t_ms=112227 type=CORE seq=0 from=3600 rssi=-12
+[17:30:28] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:28] pkt rx t_ms=112530 type=CORE seq=0 from=3600 rssi=-12
+[17:30:28] tick: 112659
+[17:30:28] pkt rx t_ms=112834 type=CORE seq=0 from=3600 rssi=-12
+[17:30:29] pkt rx t_ms=113076 type=INFO seq=3448 core_seq=0 from=1260 rssi=-12
+[17:30:29] pkt rx t_ms=113380 type=CORE seq=0 from=3600 rssi=-12
+[17:30:29] pkt rx t_ms=113643 type=TAIL2 seq=3453 core_seq=0 from=1260 rssi=-11
+[17:30:29] tick: 113760
+[17:30:29] pkt rx t_ms=113885 type=INFO seq=3456 core_seq=0 from=1260 rssi=-12
+[17:30:30] pkt rx t_ms=114230 type=CORE seq=0 from=3600 rssi=-11
+[17:30:30] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:30] pkt rx t_ms=114534 type=CORE seq=0 from=3600 rssi=-12
+[17:30:30] tick: 114760
+[17:30:30] pkt rx t_ms=114797 type=TAIL2 seq=3461 core_seq=0 from=1260 rssi=-12
+[17:30:31] nodetable: size=2
+[17:30:31] peer shortId=1260 ageS=0 grey=0 seq=3461 rssi=-12 posAgeS=0
+[17:30:31] tick: 115760
+[17:30:32] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:32] tick: 116760
+[17:30:33] GNSS override: FIX lat_e7=376200000 lon_e7=-1220800000
+[17:30:33] tick: 117760
+[17:30:34] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:34] pkt tx t_ms=118706 type=TAIL2 seq=178 core_seq=0
+[17:30:34] tick: 118760
+[17:30:34] pkt tx t_ms=118940 type=INFO seq=179 core_seq=0
+[17:30:35] pkt tx t_ms=119148 type=TAIL2 seq=180 core_seq=0
+[17:30:35] pkt tx t_ms=119322 type=INFO seq=181 core_seq=0
+[17:30:35] pkt tx t_ms=119494 type=TAIL2 seq=182 core_seq=0
+[17:30:35] pkt tx t_ms=119623 type=INFO seq=183 core_seq=0
+[17:30:35] tick: 119760
+[17:30:35] pkt tx t_ms=119865 type=TAIL2 seq=184 core_seq=0
+[17:30:36] pkt tx t_ms=120055 type=INFO seq=185 core_seq=0
+[17:30:36] pkt tx t_ms=120083 type=TAIL2 seq=186 core_seq=0
+[17:30:36] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:36] pkt tx t_ms=120390 type=INFO seq=187 core_seq=0
+[17:30:36] nodetable: size=2
+[17:30:36] peer shortId=1260 ageS=5 grey=0 seq=3461 rssi=-12 posAgeS=0
+[17:30:36] pkt tx t_ms=120658 type=TAIL2 seq=188 core_seq=0
+[17:30:36] tick: 120760
+[17:30:36] pkt tx t_ms=120765 type=INFO seq=189 core_seq=0
+[17:30:36] pkt tx t_ms=120941 type=TAIL2 seq=190 core_seq=0
+[17:30:37] pkt tx t_ms=121144 type=INFO seq=191 core_seq=0
+[17:30:37] pkt tx t_ms=121343 type=TAIL2 seq=192 core_seq=0
+[17:30:37] pkt tx t_ms=121490 type=INFO seq=193 core_seq=0
+[17:30:37] pkt tx t_ms=121603 type=TAIL2 seq=194 core_seq=0
+[17:30:37] tick: 121760
+[17:30:37] pkt tx t_ms=121861 type=INFO seq=195 core_seq=0
+[17:30:38] GNSS override: FIX lat_e7=376200000 lon_e7=-1220800000
+[17:30:38] pkt tx t_ms=122083 type=TAIL2 seq=196 core_seq=0
+[17:30:38] pkt tx t_ms=122199 type=INFO seq=197 core_seq=0
+[17:30:38] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:38] pkt tx t_ms=122479 type=TAIL2 seq=198 core_seq=0
+[17:30:38] pkt tx t_ms=122627 type=INFO seq=199 core_seq=0
+[17:30:38] tick: 122760
+[17:30:38] pkt tx t_ms=122815 type=TAIL2 seq=200 core_seq=0
+[17:30:38] pkt tx t_ms=122896 type=INFO seq=201 core_seq=0
+[17:30:39] pkt tx t_ms=122962 type=TAIL2 seq=202 core_seq=0
+[17:30:39] pkt tx t_ms=123213 type=INFO seq=203 core_seq=0
+[17:30:39] pkt tx t_ms=123467 type=TAIL2 seq=204 core_seq=0
+[17:30:39] pkt tx t_ms=123654 type=INFO seq=205 core_seq=0
+[17:30:39] tick: 123760
+[17:30:39] pkt tx t_ms=123782 type=TAIL2 seq=206 core_seq=0
+[17:30:39] pkt tx t_ms=123819 type=INFO seq=207 core_seq=0
+[17:30:40] pkt tx t_ms=124132 type=TAIL2 seq=208 core_seq=0
+[17:30:40] pkt tx t_ms=124155 type=INFO seq=209 core_seq=0
+[17:30:40] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:40] pkt tx t_ms=124534 type=TAIL2 seq=210 core_seq=0
+[17:30:40] pkt tx t_ms=124603 type=INFO seq=211 core_seq=0
+[17:30:40] pkt tx t_ms=124704 type=TAIL2 seq=212 core_seq=0
+[17:30:40] tick: 124882
+[17:30:40] pkt tx t_ms=124912 type=INFO seq=213 core_seq=0
+[17:30:41] pkt tx t_ms=124995 type=TAIL2 seq=214 core_seq=0
+[17:30:41] pkt tx t_ms=125426 type=INFO seq=215 core_seq=0
+[17:30:41] nodetable: size=2
+[17:30:41] peer shortId=1260 ageS=10 grey=0 seq=3461 rssi=-12 posAgeS=0
+[17:30:41] pkt tx t_ms=125687 type=TAIL2 seq=216 core_seq=0
+[17:30:41] tick: 125882
+[17:30:41] pkt tx t_ms=125948 type=INFO seq=217 core_seq=0
+[17:30:42] pkt tx t_ms=126135 type=TAIL2 seq=218 core_seq=0
+[17:30:42] pkt tx t_ms=126224 type=INFO seq=219 core_seq=0
+[17:30:42] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:42] pkt tx t_ms=126435 type=TAIL2 seq=220 core_seq=0
+[17:30:42] pkt tx t_ms=126717 type=INFO seq=221 core_seq=0
+[17:30:42] pkt tx t_ms=126808 type=TAIL2 seq=222 core_seq=0
+[17:30:43] pkt tx t_ms=126875 type=INFO seq=223 core_seq=0
+[17:30:43] tick: 127046
+[17:30:43] GNSS override: FIX lat_e7=376200000 lon_e7=-1220800000
+[17:30:43] pkt tx t_ms=127267 type=TAIL2 seq=224 core_seq=0
+[17:30:43] pkt tx t_ms=127411 type=INFO seq=225 core_seq=0
+[17:30:43] pkt tx t_ms=127625 type=TAIL2 seq=226 core_seq=0
+[17:30:43] pkt tx t_ms=127878 type=INFO seq=227 core_seq=0
+[17:30:44] pkt tx t_ms=127983 type=TAIL2 seq=228 core_seq=0
+[17:30:44] tick: 128117
+[17:30:44] pkt tx t_ms=128143 type=INFO seq=229 core_seq=0
+[17:30:44] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:44] pkt tx t_ms=128411 type=TAIL2 seq=230 core_seq=0
+[17:30:44] pkt tx t_ms=128491 type=INFO seq=231 core_seq=0
+[17:30:44] pkt tx t_ms=128693 type=TAIL2 seq=232 core_seq=0
+[17:30:44] pkt tx t_ms=128780 type=INFO seq=233 core_seq=0
+[17:30:45] pkt tx t_ms=129109 type=TAIL2 seq=234 core_seq=0
+[17:30:45] tick: 129129
+[17:30:45] pkt tx t_ms=129351 type=INFO seq=235 core_seq=0
+[17:30:45] pkt tx t_ms=129579 type=TAIL2 seq=236 core_seq=0
+[17:30:45] pkt tx t_ms=129814 type=INFO seq=237 core_seq=0
+[17:30:46] pkt tx t_ms=129841 type=TAIL2 seq=238 core_seq=0
+[17:30:46] pkt tx t_ms=130076 type=INFO seq=239 core_seq=0
+[17:30:46] tick: 130129
+[17:30:46] pkt tx t_ms=130164 type=TAIL2 seq=240 core_seq=0
+[17:30:46] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:46] pkt tx t_ms=130417 type=INFO seq=241 core_seq=0
+[17:30:46] pkt tx t_ms=130531 type=TAIL2 seq=242 core_seq=0
+[17:30:46] nodetable: size=2
+[17:30:46] peer shortId=1260 ageS=15 grey=0 seq=3461 rssi=-12 posAgeS=0
+[17:30:46] pkt tx t_ms=130689 type=INFO seq=243 core_seq=0
+[17:30:46] pkt tx t_ms=130782 type=TAIL2 seq=244 core_seq=0
+[17:30:46] OK; gnss override move dlat_e7=1000000 dlon_e7=0
+[17:30:46] SELF_POS: updated reason=DISTANCE lat_e7=377200000 lon_e7=-1220800000 d=11119.49 dt=30652
+[17:30:47] pkt tx t_ms=131062 type=INFO seq=245 core_seq=0
+[17:30:47] tick: 131129
+[17:30:47] pkt tx t_ms=131295 type=CORE seq=246
+[17:30:47] pkt tx t_ms=131423 type=TAIL1 seq=247 core_seq=475
+[17:30:47] pkt tx t_ms=131546 type=TAIL2 seq=248 core_seq=0
+[17:30:47] pkt tx t_ms=131689 type=INFO seq=249 core_seq=0
+[17:30:48] GNSS override: FIX lat_e7=377200000 lon_e7=-1220800000
+[17:30:48] tick: 132129
+[17:30:48] pkt rx t_ms=132350 type=TAIL2 seq=3571 core_seq=0 from=1260 rssi=-12
+[17:30:48] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:48] pkt rx t_ms=132654 type=CORE seq=0 from=3600 rssi=-12
+[17:30:48] pkt rx t_ms=132896 type=INFO seq=3578 core_seq=0 from=1260 rssi=-12
+[17:30:49] tick: 133129
+[17:30:49] pkt rx t_ms=133159 type=TAIL2 seq=3579 core_seq=0 from=1260 rssi=-12
+[17:30:49] pkt rx t_ms=133401 type=INFO seq=3582 core_seq=0 from=1260 rssi=-11
+[17:30:49] pkt rx t_ms=133714 type=CORE seq=0 from=3600 rssi=-12
+[17:30:50] pkt rx t_ms=133977 type=TAIL2 seq=3587 core_seq=0 from=1260 rssi=-11
+[17:30:50] tick: 134129
+[17:30:50] pkt rx t_ms=134219 type=INFO seq=3590 core_seq=0 from=1260 rssi=-12
+[17:30:50] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:50] pkt rx t_ms=134482 type=TAIL2 seq=3591 core_seq=0 from=1260 rssi=-12
+[17:30:50] pkt rx t_ms=134724 type=INFO seq=3594 core_seq=0 from=1260 rssi=-11
+[17:30:51] pkt rx t_ms=135035 type=CORE seq=0 from=3600 rssi=-12
+[17:30:51] tick: 135164
+[17:30:51] pkt rx t_ms=135340 type=CORE seq=0 from=3600 rssi=-12
+[17:30:51] pkt rx t_ms=135603 type=TAIL2 seq=3603 core_seq=0 from=1260 rssi=-11
+[17:30:51] nodetable: size=2
+[17:30:51] peer shortId=1260 ageS=0 grey=0 seq=3603 rssi=-11 posAgeS=0
+[17:30:52] pkt rx t_ms=135907 type=CORE seq=0 from=3600 rssi=-12
+[17:30:52] pkt rx t_ms=136149 type=INFO seq=3610 core_seq=0 from=1260 rssi=-11
+[17:30:52] tick: 136261
+[17:30:52] pkt rx t_ms=136453 type=CORE seq=0 from=3600 rssi=-12
+[17:30:52] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:52] pkt rx t_ms=136760 type=CORE seq=0 from=3600 rssi=-12
+[17:30:53] pkt rx t_ms=137023 type=TAIL2 seq=3619 core_seq=0 from=1260 rssi=-11
+[17:30:53] GNSS override: FIX lat_e7=377200000 lon_e7=-1220800000
+[17:30:53] tick: 137261
+[17:30:53] pkt rx t_ms=137265 type=INFO seq=3622 core_seq=0 from=1260 rssi=-11
+[17:30:53] pkt rx t_ms=137569 type=CORE seq=0 from=3600 rssi=-12
+[17:30:53] pkt rx t_ms=137832 type=TAIL2 seq=3627 core_seq=0 from=1260 rssi=-11
+[17:30:54] pkt rx t_ms=138136 type=CORE seq=0 from=3600 rssi=-12
+[17:30:54] tick: 138265
+[17:30:54] pkt rx t_ms=138439 type=CORE seq=0 from=3600 rssi=-12
+[17:30:54] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:54] pkt rx t_ms=138743 type=CORE seq=0 from=3600 rssi=-12
+[17:30:55] pkt rx t_ms=138985 type=INFO seq=3642 core_seq=0 from=1260 rssi=-11
+[17:30:55] tick: 139265
+[17:30:55] pkt rx t_ms=139289 type=CORE seq=0 from=3600 rssi=-12
+[17:30:55] pkt rx t_ms=139593 type=CORE seq=0 from=3600 rssi=-12
+[17:30:56] pkt rx t_ms=139897 type=CORE seq=0 from=3600 rssi=-12
+[17:30:56] pkt rx t_ms=140201 type=CORE seq=0 from=3600 rssi=-12
+[17:30:56] tick: 140330
+[17:30:56] pkt rx t_ms=140463 type=TAIL2 seq=3659 core_seq=0 from=1260 rssi=-12
+[17:30:56] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:56] nodetable: size=2
+[17:30:56] peer shortId=1260 ageS=0 grey=0 seq=3659 rssi=-12 posAgeS=0
+[17:30:56] pkt rx t_ms=140767 type=CORE seq=0 from=3600 rssi=-12
+[17:30:57] pkt rx t_ms=141071 type=CORE seq=0 from=3600 rssi=-12
+[17:30:57] pkt rx t_ms=141313 type=INFO seq=3670 core_seq=0 from=1260 rssi=-12
+[17:30:57] tick: 141425
+[17:30:57] pkt rx t_ms=141617 type=CORE seq=0 from=3600 rssi=-12
+[17:30:58] pkt rx t_ms=141921 type=CORE seq=0 from=3600 rssi=-12
+[17:30:58] GNSS override: FIX lat_e7=377200000 lon_e7=-1220800000
+[17:30:58] pkt rx t_ms=142225 type=CORE seq=0 from=3600 rssi=-12
+[17:30:58] tick: 142425
+[17:30:58] pkt rx t_ms=142536 type=CORE seq=0 from=3600 rssi=-12
+[17:30:58] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:30:58] pkt rx t_ms=142841 type=CORE seq=0 from=3600 rssi=-12
+[17:30:59] pkt rx t_ms=143104 type=TAIL2 seq=3691 core_seq=0 from=1260 rssi=-12
+[17:30:59] pkt rx t_ms=143408 type=CORE seq=0 from=3600 rssi=-12
+[17:30:59] tick: 143537
+[17:30:59] pkt rx t_ms=143711 type=CORE seq=0 from=3600 rssi=-12
+[17:31:00] pkt rx t_ms=144015 type=CORE seq=0 from=3600 rssi=-12
+[17:31:00] pkt rx t_ms=144339 type=CORE seq=0 from=3600 rssi=-11
+[17:31:00] tick: 144537
+[17:31:00] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:00] pkt rx t_ms=144669 type=CORE seq=0 from=3600 rssi=-12
+[17:31:00] pkt rx t_ms=144906 type=INFO seq=3710 core_seq=0 from=1260 rssi=-11
+[17:31:01] tick: 145537
+[17:31:01] nodetable: size=2
+[17:31:01] peer shortId=1260 ageS=0 grey=0 seq=3710 rssi=-11 posAgeS=0
+[17:31:02] tick: 146537
+[17:31:02] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:03] GNSS override: FIX lat_e7=377200000 lon_e7=-1220800000
+[17:31:03] tick: 147537
+[17:31:04] tick: 148537
+[17:31:04] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:05] pkt tx t_ms=149178 type=TAIL2 seq=250 core_seq=0
+[17:31:05] pkt tx t_ms=149291 type=INFO seq=251 core_seq=0
+[17:31:05] pkt tx t_ms=149338 type=TAIL2 seq=252 core_seq=0
+[17:31:05] tick: 149537
+[17:31:05] pkt tx t_ms=149698 type=INFO seq=253 core_seq=0
+[17:31:05] pkt tx t_ms=149833 type=TAIL2 seq=254 core_seq=0
+[17:31:06] pkt tx t_ms=149902 type=INFO seq=255 core_seq=0
+[17:31:06] pkt tx t_ms=150219 type=TAIL2 seq=256 core_seq=0
+[17:31:06] pkt tx t_ms=150262 type=INFO seq=257 core_seq=0
+[17:31:06] pkt tx t_ms=150490 type=TAIL2 seq=258 core_seq=0
+[17:31:06] tick: 150537
+[17:31:06] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:06] pkt tx t_ms=150669 type=INFO seq=259 core_seq=0
+[17:31:06] nodetable: size=2
+[17:31:06] peer shortId=1260 ageS=5 grey=0 seq=3710 rssi=-11 posAgeS=0
+[17:31:06] pkt tx t_ms=150906 type=TAIL2 seq=260 core_seq=0
+[17:31:07] pkt tx t_ms=150993 type=INFO seq=261 core_seq=0
+[17:31:07] pkt tx t_ms=151239 type=TAIL2 seq=262 core_seq=0
+[17:31:07] pkt tx t_ms=151362 type=INFO seq=263 core_seq=0
+[17:31:07] tick: 151537
+[17:31:07] pkt tx t_ms=151567 type=TAIL2 seq=264 core_seq=0
+[17:31:07] pkt tx t_ms=151669 type=INFO seq=265 core_seq=0
+[17:31:07] pkt tx t_ms=151899 type=TAIL2 seq=266 core_seq=0
+[17:31:08] pkt tx t_ms=151978 type=INFO seq=267 core_seq=0
+[17:31:08] GNSS override: FIX lat_e7=377200000 lon_e7=-1220800000
+[17:31:08] pkt tx t_ms=152170 type=TAIL2 seq=268 core_seq=0
+[17:31:08] pkt tx t_ms=152303 type=INFO seq=269 core_seq=0
+[17:31:08] pkt tx t_ms=152400 type=TAIL2 seq=270 core_seq=0
+[17:31:08] tick: 152537
+[17:31:08] pkt tx t_ms=152545 type=INFO seq=271 core_seq=0
+[17:31:08] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:08] pkt tx t_ms=152802 type=TAIL2 seq=272 core_seq=0
+[17:31:09] pkt tx t_ms=153053 type=INFO seq=273 core_seq=0
+[17:31:09] pkt tx t_ms=153290 type=TAIL2 seq=274 core_seq=0
+[17:31:09] pkt tx t_ms=153436 type=INFO seq=275 core_seq=0
+[17:31:09] tick: 153537
+[17:31:09] pkt tx t_ms=153557 type=TAIL2 seq=276 core_seq=0
+[17:31:09] pkt tx t_ms=153809 type=INFO seq=277 core_seq=0
+[17:31:10] pkt tx t_ms=154068 type=TAIL2 seq=278 core_seq=0
+[17:31:10] pkt tx t_ms=154101 type=INFO seq=279 core_seq=0
+[17:31:10] pkt tx t_ms=154459 type=TAIL2 seq=280 core_seq=0
+[17:31:10] tick: 154537
+[17:31:10] pkt tx t_ms=154615 type=INFO seq=281 core_seq=0
+[17:31:10] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:10] pkt tx t_ms=154721 type=TAIL2 seq=282 core_seq=0
+[17:31:11] pkt tx t_ms=155067 type=INFO seq=283 core_seq=0
+[17:31:11] pkt tx t_ms=155240 type=TAIL2 seq=284 core_seq=0
+[17:31:11] pkt tx t_ms=155489 type=INFO seq=285 core_seq=0
+[17:31:11] tick: 155537
+[17:31:11] pkt tx t_ms=155667 type=TAIL2 seq=286 core_seq=0
+[17:31:11] nodetable: size=2
+[17:31:11] peer shortId=1260 ageS=10 grey=0 seq=3710 rssi=-11 posAgeS=0
+[17:31:11] pkt tx t_ms=155774 type=INFO seq=287 core_seq=0
+[17:31:11] pkt tx t_ms=155977 type=TAIL2 seq=288 core_seq=0
+[17:31:12] pkt tx t_ms=156147 type=INFO seq=289 core_seq=0
+[17:31:12] pkt tx t_ms=156252 type=TAIL2 seq=290 core_seq=0
+[17:31:12] pkt tx t_ms=156423 type=INFO seq=291 core_seq=0
+[17:31:12] tick: 156537
+[17:31:12] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:12] pkt tx t_ms=156750 type=TAIL2 seq=292 core_seq=0
+[17:31:12] pkt tx t_ms=156984 type=INFO seq=293 core_seq=0
+[17:31:13] GNSS override: FIX lat_e7=377200000 lon_e7=-1220800000
+[17:31:13] pkt tx t_ms=157177 type=TAIL2 seq=294 core_seq=0
+[17:31:13] pkt tx t_ms=157446 type=INFO seq=295 core_seq=0
+[17:31:13] tick: 157537
+[17:31:13] pkt tx t_ms=157584 type=TAIL2 seq=296 core_seq=0
+[17:31:13] pkt tx t_ms=157693 type=INFO seq=297 core_seq=0
+[17:31:13] pkt tx t_ms=157898 type=TAIL2 seq=298 core_seq=0
+[17:31:14] pkt tx t_ms=158019 type=INFO seq=299 core_seq=0
+[17:31:14] pkt tx t_ms=158314 type=TAIL2 seq=300 core_seq=0
+[17:31:14] tick: 158537
+[17:31:14] pkt tx t_ms=158541 type=INFO seq=301 core_seq=0
+[17:31:14] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:14] pkt tx t_ms=158708 type=TAIL2 seq=302 core_seq=0
+[17:31:14] pkt tx t_ms=158823 type=INFO seq=303 core_seq=0
+[17:31:15] pkt tx t_ms=159028 type=TAIL2 seq=304 core_seq=0
+[17:31:15] pkt tx t_ms=159228 type=INFO seq=305 core_seq=0
+[17:31:15] pkt tx t_ms=159457 type=TAIL2 seq=306 core_seq=0
+[17:31:15] tick: 159537
+[17:31:15] pkt tx t_ms=159669 type=INFO seq=307 core_seq=0
+[17:31:15] pkt tx t_ms=159886 type=TAIL2 seq=308 core_seq=0
+[17:31:16] pkt tx t_ms=160153 type=INFO seq=309 core_seq=0
+[17:31:16] pkt tx t_ms=160218 type=TAIL2 seq=310 core_seq=0
+[17:31:16] pkt tx t_ms=160384 type=INFO seq=311 core_seq=0
+[17:31:16] pkt tx t_ms=160537 type=TAIL2 seq=312 core_seq=0
+[17:31:16] tick: 160537
+[17:31:16] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:16] nodetable: size=2
+[17:31:16] peer shortId=1260 ageS=15 grey=0 seq=3710 rssi=-11 posAgeS=0
+[17:31:16] pkt tx t_ms=160854 type=INFO seq=313 core_seq=0
+[17:31:16] pkt tx t_ms=160897 type=TAIL2 seq=314 core_seq=0
+[17:31:17] pkt tx t_ms=161001 type=INFO seq=315 core_seq=0
+[17:31:17] pkt tx t_ms=161200 type=TAIL2 seq=316 core_seq=0
+[17:31:17] pkt tx t_ms=161457 type=INFO seq=317 core_seq=0
+[17:31:17] tick: 161537
+[17:31:17] OK; gnss override move dlat_e7=1200000 dlon_e7=0
+[17:31:17] SELF_POS: updated reason=DISTANCE lat_e7=378400000 lon_e7=-1220800000 d=13343.39 dt=30593
+[17:31:17] pkt tx t_ms=161690 type=TAIL2 seq=318 core_seq=0
+[17:31:17] pkt tx t_ms=161807 type=CORE seq=319
+[17:31:18] pkt tx t_ms=161892 type=TAIL1 seq=320 core_seq=617
+[17:31:18] GNSS override: FIX lat_e7=378400000 lon_e7=-1220800000
+[17:31:18] pkt tx t_ms=162168 type=INFO seq=321 core_seq=0
+[17:31:18] pkt tx t_ms=162271 type=TAIL2 seq=322 core_seq=0
+[17:31:18] tick: 162558
+[17:31:18] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:19] pkt rx t_ms=163142 type=CORE seq=0 from=3600 rssi=-9
+[17:31:19] pkt rx t_ms=163405 type=TAIL2 seq=3819 core_seq=0 from=1260 rssi=-11
+[17:31:19] tick: 163558
+[17:31:19] pkt rx t_ms=163723 type=CORE seq=0 from=3600 rssi=-12
+[17:31:20] pkt rx t_ms=164028 type=CORE seq=0 from=3600 rssi=-12
+[17:31:20] pkt rx t_ms=164331 type=CORE seq=0 from=3600 rssi=-12
+[17:31:20] tick: 164558
+[17:31:20] pkt rx t_ms=164573 type=INFO seq=3834 core_seq=0 from=1260 rssi=-11
+[17:31:20] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:20] pkt rx t_ms=164877 type=CORE seq=0 from=3600 rssi=-12
+[17:31:21] pkt rx t_ms=165140 type=TAIL2 seq=3839 core_seq=0 from=1260 rssi=-12
+[17:31:21] pkt rx t_ms=165453 type=CORE seq=0 from=3600 rssi=-12
+[17:31:21] tick: 165582
+[17:31:21] nodetable: size=2
+[17:31:21] peer shortId=1260 ageS=0 grey=0 seq=3839 rssi=-12 posAgeS=0
+[17:31:21] pkt rx t_ms=165782 type=CORE seq=0 from=3600 rssi=-12
+[17:31:22] pkt rx t_ms=165999 type=INFO seq=3850 core_seq=0 from=1260 rssi=-12
+[17:31:22] pkt rx t_ms=166282 type=TAIL2 seq=3851 core_seq=0 from=1260 rssi=-12
+[17:31:22] pkt rx t_ms=166566 type=CORE seq=0 from=3600 rssi=-12
+[17:31:22] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:22] tick: 166695
+[17:31:22] pkt rx t_ms=166870 type=CORE seq=0 from=3600 rssi=-12
+[17:31:23] pkt rx t_ms=167112 type=INFO seq=3862 core_seq=0 from=1260 rssi=-12
+[17:31:23] GNSS override: FIX lat_e7=378400000 lon_e7=-1220800000
+[17:31:23] pkt rx t_ms=167416 type=CORE seq=0 from=3600 rssi=-12
+[17:31:23] tick: 167695
+[17:31:23] pkt rx t_ms=167719 type=CORE seq=0 from=3600 rssi=-12
+[17:31:24] pkt rx t_ms=167982 type=TAIL2 seq=3871 core_seq=0 from=1260 rssi=-11
+[17:31:24] pkt rx t_ms=168286 type=CORE seq=0 from=3600 rssi=-12
+[17:31:24] pkt rx t_ms=168590 type=CORE seq=0 from=3600 rssi=-12
+[17:31:24] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:24] tick: 168720
+[17:31:24] pkt rx t_ms=168893 type=CORE seq=0 from=3600 rssi=-12
+[17:31:25] pkt rx t_ms=169136 type=INFO seq=3886 core_seq=0 from=1260 rssi=-11
+[17:31:25] pkt rx t_ms=169398 type=TAIL2 seq=3887 core_seq=0 from=1260 rssi=-11
+[17:31:25] pkt rx t_ms=169706 type=CORE seq=0 from=3600 rssi=-10
+[17:31:25] tick: 169836
+[17:31:26] pkt rx t_ms=169948 type=INFO seq=3894 core_seq=0 from=1260 rssi=-12
+[17:31:26] pkt rx t_ms=170252 type=CORE seq=0 from=3600 rssi=-12
+[17:31:26] pkt rx t_ms=170556 type=CORE seq=0 from=3600 rssi=-12
+[17:31:26] nodetable: size=2
+[17:31:26] peer shortId=1260 ageS=0 grey=0 seq=3894 rssi=-12 posAgeS=0
+[17:31:26] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:26] tick: 170836
+[17:31:26] pkt rx t_ms=170860 type=CORE seq=0 from=3600 rssi=-12
+[17:31:27] pkt rx t_ms=171123 type=TAIL2 seq=3907 core_seq=0 from=1260 rssi=-11
+[17:31:27] pkt rx t_ms=171432 type=CORE seq=0 from=3600 rssi=-12
+[17:31:27] pkt rx t_ms=171674 type=INFO seq=3914 core_seq=0 from=1260 rssi=-11
+[17:31:27] tick: 171836
+[17:31:28] pkt rx t_ms=171937 type=TAIL2 seq=3915 core_seq=0 from=1260 rssi=-12
+[17:31:28] GNSS override: FIX lat_e7=378400000 lon_e7=-1220800000
+[17:31:28] pkt rx t_ms=172241 type=CORE seq=0 from=3600 rssi=-12
+[17:31:28] pkt rx t_ms=172545 type=CORE seq=0 from=3600 rssi=-12
+[17:31:28] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:28] pkt rx t_ms=172788 type=INFO seq=3926 core_seq=0 from=1260 rssi=-11
+[17:31:28] tick: 172900
+[17:31:29] pkt rx t_ms=173050 type=TAIL2 seq=3927 core_seq=0 from=1260 rssi=-11
+[17:31:29] pkt rx t_ms=173354 type=CORE seq=0 from=3600 rssi=-12
+[17:31:29] pkt rx t_ms=173658 type=CORE seq=0 from=3600 rssi=-12
+[17:31:29] tick: 173900
+[17:31:29] pkt rx t_ms=173900 type=INFO seq=3938 core_seq=0 from=1260 rssi=-12
+[17:31:30] pkt rx t_ms=174204 type=CORE seq=0 from=3600 rssi=-12
+[17:31:30] pkt rx t_ms=174467 type=CORE seq=3943 from=1260 rssi=-12
+[17:31:30] pkt rx t_ms=174709 type=TAIL1 seq=3944 core_seq=3943 from=1260 rssi=-12
+[17:31:30] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:30] tick: 174900
+[17:31:31] pkt rx t_ms=175014 type=CORE seq=0 from=3600 rssi=-12
+[17:31:31] nodetable: size=2
+[17:31:31] peer shortId=1260 ageS=1 grey=0 seq=3944 rssi=-12 posAgeS=0
+[17:31:31] tick: 175900
+[17:31:32] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:32] tick: 176900
+[17:31:33] GNSS override: FIX lat_e7=378400000 lon_e7=-1220800000
+[17:31:33] tick: 177900
+[17:31:34] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:34] tick: 178900
+[17:31:35] pkt tx t_ms=179879 type=TAIL2 seq=323 core_seq=0
+[17:31:35] tick: 179900
+[17:31:35] pkt tx t_ms=180004 type=INFO seq=324 core_seq=0
+[17:31:36] pkt tx t_ms=180066 type=TAIL2 seq=325 core_seq=0
+[17:31:36] pkt tx t_ms=180326 type=INFO seq=326 core_seq=0
+[17:31:36] pkt tx t_ms=180535 type=TAIL2 seq=327 core_seq=0
+[17:31:36] nodetable: size=2
+[17:31:36] peer shortId=1260 ageS=6 grey=0 seq=3944 rssi=-12 posAgeS=0
+[17:31:36] pkt tx t_ms=180728 type=INFO seq=328 core_seq=0
+[17:31:36] pkt tx t_ms=180806 type=TAIL2 seq=329 core_seq=0
+[17:31:36] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:36] tick: 180990
+[17:31:37] pkt tx t_ms=181130 type=INFO seq=330 core_seq=0
+[17:31:37] pkt tx t_ms=181358 type=TAIL2 seq=331 core_seq=0
+[17:31:37] pkt tx t_ms=181599 type=INFO seq=332 core_seq=0
+[17:31:37] pkt tx t_ms=181803 type=TAIL2 seq=333 core_seq=0
+[17:31:37] tick: 181990
+[17:31:38] pkt tx t_ms=182021 type=INFO seq=334 core_seq=0
+[17:31:38] pkt tx t_ms=182206 type=TAIL2 seq=335 core_seq=0
+[17:31:38] GNSS override: FIX lat_e7=378400000 lon_e7=-1220800000
+[17:31:38] pkt tx t_ms=182532 type=INFO seq=336 core_seq=0
+[17:31:38] pkt tx t_ms=182776 type=TAIL2 seq=337 core_seq=0
+[17:31:38] pkt tx t_ms=182971 type=INFO seq=338 core_seq=0
+[17:31:38] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:38] tick: 182991
+[17:31:39] pkt tx t_ms=183091 type=TAIL2 seq=339 core_seq=0
+[17:31:39] pkt tx t_ms=183133 type=INFO seq=340 core_seq=0
+[17:31:39] pkt tx t_ms=183206 type=TAIL2 seq=341 core_seq=0
+[17:31:39] pkt tx t_ms=183467 type=INFO seq=342 core_seq=0
+[17:31:39] pkt tx t_ms=183608 type=TAIL2 seq=343 core_seq=0
+[17:31:39] pkt tx t_ms=183893 type=INFO seq=344 core_seq=0
+[17:31:40] pkt tx t_ms=183933 type=TAIL2 seq=345 core_seq=0
+[17:31:40] tick: 184042
+[17:31:40] pkt tx t_ms=184065 type=INFO seq=346 core_seq=0
+[17:31:40] pkt tx t_ms=184193 type=TAIL2 seq=347 core_seq=0
+[17:31:40] pkt tx t_ms=184371 type=INFO seq=348 core_seq=0
+[17:31:40] pkt tx t_ms=184458 type=TAIL2 seq=349 core_seq=0
+[17:31:40] pkt tx t_ms=184889 type=INFO seq=350 core_seq=0
+[17:31:40] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:41] tick: 185042
+[17:31:41] pkt tx t_ms=185108 type=TAIL2 seq=351 core_seq=0
+[17:31:41] pkt tx t_ms=185140 type=INFO seq=352 core_seq=0
+[17:31:41] pkt tx t_ms=185372 type=TAIL2 seq=353 core_seq=0
+[17:31:41] pkt tx t_ms=185528 type=INFO seq=354 core_seq=0
+[17:31:41] nodetable: size=2
+[17:31:41] peer shortId=1260 ageS=11 grey=0 seq=3944 rssi=-12 posAgeS=0
+[17:31:41] pkt tx t_ms=185745 type=TAIL2 seq=355 core_seq=0
+[17:31:41] pkt tx t_ms=185890 type=INFO seq=356 core_seq=0
+[17:31:42] tick: 186042
+[17:31:42] pkt tx t_ms=186050 type=TAIL2 seq=357 core_seq=0
+[17:31:42] pkt tx t_ms=186154 type=INFO seq=358 core_seq=0
+[17:31:42] pkt tx t_ms=186374 type=TAIL2 seq=359 core_seq=0
+[17:31:42] pkt tx t_ms=186574 type=INFO seq=360 core_seq=0
+[17:31:42] pkt tx t_ms=186626 type=TAIL2 seq=361 core_seq=0
+[17:31:42] pkt tx t_ms=186674 type=INFO seq=362 core_seq=0
+[17:31:42] pkt tx t_ms=186972 type=TAIL2 seq=363 core_seq=0
+[17:31:42] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:43] tick: 187042
+[17:31:43] pkt tx t_ms=187088 type=INFO seq=364 core_seq=0
+[17:31:43] GNSS override: FIX lat_e7=378400000 lon_e7=-1220800000
+[17:31:43] pkt tx t_ms=187413 type=TAIL2 seq=365 core_seq=0
+[17:31:43] pkt tx t_ms=187600 type=INFO seq=366 core_seq=0
+[17:31:43] pkt tx t_ms=187636 type=TAIL2 seq=367 core_seq=0
+[17:31:43] pkt tx t_ms=187803 type=INFO seq=368 core_seq=0
+[17:31:44] tick: 188042
+[17:31:44] pkt tx t_ms=188059 type=TAIL2 seq=369 core_seq=0
+[17:31:44] pkt tx t_ms=188183 type=INFO seq=370 core_seq=0
+[17:31:44] pkt tx t_ms=188285 type=TAIL2 seq=371 core_seq=0
+[17:31:44] pkt tx t_ms=188524 type=INFO seq=372 core_seq=0
+[17:31:44] pkt tx t_ms=188591 type=TAIL2 seq=373 core_seq=0
+[17:31:44] pkt tx t_ms=188820 type=INFO seq=374 core_seq=0
+[17:31:44] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:45] pkt tx t_ms=189012 type=TAIL2 seq=375 core_seq=0
+[17:31:45] tick: 189042
+[17:31:45] pkt tx t_ms=189141 type=INFO seq=376 core_seq=0
+[17:31:45] pkt tx t_ms=189424 type=TAIL2 seq=377 core_seq=0
+[17:31:45] pkt tx t_ms=189492 type=INFO seq=378 core_seq=0
+[17:31:45] pkt tx t_ms=189692 type=TAIL2 seq=379 core_seq=0
+[17:31:45] pkt tx t_ms=189801 type=INFO seq=380 core_seq=0
+[17:31:45] pkt tx t_ms=189872 type=TAIL2 seq=381 core_seq=0
+[17:31:46] pkt tx t_ms=190038 type=INFO seq=382 core_seq=0
+[17:31:46] tick: 190163
+[17:31:46] pkt tx t_ms=190307 type=TAIL2 seq=383 core_seq=0
+[17:31:46] pkt tx t_ms=190536 type=INFO seq=384 core_seq=0
+[17:31:46] pkt tx t_ms=190581 type=TAIL2 seq=385 core_seq=0
+[17:31:46] nodetable: size=2
+[17:31:46] peer shortId=1260 ageS=16 grey=0 seq=3944 rssi=-12 posAgeS=0
+[17:31:46] pkt tx t_ms=190735 type=INFO seq=386 core_seq=0
+[17:31:47] pkt tx t_ms=190912 type=TAIL2 seq=387 core_seq=0
+[17:31:47] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:47] tick: 191163
+[17:31:47] pkt tx t_ms=191183 type=INFO seq=388 core_seq=0
+[17:31:47] pkt tx t_ms=191334 type=TAIL2 seq=389 core_seq=0
+[17:31:47] pkt tx t_ms=191408 type=INFO seq=390 core_seq=0
+[17:31:47] pkt tx t_ms=191681 type=TAIL2 seq=391 core_seq=0
+[17:31:47] pkt tx t_ms=191731 type=INFO seq=392 core_seq=0
+[17:31:47] pkt tx t_ms=191887 type=TAIL2 seq=393 core_seq=0
+[17:31:48] pkt tx t_ms=191946 type=INFO seq=394 core_seq=0
+[17:31:48] tick: 192187
+[17:31:48] pkt tx t_ms=192213 type=TAIL2 seq=395 core_seq=0
+[17:31:48] GNSS override: FIX lat_e7=378400000 lon_e7=-1220800000
+[17:31:48] pkt tx t_ms=192395 type=INFO seq=396 core_seq=0
+[17:31:48] pkt tx t_ms=192726 type=TAIL2 seq=397 core_seq=0
+[17:31:48] pkt tx t_ms=192956 type=INFO seq=398 core_seq=0
+[17:31:49] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:49] pkt tx t_ms=193138 type=TAIL2 seq=399 core_seq=0
+[17:31:49] pkt tx t_ms=193161 type=INFO seq=400 core_seq=0
+[17:31:49] tick: 193300
+[17:31:49] pkt tx t_ms=193338 type=TAIL2 seq=401 core_seq=0
+[17:31:49] pkt tx t_ms=193499 type=INFO seq=402 core_seq=0
+[17:31:49] pkt tx t_ms=193621 type=TAIL2 seq=403 core_seq=0
+[17:31:49] pkt tx t_ms=193836 type=INFO seq=404 core_seq=0
+[17:31:49] pkt tx t_ms=193982 type=TAIL2 seq=405 core_seq=0
+[17:31:50] pkt tx t_ms=194079 type=INFO seq=406 core_seq=0
+[17:31:50] tick: 194300
+[17:31:50] pkt tx t_ms=194418 type=TAIL2 seq=407 core_seq=0
+[17:31:50] pkt tx t_ms=194533 type=INFO seq=408 core_seq=0
+[17:31:50] pkt tx t_ms=194695 type=TAIL2 seq=409 core_seq=0
+[17:31:50] pkt tx t_ms=194940 type=INFO seq=410 core_seq=0
+[17:31:51] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:51] pkt tx t_ms=195146 type=TAIL2 seq=411 core_seq=0
+[17:31:51] pkt tx t_ms=195286 type=INFO seq=412 core_seq=0
+[17:31:51] tick: 195324
+[17:31:51] pkt tx t_ms=195404 type=TAIL2 seq=413 core_seq=0
+[17:31:51] pkt tx t_ms=195450 type=INFO seq=414 core_seq=0
+[17:31:51] nodetable: size=2
+[17:31:51] peer shortId=1260 ageS=21 grey=0 seq=3944 rssi=-12 posAgeS=0
+[17:31:51] pkt tx t_ms=195746 type=TAIL2 seq=415 core_seq=0
+[17:31:51] pkt tx t_ms=195884 type=INFO seq=416 core_seq=0
+[17:31:51] pkt tx t_ms=195933 type=TAIL2 seq=417 core_seq=0
+[17:31:52] pkt tx t_ms=195973 type=INFO seq=418 core_seq=0
+[17:31:52] tick: 196324
+[17:31:52] pkt tx t_ms=196375 type=TAIL2 seq=419 core_seq=0
+[17:31:52] pkt tx t_ms=196443 type=INFO seq=420 core_seq=0
+[17:31:52] pkt tx t_ms=196638 type=TAIL2 seq=421 core_seq=0
+[17:31:52] pkt tx t_ms=196793 type=INFO seq=422 core_seq=0
+[17:31:53] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:53] pkt tx t_ms=197057 type=TAIL2 seq=423 core_seq=0
+[17:31:53] pkt tx t_ms=197178 type=INFO seq=424 core_seq=0
+[17:31:53] GNSS override: FIX lat_e7=378400000 lon_e7=-1220800000
+[17:31:53] tick: 197324
+[17:31:53] pkt tx t_ms=197394 type=TAIL2 seq=425 core_seq=0
+[17:31:53] pkt tx t_ms=197606 type=INFO seq=426 core_seq=0
+[17:31:53] pkt tx t_ms=197701 type=TAIL2 seq=427 core_seq=0
+[17:31:53] pkt tx t_ms=197947 type=INFO seq=428 core_seq=0
+[17:31:54] pkt tx t_ms=197982 type=TAIL2 seq=429 core_seq=0
+[17:31:54] pkt tx t_ms=198269 type=INFO seq=430 core_seq=0
+[17:31:54] tick: 198324
+[17:31:54] pkt tx t_ms=198500 type=TAIL2 seq=431 core_seq=0
+[17:31:54] pkt tx t_ms=198556 type=INFO seq=432 core_seq=0
+[17:31:54] pkt tx t_ms=198582 type=TAIL2 seq=433 core_seq=0
+[17:31:55] GNSS_UBX rx=4895 ok=5 bad=0 last=6039 fix=FIX_3D lat=572634909 lon=395243572
+[17:31:55] pkt tx t_ms=199070 type=INFO seq=434 core_seq=0
+[17:31:55] pkt tx t_ms=199261 type=TAIL2 seq=435 core_seq=0
+[17:31:55] tick: 199324
