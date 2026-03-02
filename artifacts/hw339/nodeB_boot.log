@@ -1,0 +1,15 @@
+[17:13:42] GNSS_UBX rx=991557 ok=1184 bad=0 last=1182317 fix=NO_FIX lat=0 lon=0
+[17:13:42] tick: 1183403
+[17:13:43] tick: 1184403
+[17:13:43] nodetable: size=1
+[17:13:44] GNSS_UBX rx=993117 ok=1186 bad=0 last=1184288 fix=NO_FIX lat=0 lon=0
+[17:13:44] tick: 1185403
+[17:13:45] tick: 1186403
+[17:13:46] GNSS_UBX rx=994633 ok=1188 bad=0 last=1186327 fix=NO_FIX lat=0 lon=0
+[17:13:46] tick: 1187403
+[17:13:47] tick: 1188403
+[17:13:48] GNSS_UBX rx=996195 ok=1190 bad=0 last=1188312 fix=NO_FIX lat=0 lon=0
+[17:13:48] SELF_POS: updated reason=DISTANCE lat_e7=572652296 lon_e7=395268022 d=205.96 dt=12022
+[17:13:48] tick: 1189408
+[17:13:48] nodetable: size=1
+[17:13:49] tick: 1190408

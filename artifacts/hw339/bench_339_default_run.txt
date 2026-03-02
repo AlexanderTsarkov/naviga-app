@@ -1,0 +1,54 @@
+[17:28:27] NodeB: opened /dev/cu.wchusbserial5B3D0164361 → /Users/alexandertsarkov/Dev/Naviga/artifacts/hw339/nodeB_default.log
+[17:28:27] NodeA: opened /dev/cu.wchusbserial5B3D0112491 → /Users/alexandertsarkov/Dev/Naviga/artifacts/hw339/nodeA_default.log
+[17:28:27] Settling 8s before Default run...
+
+============================================================
+  Preset: Default
+============================================================
+[17:28:35]   Rebooting NodeA to capture boot log...
+[17:28:35] NodeA >> reboot
+  A| [17:28:36] E22 boot: config ok
+[17:28:41]   Boot preset: status=ok rb_airRate=None msg=config ok
+[17:28:41] NodeA >> debug on
+  A| [17:28:41] OK; instrumentation on
+[17:28:42] NodeB >> debug on
+[17:28:42] NodeA >> gnss fix 374200000 -1220800000
+[17:28:42] NodeB >> gnss fix 374300000 -1220900000
+[17:28:44] NodeA >> gnss move 200000 0
+[17:28:44]   Collecting TX lines for 180s (with periodic gnss move)...
+[17:29:15] NodeA >> gnss move 400000 0
+[17:29:45] NodeA >> gnss move 600000 0
+[17:30:16] NodeA >> gnss move 800000 0
+[17:30:46] NodeA >> gnss move 1000000 0
+[17:31:17] NodeA >> gnss move 1200000 0
+[17:31:45]   Collected 372 pkt tx lines
+    A| [17:28:54] pkt tx t_ms=18246 type=TAIL2 seq=1 core_seq=0
+    A| [17:28:54] pkt tx t_ms=18450 type=INFO seq=2 core_seq=0
+    A| [17:28:54] pkt tx t_ms=18675 type=TAIL2 seq=3 core_seq=0
+    A| [17:28:54] pkt tx t_ms=18950 type=INFO seq=4 core_seq=0
+    A| [17:28:55] pkt tx t_ms=19124 type=TAIL2 seq=5 core_seq=0
+    A| [17:28:55] pkt tx t_ms=19203 type=INFO seq=6 core_seq=0
+    A| [17:28:55] pkt tx t_ms=19450 type=TAIL2 seq=7 core_seq=0
+    A| [17:28:55] pkt tx t_ms=19578 type=INFO seq=8 core_seq=0
+    ... (364 more)
+[17:31:55]   NodeB RX: 0 lines
+  [PASS] Default: preset boot ok  (status=ok msg=config ok)
+  [PASS] Default: ≥10 TX gap samples  (total=365)
+
+============================================================
+  SUMMARY TABLE
+============================================================
+  preset     rb_airRate pkt_type wire_B  mean_gap_ms   stddev     n
+  ---------- ---------- -------- ------ ------------ -------- -----
+  Default        ok(ok) CORE         17         90.8     43.0     6
+  Default        ok(ok) TAIL1        13        206.5    100.9     6
+  Default        ok(ok) TAIL2        13        181.0     90.3   178
+  Default        ok(ok) INFO         13        175.8     87.4   175
+
+============================================================
+  CONCLUSION
+============================================================
+  [OK] Default: boot=ok rb_airRate=None gaps=365
+
+  ALL CHECKS PASSED
+[17:31:55] Artifacts: /Users/alexandertsarkov/Dev/Naviga/artifacts/hw339/

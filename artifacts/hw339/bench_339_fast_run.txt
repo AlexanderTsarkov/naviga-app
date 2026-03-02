@@ -1,0 +1,54 @@
+[17:33:18] NodeB: opened /dev/cu.wchusbserial5B3D0164361 → /Users/alexandertsarkov/Dev/Naviga/artifacts/hw339/nodeB_fast.log
+[17:33:18] NodeA: opened /dev/cu.wchusbserial5B3D0112491 → /Users/alexandertsarkov/Dev/Naviga/artifacts/hw339/nodeA_fast.log
+[17:33:18] Settling 8s before Fast run...
+
+============================================================
+  Preset: Fast
+============================================================
+[17:33:26]   Rebooting NodeA to capture boot log...
+[17:33:26] NodeA >> reboot
+  A| [17:33:27] E22 boot: repaired (air_rate)
+[17:33:32]   Boot preset: status=repaired rb_airRate=None msg=repaired: air_rate
+[17:33:32] NodeA >> debug on
+  A| [17:33:32] OK; instrumentation on
+[17:33:33] NodeB >> debug on
+[17:33:33] NodeA >> gnss fix 374200000 -1220800000
+[17:33:33] NodeB >> gnss fix 374300000 -1220900000
+[17:33:35] NodeA >> gnss move 200000 0
+[17:33:35]   Collecting TX lines for 180s (with periodic gnss move)...
+[17:34:06] NodeA >> gnss move 400000 0
+[17:34:36] NodeA >> gnss move 600000 0
+[17:35:07] NodeA >> gnss move 800000 0
+[17:35:37] NodeA >> gnss move 1000000 0
+[17:36:08] NodeA >> gnss move 1200000 0
+[17:36:36]   Collected 461 pkt tx lines
+    A| [17:33:44] pkt tx t_ms=18246 type=TAIL2 seq=1 core_seq=0
+    A| [17:33:44] pkt tx t_ms=18444 type=INFO seq=2 core_seq=0
+    A| [17:33:44] pkt tx t_ms=18672 type=TAIL2 seq=3 core_seq=0
+    A| [17:33:45] pkt tx t_ms=18929 type=INFO seq=4 core_seq=0
+    A| [17:33:45] pkt tx t_ms=19102 type=TAIL2 seq=5 core_seq=0
+    A| [17:33:45] pkt tx t_ms=19181 type=INFO seq=6 core_seq=0
+    A| [17:33:45] pkt tx t_ms=19350 type=TAIL2 seq=7 core_seq=0
+    A| [17:33:45] pkt tx t_ms=19478 type=INFO seq=8 core_seq=0
+    ... (453 more)
+[17:36:46]   NodeB RX: 0 lines
+  [PASS] Fast: preset boot ok  (status=repaired msg=repaired: air_rate)
+  [PASS] Fast: ≥10 TX gap samples  (total=454)
+
+============================================================
+  SUMMARY TABLE
+============================================================
+  preset     rb_airRate pkt_type wire_B  mean_gap_ms   stddev     n
+  ---------- ---------- -------- ------ ------------ -------- -----
+  Fast       ok(repaired) CORE         17        120.0     70.6     6
+  Fast       ok(repaired) TAIL1        13        118.8     70.9     6
+  Fast       ok(repaired) TAIL2        13        143.8     72.8   224
+  Fast       ok(repaired) INFO         13        145.4     70.3   218
+
+============================================================
+  CONCLUSION
+============================================================
+  [OK] Fast: boot=repaired rb_airRate=None gaps=454
+
+  ALL CHECKS PASSED
+[17:36:46] Artifacts: /Users/alexandertsarkov/Dev/Naviga/artifacts/hw339/
