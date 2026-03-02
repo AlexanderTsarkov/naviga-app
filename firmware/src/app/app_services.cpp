@@ -11,7 +11,7 @@
 #include "platform/arduino_logger.h"
 #include "platform/device_id.h"
 #include "platform/device_id_provider.h"
-#include "platform/e220_radio.h"
+#include "platform/radio_factory.h"
 #include "platform/gnss_ubx_uart_io.h"
 #include "platform/log_export_uart.h"
 #include "platform/naviga_storage.h"
@@ -49,7 +49,7 @@ uint32_t gnss_diag_next_ms = 0;
 #endif
 
 SelfUpdatePolicy self_policy;
-E220Radio* radio = nullptr;
+IRadio* radio = nullptr;
 
 platform::ArduinoClock clock_;
 platform::ArduinoLogger logger_;
@@ -172,27 +172,28 @@ void AppServices::init() {
   }
 #endif
 
-  static E220Radio radio_instance(profile.pins);
-  radio = &radio_instance;
-  const bool radio_ready = radio->begin();
+  bool radio_ready = false;
+  radio = create_radio(profile, &radio_ready);
   {
+    const char* radio_boot_msg = radio->boot_config_message();
     char buf[80] = {0};
-    switch (radio->last_boot_config_result()) {
-      case E220BootConfigResult::Ok:
-        log_line("E220 boot: config ok");
-        break;
-      case E220BootConfigResult::Repaired:
-        std::snprintf(buf, sizeof(buf), "E220 boot: repaired (%s)", radio->last_boot_config_message());
+    const char* radio_name = (profile.caps.radio_type == RadioType::E22_UART) ? "E22" : "E220";
+    switch (radio->boot_config_result()) {
+      case RadioBootConfigResult::Ok:
+        std::snprintf(buf, sizeof(buf), "%s boot: config ok", radio_name);
         log_line(buf);
         break;
-      case E220BootConfigResult::RepairFailed:
-        std::snprintf(buf, sizeof(buf), "E220 boot: repair failed (%s)", radio->last_boot_config_message());
+      case RadioBootConfigResult::Repaired:
+        std::snprintf(buf, sizeof(buf), "%s boot: repaired (%s)", radio_name, radio_boot_msg);
+        log_line(buf);
+        break;
+      case RadioBootConfigResult::RepairFailed:
+        std::snprintf(buf, sizeof(buf), "%s boot: repair failed (%s)", radio_name, radio_boot_msg);
         log_line(buf);
         break;
     }
+    provisioning_->set_radio_boot_info(static_cast<int>(radio->boot_config_result()), radio_boot_msg);
   }
-  provisioning_->set_radio_boot_info(static_cast<int>(radio->last_boot_config_result()),
-                                    radio->last_boot_config_message());
 
   // --- Phase B: Provision role + radio profile (boot_pipeline_v0) ---
   // Cadence params from current role profile record in flash (#289); pointers for role/radio id (display, consistency).
@@ -294,7 +295,7 @@ void AppServices::init() {
   device_info.capabilities = 0;
 
   runtime_.init(full_id, short_id_, uptime_ms(), device_info, radio, radio_ready,
-                radio->rssi_available(), effective_interval_s, min_interval_ms, max_silence_ms,
+                radio ? radio->rssi_available() : false, effective_interval_s, min_interval_ms, max_silence_ms,
                 &event_logger_, nullptr);
   provisioning_->set_instrumentation_flag(&instrumentation_enabled_);
   provisioning_->set_gnss_override(&gnss_override_);

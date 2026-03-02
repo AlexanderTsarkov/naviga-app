@@ -1,29 +1,37 @@
-// Guard: only compile for E220 environments (not E22).
-// PlatformIO compiles all src/ files for every env; when E22 env is active,
-// LoRa_E220.h is not available and E220_SUCCESS is undefined.
-#if !defined(HW_PROFILE_DEVKIT_E22_OLED_GNSS)
+// Guard: this translation unit must only be compiled for E22 environments.
+// PlatformIO compiles all src/ files for every env; the #error in e22_radio.h
+// would fire for E220 envs. We guard here instead of in the header so the
+// header's #error still catches accidental direct includes.
+#if defined(HW_PROFILE_DEVKIT_E22_OLED_GNSS)
 
-#include "platform/e220_radio.h"
+#include "platform/e22_radio.h"
 
 #include <algorithm>
 #include <cstring>
+
+// E22 library requires frequency band and power variant to be defined at compile time.
+// These must match the build_flags in platformio.ini for the E22 env.
+// -DFREQUENCY_433 → OPERATING_FREQUENCY = 410 MHz base
+// -DE22_30        → POWER_30/27/24/21 dBm variants
 
 namespace naviga {
 
 namespace {
 
-constexpr UART_BPS_RATE kE220BaudRate = UART_BPS_RATE_9600;
+constexpr UART_BPS_RATE kE22BaudRate = UART_BPS_RATE_9600;
 
 // Fixed critical params (not preset-dependent).
 constexpr byte kExpectedUartBaudRate     = UART_BPS_9600;
 constexpr byte kExpectedUartParity       = MODE_00_8N1;
-constexpr byte kExpectedRssiEnable       = RSSI_ENABLED;
-constexpr byte kExpectedLbtEnable        = 0;  // OFF — policy: sense unsupported, jitter-only.
-constexpr byte kExpectedSubPacketSetting = SPS_200_00;
-constexpr byte kExpectedRssiAmbientNoise = RSSI_AMBIENT_NOISE_ENABLED;
 constexpr byte kExpectedAddressHigh      = 0x00;
 constexpr byte kExpectedAddressLow       = 0x00;
+constexpr byte kExpectedNetId            = 0x00;
 constexpr byte kExpectedFixedTx          = FT_TRANSPARENT_TRANSMISSION;
+constexpr byte kExpectedRssiEnable       = RSSI_ENABLED;
+constexpr byte kExpectedLbtEnable        = LBT_DISABLED;
+constexpr byte kExpectedRepeaterEnable   = REPEATER_DISABLED;
+constexpr byte kExpectedSubPacketSetting = SPS_240_00;
+constexpr byte kExpectedRssiAmbientNoise = RSSI_AMBIENT_NOISE_ENABLED;
 
 // Preset-derived params (passed in from RadioPreset after normalization).
 struct ApplyTarget {
@@ -37,10 +45,12 @@ bool critical_params_match(const Configuration& cfg, const ApplyTarget& t) {
          cfg.SPED.airDataRate == t.air_data_rate &&
          cfg.ADDH == kExpectedAddressHigh &&
          cfg.ADDL == kExpectedAddressLow &&
+         cfg.NETID == kExpectedNetId &&
          cfg.CHAN == t.channel &&
          cfg.TRANSMISSION_MODE.fixedTransmission == kExpectedFixedTx &&
          cfg.TRANSMISSION_MODE.enableRSSI == kExpectedRssiEnable &&
          cfg.TRANSMISSION_MODE.enableLBT == kExpectedLbtEnable &&
+         cfg.TRANSMISSION_MODE.enableRepeater == kExpectedRepeaterEnable &&
          cfg.OPTION.subPacketSetting == kExpectedSubPacketSetting &&
          cfg.OPTION.RSSIAmbientNoise == kExpectedRssiAmbientNoise;
 }
@@ -51,10 +61,12 @@ void apply_critical(Configuration* cfg, const ApplyTarget& t) {
   cfg->SPED.airDataRate = t.air_data_rate;
   cfg->ADDH = kExpectedAddressHigh;
   cfg->ADDL = kExpectedAddressLow;
+  cfg->NETID = kExpectedNetId;
   cfg->CHAN = t.channel;
   cfg->TRANSMISSION_MODE.fixedTransmission = kExpectedFixedTx;
   cfg->TRANSMISSION_MODE.enableRSSI = kExpectedRssiEnable;
   cfg->TRANSMISSION_MODE.enableLBT = kExpectedLbtEnable;
+  cfg->TRANSMISSION_MODE.enableRepeater = kExpectedRepeaterEnable;
   cfg->OPTION.subPacketSetting = kExpectedSubPacketSetting;
   cfg->OPTION.RSSIAmbientNoise = kExpectedRssiAmbientNoise;
 }
@@ -75,42 +87,46 @@ void describe_mismatch(const Configuration& current, const ApplyTarget& t,
       remain -= tag_len;
     }
   };
-  if (current.SPED.uartBaudRate != kExpectedUartBaudRate) append("baud");
-  if (current.SPED.uartParity != kExpectedUartParity)     append("parity");
-  if (current.SPED.airDataRate != t.air_data_rate)        append("air_rate");
-  if (current.ADDH != kExpectedAddressHigh)               append("addh");
-  if (current.ADDL != kExpectedAddressLow)                append("addl");
-  if (current.CHAN != t.channel)                          append("chan");
+  if (current.SPED.uartBaudRate != kExpectedUartBaudRate)              append("baud");
+  if (current.SPED.uartParity != kExpectedUartParity)                  append("parity");
+  if (current.SPED.airDataRate != t.air_data_rate)                     append("air_rate");
+  if (current.ADDH != kExpectedAddressHigh)                            append("addh");
+  if (current.ADDL != kExpectedAddressLow)                             append("addl");
+  if (current.NETID != kExpectedNetId)                                 append("netid");
+  if (current.CHAN != t.channel)                                       append("chan");
   if (current.TRANSMISSION_MODE.fixedTransmission != kExpectedFixedTx) append("fixed_tx");
   if (current.TRANSMISSION_MODE.enableRSSI != kExpectedRssiEnable)     append("rssi");
   if (current.TRANSMISSION_MODE.enableLBT != kExpectedLbtEnable)       append("lbt");
+  if (current.TRANSMISSION_MODE.enableRepeater != kExpectedRepeaterEnable) append("repeater");
   if (current.OPTION.subPacketSetting != kExpectedSubPacketSetting)    append("subpkt");
   if (current.OPTION.RSSIAmbientNoise != kExpectedRssiAmbientNoise)    append("rssi_amb");
 }
 
 } // namespace
 
-E220Radio::E220Radio(const Pins& pins)
+E22Radio::E22Radio(const Pins& pins)
     : pins_(pins),
       radio_(static_cast<byte>(pins.lora_tx), static_cast<byte>(pins.lora_rx), &serial_,
              static_cast<byte>(pins.lora_aux), static_cast<byte>(pins.lora_m0),
-             static_cast<byte>(pins.lora_m1), kE220BaudRate, SERIAL_8N1) {}
+             static_cast<byte>(pins.lora_m1), kE22BaudRate, SERIAL_8N1) {}
 
-bool E220Radio::begin() {
+bool E22Radio::begin() {
   return begin(get_radio_preset(RadioPresetId::Default));
 }
 
-bool E220Radio::begin(const RadioPreset& preset) {
-  last_boot_result_ = E220BootConfigResult::Ok;
+bool E22Radio::begin(const RadioPreset& preset) {
+  last_boot_result_ = E22BootConfigResult::Ok;
   last_boot_message_[0] = '\0';
 
-  // Normalize airRate: E220 also uses 2.4 kbps as its lowest supported rate.
+  // Normalize airRate: E22-400T30D V2 clamps < 2 to 2 (issue #336).
   uint8_t norm_air_rate = preset.air_rate;
   const bool clamped = normalize_air_rate(preset.air_rate, &norm_air_rate);
   if (clamped) {
+    // Log is emitted via boot_config_message() after begin() returns.
+    // We store it now so the caller sees it regardless of repair outcome.
     std::snprintf(last_boot_message_, kBootMessageLen,
                   "air_rate clamped: req=%u norm=%u", preset.air_rate, norm_air_rate);
-    last_boot_result_ = E220BootConfigResult::Repaired;
+    last_boot_result_ = E22BootConfigResult::Repaired;
   }
 
   const ApplyTarget target{/*.air_data_rate=*/static_cast<byte>(norm_air_rate),
@@ -121,22 +137,19 @@ bool E220Radio::begin(const RadioPreset& preset) {
     return false;
   }
 
-  // #326 fix: pre-assert config mode (M0=M1=HIGH) and hold 200 ms before getConfiguration().
-  // Root cause: the library's setMode(MODE_3_PROGRAM) checks AUX immediately after asserting
-  // M0/M1 HIGH; since AUX is already HIGH at idle the library does not wait for the actual
-  // mode-switch settling time, causing HEAD_NOT_RECOGNIZED / NO_RESPONSE on getConfiguration.
-  // Pre-asserting here gives the module the required settling time before the library call.
-  digitalWrite(static_cast<uint8_t>(pins_.lora_m0), HIGH);
-  digitalWrite(static_cast<uint8_t>(pins_.lora_m1), HIGH);
+  // E22 config mode = M0=LOW, M1=HIGH. Start from Normal (M0=LOW, M1=LOW)
+  // and let the library switch to config mode. Give the module settling time.
+  digitalWrite(static_cast<uint8_t>(pins_.lora_m0), LOW);
+  digitalWrite(static_cast<uint8_t>(pins_.lora_m1), LOW);
   delay(200);
   serial_.flush();
   while (serial_.available()) serial_.read();
 
-  // Verify-and-repair critical params every boot (module_boot_config_v0).
+  // Verify-and-repair critical params every boot.
   ResponseStructContainer config = radio_.getConfiguration();
-  if (config.status.code != E220_SUCCESS || !config.data) {
+  if (config.status.code != E22_SUCCESS || !config.data) {
     config.close();
-    last_boot_result_ = E220BootConfigResult::RepairFailed;
+    last_boot_result_ = E22BootConfigResult::RepairFailed;
     std::snprintf(last_boot_message_, kBootMessageLen, "read failed");
     rssi_enabled_ = (kExpectedRssiEnable == RSSI_ENABLED);
     return true;
@@ -146,10 +159,12 @@ bool E220Radio::begin(const RadioPreset& preset) {
   if (critical_params_match(*cfg, target)) {
     rssi_enabled_ = (cfg->TRANSMISSION_MODE.enableRSSI == RSSI_ENABLED);
     config.close();
+    // If we only had a clamp (no structural mismatch), keep Repaired status.
     return true;
   }
 
   // Mismatch: repair once (apply target, write, re-read, verify).
+  // Preserve clamp note if already set, otherwise record mismatch fields.
   if (!clamped) {
     describe_mismatch(*cfg, target, last_boot_message_, kBootMessageLen);
   }
@@ -157,16 +172,16 @@ bool E220Radio::begin(const RadioPreset& preset) {
   ResponseStatus write_status = radio_.setConfiguration(*cfg, WRITE_CFG_PWR_DWN_SAVE);
   config.close();
 
-  if (write_status.code != E220_SUCCESS) {
-    last_boot_result_ = E220BootConfigResult::RepairFailed;
+  if (write_status.code != E22_SUCCESS) {
+    last_boot_result_ = E22BootConfigResult::RepairFailed;
     std::snprintf(last_boot_message_, kBootMessageLen, "write failed");
     rssi_enabled_ = (kExpectedRssiEnable == RSSI_ENABLED);
     return true;
   }
 
   ResponseStructContainer config2 = radio_.getConfiguration();
-  if (config2.status.code != E220_SUCCESS || !config2.data) {
-    last_boot_result_ = E220BootConfigResult::RepairFailed;
+  if (config2.status.code != E22_SUCCESS || !config2.data) {
+    last_boot_result_ = E22BootConfigResult::RepairFailed;
     std::snprintf(last_boot_message_, kBootMessageLen, "re-read failed");
     config2.close();
     rssi_enabled_ = (kExpectedRssiEnable == RSSI_ENABLED);
@@ -181,9 +196,10 @@ bool E220Radio::begin(const RadioPreset& preset) {
   rssi_enabled_ = (cfg2->TRANSMISSION_MODE.enableRSSI == RSSI_ENABLED);
 
   if (vr.all_ok()) {
-    last_boot_result_ = E220BootConfigResult::Repaired;
+    last_boot_result_ = E22BootConfigResult::Repaired;
+    // last_boot_message_ already has mismatch list or clamp note.
   } else {
-    last_boot_result_ = E220BootConfigResult::RepairFailed;
+    last_boot_result_ = E22BootConfigResult::RepairFailed;
     std::snprintf(last_boot_message_, kBootMessageLen,
                   "verify failed: req=%u/%u norm=%u rb=%u/%u",
                   preset.air_rate, preset.channel,
@@ -195,23 +211,23 @@ bool E220Radio::begin(const RadioPreset& preset) {
   return true;
 }
 
-bool E220Radio::is_ready() const {
+bool E22Radio::is_ready() const {
   return ready_;
 }
 
-bool E220Radio::rssi_available() const {
+bool E22Radio::rssi_available() const {
   return rssi_enabled_;
 }
 
-bool E220Radio::send(const uint8_t* data, size_t len) {
+bool E22Radio::send(const uint8_t* data, size_t len) {
   if (!ready_ || !data || len == 0 || len > MAX_SIZE_TX_PACKET) {
     return false;
   }
   ResponseStatus status = radio_.sendMessage(data, static_cast<uint8_t>(len));
-  return status.code == E220_SUCCESS;
+  return status.code == E22_SUCCESS;
 }
 
-bool E220Radio::recv(uint8_t* out, size_t max_len, size_t* out_len) {
+bool E22Radio::recv(uint8_t* out, size_t max_len, size_t* out_len) {
   if (!ready_ || !out_len || max_len == 0) {
     return false;
   }
@@ -220,13 +236,12 @@ bool E220Radio::recv(uint8_t* out, size_t max_len, size_t* out_len) {
     return false;
   }
 
-  // Use the String-based receiveMessage() which reads until the UART buffer is drained
-  // (no fixed-size requirement). receiveMessage(size) fails with DATA_SIZE_NOT_MATCH
-  // when the actual frame is shorter than the requested size.
+  // Use String-based receiveMessage() — reads until UART buffer is drained.
+  // receiveMessage(size) fails with DATA_SIZE_NOT_MATCH for variable-length frames.
   ResponseContainer response = rssi_enabled_
                                    ? radio_.receiveMessageRSSI()
                                    : radio_.receiveMessage();
-  if (response.status.code != E220_SUCCESS) {
+  if (response.status.code != E22_SUCCESS) {
     *out_len = 0;
     return false;
   }
@@ -247,22 +262,22 @@ bool E220Radio::recv(uint8_t* out, size_t max_len, size_t* out_len) {
   return true;
 }
 
-int8_t E220Radio::last_rssi_dbm() const {
+int8_t E22Radio::last_rssi_dbm() const {
   return last_rssi_dbm_;
 }
 
-RadioBootConfigResult E220Radio::boot_config_result() const {
+RadioBootConfigResult E22Radio::boot_config_result() const {
   switch (last_boot_result_) {
-    case E220BootConfigResult::Repaired:    return RadioBootConfigResult::Repaired;
-    case E220BootConfigResult::RepairFailed: return RadioBootConfigResult::RepairFailed;
-    default:                                return RadioBootConfigResult::Ok;
+    case E22BootConfigResult::Repaired:    return RadioBootConfigResult::Repaired;
+    case E22BootConfigResult::RepairFailed: return RadioBootConfigResult::RepairFailed;
+    default:                               return RadioBootConfigResult::Ok;
   }
 }
 
-const char* E220Radio::boot_config_message() const {
+const char* E22Radio::boot_config_message() const {
   return last_boot_message_;
 }
 
 } // namespace naviga
 
-#endif // !HW_PROFILE_DEVKIT_E22_OLED_GNSS
+#endif // HW_PROFILE_DEVKIT_E22_OLED_GNSS

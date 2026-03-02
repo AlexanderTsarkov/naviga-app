@@ -12,6 +12,11 @@ class MockRadio : public IRadio {
   bool send(const uint8_t* data, size_t len) override;
   bool recv(uint8_t* out, size_t max_len, size_t* out_len) override;
   int8_t last_rssi_dbm() const override;
+  bool rssi_available() const override { return false; }
+  RadioBootConfigResult boot_config_result() const override {
+    return RadioBootConfigResult::Ok;
+  }
+  const char* boot_config_message() const override { return ""; }
 
   void inject_rx(const uint8_t* data, size_t len, int8_t rssi_dbm);
   size_t tx_count() const;
