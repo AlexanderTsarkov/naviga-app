@@ -1217,7 +1217,7 @@ void test_txq_alive_enqueued_when_no_fix_at_max_silence() {
 
 void test_txq_operational_enqueued_independently() {
   BeaconLogic logic;
-  logic.set_min_interval_ms(60000);  // Core not due
+  logic.set_min_interval_ms(1000);   // Core not due (allow_core=false); cadence due at t=1000
   logic.set_max_silence_ms(120000);
 
   const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
@@ -1226,11 +1226,11 @@ void test_txq_operational_enqueued_independently() {
   telem.has_battery     = true;
   telem.battery_percent = 85;
 
-  logic.update_tx_queue(1000, self, telem, false);  // allow_core=false
+  logic.update_tx_queue(1000, self, telem, false);  // allow_core=false; time_for_min=true
 
-  // Core not enqueued (not due + allow_core=false).
+  // Core not enqueued (allow_core=false).
   TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
-  // Operational enqueued independently.
+  // Operational enqueued when cadence is due.
   TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
   TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL2),
                     static_cast<int>(logic.slot(kSlotTail2).pkt_type));
@@ -1238,7 +1238,7 @@ void test_txq_operational_enqueued_independently() {
 
 void test_txq_informative_enqueued_independently() {
   BeaconLogic logic;
-  logic.set_min_interval_ms(60000);
+  logic.set_min_interval_ms(1000);   // cadence due at t=1000
   logic.set_max_silence_ms(120000);
 
   const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
@@ -1247,7 +1247,7 @@ void test_txq_informative_enqueued_independently() {
   telem.has_max_silence = true;
   telem.max_silence_10s = 9;
 
-  logic.update_tx_queue(1000, self, telem, false);
+  logic.update_tx_queue(1000, self, telem, false);  // time_for_min=true
 
   TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
   TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
@@ -1278,7 +1278,7 @@ void test_txq_empty_telemetry_no_operational_no_informative() {
 void test_txq_uptime_only_enqueues_operational_not_informative() {
   // has_uptime=true → 0x04 enqueued; has_max_silence=false → 0x05 NOT enqueued.
   BeaconLogic logic;
-  logic.set_min_interval_ms(60000);
+  logic.set_min_interval_ms(1000);   // cadence due at t=1000
   logic.set_max_silence_ms(120000);
 
   const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
@@ -1287,7 +1287,7 @@ void test_txq_uptime_only_enqueues_operational_not_informative() {
   telem.has_uptime  = true;
   telem.uptime_sec  = 42;
 
-  logic.update_tx_queue(1000, self, telem, false);
+  logic.update_tx_queue(1000, self, telem, false);  // time_for_min=true
 
   TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
   TEST_ASSERT_FALSE(logic.slot(kSlotInfo).present);
@@ -1296,7 +1296,7 @@ void test_txq_uptime_only_enqueues_operational_not_informative() {
 void test_txq_max_silence_only_enqueues_informative_not_operational() {
   // has_max_silence=true → 0x05 enqueued; has_battery=false, has_uptime=false → 0x04 NOT enqueued.
   BeaconLogic logic;
-  logic.set_min_interval_ms(60000);
+  logic.set_min_interval_ms(1000);   // cadence due at t=1000
   logic.set_max_silence_ms(120000);
 
   const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
@@ -1305,7 +1305,7 @@ void test_txq_max_silence_only_enqueues_informative_not_operational() {
   telem.has_max_silence = true;
   telem.max_silence_10s = 9;
 
-  logic.update_tx_queue(1000, self, telem, false);
+  logic.update_tx_queue(1000, self, telem, false);  // time_for_min=true
 
   TEST_ASSERT_FALSE(logic.slot(kSlotTail2).present);
   TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
@@ -1384,7 +1384,7 @@ void test_txq_dequeue_tail1_before_operational() {
 void test_txq_fairness_higher_replaced_count_wins() {
   // Within same priority (P2), the slot with higher replaced_count is dequeued first.
   BeaconLogic logic;
-  logic.set_min_interval_ms(60000);
+  logic.set_min_interval_ms(1000);   // cadence due at t=1000, 2000, 3000
   logic.set_max_silence_ms(120000);
 
   const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
@@ -1394,7 +1394,7 @@ void test_txq_fairness_higher_replaced_count_wins() {
   SelfTelemetry telem_op{};
   telem_op.has_battery     = true;
   telem_op.battery_percent = 80;
-  logic.update_tx_queue(1000, self, telem_op, false);
+  logic.update_tx_queue(1000, self, telem_op, false);  // time_for_min=true
   TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
   TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotTail2).replaced_count);
 
@@ -1402,13 +1402,13 @@ void test_txq_fairness_higher_replaced_count_wins() {
   SelfTelemetry telem_info{};
   telem_info.has_max_silence = true;
   telem_info.max_silence_10s = 9;
-  logic.update_tx_queue(1100, self, telem_info, false);
+  logic.update_tx_queue(2000, self, telem_info, false);  // time_for_min=true
   TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
   TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotInfo).replaced_count);
 
   // Replace Operational again (replaced_count becomes 1).
   telem_op.battery_percent = 75;
-  logic.update_tx_queue(1200, self, telem_op, false);
+  logic.update_tx_queue(3000, self, telem_op, false);  // time_for_min=true
   TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotTail2).replaced_count);
 
   // Both P2 slots present. Operational has replaced_count=1, Info has replaced_count=0.
@@ -1427,7 +1427,7 @@ void test_txq_fairness_higher_replaced_count_wins() {
 void test_txq_fairness_older_created_at_wins_on_tie() {
   // Within same priority and same replaced_count, older created_at_ms wins.
   BeaconLogic logic;
-  logic.set_min_interval_ms(60000);
+  logic.set_min_interval_ms(1000);   // cadence due at t=1000, 2000
   logic.set_max_silence_ms(120000);
 
   const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
@@ -1437,13 +1437,13 @@ void test_txq_fairness_older_created_at_wins_on_tie() {
   SelfTelemetry telem_op{};
   telem_op.has_battery     = true;
   telem_op.battery_percent = 80;
-  logic.update_tx_queue(1000, self, telem_op, false);
+  logic.update_tx_queue(1000, self, telem_op, false);  // time_for_min=true
 
   // Enqueue Informative at t=2000 (newer).
   SelfTelemetry telem_info{};
   telem_info.has_max_silence = true;
   telem_info.max_silence_10s = 9;
-  logic.update_tx_queue(2000, self, telem_info, false);
+  logic.update_tx_queue(2000, self, telem_info, false);  // time_for_min=true
 
   // Both replaced_count=0, same priority. Operational (older) should win.
   uint8_t buf[65] = {};
@@ -1456,7 +1456,7 @@ void test_txq_fairness_older_created_at_wins_on_tie() {
 void test_txq_slot_replacement_increments_count() {
   // Replacing a slot increments replaced_count; created_at_ms is preserved.
   BeaconLogic logic;
-  logic.set_min_interval_ms(60000);
+  logic.set_min_interval_ms(1000);   // cadence due at t=1000, 2000, 3000
   logic.set_max_silence_ms(120000);
 
   const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
@@ -1465,25 +1465,25 @@ void test_txq_slot_replacement_increments_count() {
   telem.has_battery     = true;
   telem.battery_percent = 90;
 
-  logic.update_tx_queue(1000, self, telem, false);
+  logic.update_tx_queue(1000, self, telem, false);  // time_for_min=true
   TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotTail2).replaced_count);
   TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotTail2).created_at_ms);
 
   telem.battery_percent = 80;
-  logic.update_tx_queue(2000, self, telem, false);
+  logic.update_tx_queue(2000, self, telem, false);  // time_for_min=true
   TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotTail2).replaced_count);
   // created_at_ms preserved from first enqueue.
   TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotTail2).created_at_ms);
 
   telem.battery_percent = 70;
-  logic.update_tx_queue(3000, self, telem, false);
+  logic.update_tx_queue(3000, self, telem, false);  // time_for_min=true
   TEST_ASSERT_EQUAL_UINT32(2, logic.slot(kSlotTail2).replaced_count);
   TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotTail2).created_at_ms);
 }
 
 void test_txq_dequeue_clears_slot() {
   BeaconLogic logic;
-  logic.set_min_interval_ms(60000);
+  logic.set_min_interval_ms(1000);   // cadence due at t=1000
   logic.set_max_silence_ms(120000);
 
   const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
@@ -1492,7 +1492,7 @@ void test_txq_dequeue_clears_slot() {
   telem.has_battery     = true;
   telem.battery_percent = 90;
 
-  logic.update_tx_queue(1000, self, telem, false);
+  logic.update_tx_queue(1000, self, telem, false);  // time_for_min=true
   TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
 
   uint8_t buf[65] = {};
@@ -1590,7 +1590,7 @@ void test_txq_alive_dequeued_correctly() {
 void test_txq_informative_replacement_increments_count() {
   // Informative slot replacement increments replaced_count and preserves created_at_ms.
   BeaconLogic logic;
-  logic.set_min_interval_ms(60000);
+  logic.set_min_interval_ms(1000);   // cadence due at t=1000, 2000
   logic.set_max_silence_ms(120000);
 
   const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
@@ -1600,14 +1600,14 @@ void test_txq_informative_replacement_increments_count() {
   telem.has_max_silence = true;
   telem.max_silence_10s = 9;
 
-  logic.update_tx_queue(1000, self, telem, false);
+  logic.update_tx_queue(1000, self, telem, false);  // time_for_min=true
   TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
   TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotInfo).replaced_count);
   TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotInfo).created_at_ms);
 
   // Replace with new value.
   telem.max_silence_10s = 18;
-  logic.update_tx_queue(2000, self, telem, false);
+  logic.update_tx_queue(2000, self, telem, false);  // time_for_min=true
   TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
   TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotInfo).replaced_count);
   TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotInfo).created_at_ms);
@@ -1616,7 +1616,7 @@ void test_txq_informative_replacement_increments_count() {
 void test_txq_informative_dequeued_correctly() {
   // Informative slot is dequeued as INFO type with correct frame.
   BeaconLogic logic;
-  logic.set_min_interval_ms(60000);
+  logic.set_min_interval_ms(1000);   // cadence due at t=1000
   logic.set_max_silence_ms(120000);
 
   const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
@@ -1626,7 +1626,7 @@ void test_txq_informative_dequeued_correctly() {
   telem.has_max_silence = true;
   telem.max_silence_10s = 9;
 
-  logic.update_tx_queue(1000, self, telem, false);
+  logic.update_tx_queue(1000, self, telem, false);  // time_for_min=true
 
   uint8_t buf[65] = {};
   size_t out_len = 0;
@@ -1672,7 +1672,7 @@ void test_txq_be_high_beats_be_low_within_p2() {
   // Within P2_BEST_EFFORT, Core_Tail (BE_HIGH) must be dequeued before
   // Operational (BE_LOW) and Informative (BE_LOW), regardless of creation order.
   BeaconLogic logic;
-  logic.set_min_interval_ms(60000);
+  logic.set_min_interval_ms(500);    // cadence due at t=500 for Op/Info
   logic.set_max_silence_ms(120000);
 
   const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
@@ -1684,7 +1684,7 @@ void test_txq_be_high_beats_be_low_within_p2() {
   telem.battery_percent = 90;
   telem.has_max_silence = true;
   telem.max_silence_10s = 9;
-  logic.update_tx_queue(500, self, telem, false);
+  logic.update_tx_queue(500, self, telem, false);  // time_for_min=true
   TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
   TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
   TEST_ASSERT_FALSE(logic.slot(kSlotTail1).present);
