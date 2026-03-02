@@ -1158,6 +1158,23 @@ void test_txq_core_enqueues_tail_with_correct_ref() {
   TEST_ASSERT_EQUAL_UINT16(core_seq, logic.slot(kSlotTail1).ref_core_seq16);
 }
 
+void test_txq_tail1_not_enqueued_without_core() {
+  // Tail-1 MUST NOT be enqueued when Core is not enqueued (allow_core=false and no max_silence).
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(30000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+
+  // allow_core=false and time_for_min=true but time_for_silence=false → no Core, no Tail-1.
+  logic.update_tx_queue(1000, self, telem, false);
+
+  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotTail1).present);
+}
+
 void test_txq_core_replacement_replaces_tail_too() {
   // If Core is re-formed before being sent, both Core and Tail slots are replaced.
   BeaconLogic logic;
@@ -1819,6 +1836,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_tail_never_overwrites_position);
   // TX queue: formation
   RUN_TEST(test_txq_core_enqueues_tail_with_correct_ref);
+  RUN_TEST(test_txq_tail1_not_enqueued_without_core);
   RUN_TEST(test_txq_core_replacement_replaces_tail_too);
   RUN_TEST(test_txq_alive_enqueued_when_no_fix_at_max_silence);
   RUN_TEST(test_txq_operational_enqueued_independently);
