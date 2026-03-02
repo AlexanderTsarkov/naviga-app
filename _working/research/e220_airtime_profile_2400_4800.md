@@ -65,26 +65,42 @@
 
 ---
 
-## SF/BW/CR inference
+## Modulation identification
 
-### 2.4 kbps — step pattern analysis
+### E220 "air data rate" presets use FSK/GFSK, not LoRa
 
-Step size ~20.3 ms, tier width ~4–5 bytes.
+**Key finding:** The standard LoRa TOA formula (Semtech AN1200.13) cannot reproduce our measurements for any combination of SF (5–12), BW (62.5–500 kHz), CR (4/5–4/8), or preamble length. This rules out LoRa modulation entirely.
 
-At 2.4 kbps effective throughput, one symbol carries:
-- If SF=11, BW=125 kHz: symbol duration = 2^11 / 125000 = 16.384 ms — close but not matching
-- If SF=11, BW=250 kHz: symbol duration = 8.192 ms — 2–3 symbols per tier
-- **Most likely:** SF=11, BW=125 kHz, CR=4/5 — symbol time 16.4 ms, with preamble overhead explaining the ~20 ms step
+**Evidence from step pattern (2.4 kbps):**
 
-The ~20.3 ms step is consistent with **1 LoRa symbol at SF=11, BW=125 kHz** (16.384 ms) plus coding overhead.
+Step size ~20.3 ms, tier width ~4.5 bytes average.
 
-### 4.8 kbps — linear pattern
+```
+20.3 ms / 4.5 bytes = 4.51 ms/byte → implied air baud = 10 bits / 0.00451 s = 2217 bps ≈ 2400 bps
+```
 
-Linear 1.04 ms/byte is characteristic of **FSK modulation** or LoRa at very low SF (SF=5 or SF=6) where symbol time is short enough to appear linear at byte granularity.
+This matches the "2.4 kbps" preset label exactly. The step pattern is not LoRa symbol quantization — it is **FSK frame blocking**: E220 encodes payload in fixed-size internal blocks (~4–5 bytes), and each additional block adds one block-time (~20.3 ms at 2400 baud).
 
-At 4.8 kbps: 1 byte = 8 bits, 8/4800 = 1.67 ms theoretical. Measured 1.04 ms/byte suggests effective throughput ~7.7 kbps on air (accounting for E220 framing overhead).
+**Evidence from 4.8 kbps linear pattern:**
 
-**Likely:** FSK mode at 4.8 kbps air rate (EBYTE uses FSK for higher speed presets on E220-400T30D).
+~1.04 ms/byte = 1 byte × 10 bits / 9600 bps... wait — 10/0.00104 = 9615 bps. This is actually the **UART baud rate (9600 bps)**, not the air rate. At 4.8 kbps the module appears to be UART-limited in our measurement window, or the air rate is fast enough that UART transfer dominates. Either way, the linear pattern confirms FSK (no symbol quantization).
+
+**Why LoRa TOA tables do not apply:**
+
+The LoRa TOA table (SF9/BW125/CR4-5/preamble16 → 218 ms for 20 bytes) describes **Semtech SX126x/SX127x in LoRa mode**. E220-400T30D uses the SX1268 chip, but EBYTE's firmware exposes only UART speed presets (0.3–19.2 kbps) — these map to **FSK/GFSK modulation**, not LoRa chirp spread spectrum. LoRa mode on E220 requires direct register access via AT commands, which the standard library does not use.
+
+**Comparison at 20 bytes:**
+
+| Mode | Airtime |
+|---|---|
+| LoRa SF9/BW125/CR4-5/p16 (table) | 218 ms |
+| LoRa SF7/BW500/CR4-5/p8 (table) | 14 ms |
+| **E220 "2.4 kbps" FSK (measured)** | **~22.7 ms** |
+| **E220 "4.8 kbps" FSK (measured)** | **~4.5 ms** |
+
+### Implication for sensitivity
+
+The E220 datasheet claims −131 dBm sensitivity at 2.4 kbps. This is the FSK sensitivity, not LoRa sensitivity. LoRa SF9/BW125 would give −137 dBm (SF12 −148 dBm) but with 10× longer airtime. The E220 "2.4 kbps" preset is a tradeoff: better than LoRa SF7 in sensitivity, but far worse than SF9+.
 
 ---
 
