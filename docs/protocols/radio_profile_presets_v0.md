@@ -1,5 +1,7 @@
 # Radio profile presets v0 (OOTB)
 
+**Status:** Non-normative (OOTB). As-implemented v0 reference. May diverge from canon. Canon: [registry_radio_profiles_v0](../product/areas/radio/policy/registry_radio_profiles_v0.md).
+
 **Purpose:** Формализовать «продуктовые пресеты» радиосвязи так, чтобы UART-модули (E22/E220) и будущие SPI-модули могли быть совместимы на уровне конфига. Пользователь и протокол оперируют абстракциями, не сырыми LoRa-параметрами.
 
 **Related:** [ADR radio band strategy](../adr/radio_band_strategy_v0.md), [OOTB Radio v0](ootb_radio_v0.md).

@@ -1,5 +1,7 @@
 # OOTB Firmware architecture v0
 
+**Status:** Non-normative (OOTB). As-implemented v0 reference. May diverge from canon. Canon: [boot_pipeline_v0](../product/areas/firmware/policy/boot_pipeline_v0.md).
+
 **Purpose:** Слои, границы и модель выполнения прошивки OOTB v0. Issue [#11](https://github.com/AlexanderTsarkov/naviga-app/issues/11).
 
 **Related:** [HAL contracts](hal_contracts_v0.md), [OOTB plan § 3.5](../product/OOTB_v0_analysis_and_plan.md), [Radio v0](../protocols/ootb_radio_v0.md), [BLE v0](../protocols/ootb_ble_v0.md).

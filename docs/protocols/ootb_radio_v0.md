@@ -1,5 +1,7 @@
 # OOTB Radio v0 — спецификация
 
+**Status:** Non-normative (OOTB). As-implemented v0 reference. May diverge from canon. Canon: [beacon payload & NodeTable](../product/areas/nodetable/contract/beacon_payload_encoding_v0.md), [NodeTable hub](../product/areas/nodetable/index.md).
+
 **Purpose:** Формат и правила радиоканала OOTB v0 (GEO_BEACON, дефолты, пресеты). Issue [#14](https://github.com/AlexanderTsarkov/naviga-app/issues/14).
 
 **Related:** [Radio profile presets v0](radio_profile_presets_v0.md), [ADR radio band strategy](../adr/radio_band_strategy_v0.md).

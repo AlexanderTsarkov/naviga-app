@@ -1,5 +1,7 @@
 # OOTB Radio preset v0 (Sprint 1 — E220/E22 UART)
 
+**Status:** Non-normative (OOTB). As-implemented v0 reference. May diverge from canon. Canon: [registry_radio_profiles_v0](areas/radio/policy/registry_radio_profiles_v0.md), [module_boot_config_v0](areas/firmware/policy/module_boot_config_v0.md).
+
 **Purpose:** Зафиксировать конфигурацию радиомодуля **«из коробки»** для E220/E22 UART, используемую в Sprint 1. Отдельно различаем: **UART baud** (ESP ↔ модуль) и **Air data rate** (скорость по эфиру).
 
 **Related:** [Радио модули Навига (hardware summary)](../hardware/radio_modules_naviga.md), [POC E220 evidence](../firmware/poc_e220_evidence.md), [Radio profile presets v0](../protocols/radio_profile_presets_v0.md), [OOTB Radio v0](../protocols/ootb_radio_v0.md). Артефакт Issue #7 — см. [poc_gaps_risks.md](poc_gaps_risks.md).
