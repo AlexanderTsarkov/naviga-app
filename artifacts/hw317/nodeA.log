@@ -1,0 +1,590 @@
+[03:14:37] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:14:38] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:14:38] tick: 577125
+[03:14:38] OK; instrumentation on
+[03:14:39] OK; gnss override FIX lat_e7=374200000 lon_e7=-1220800000
+[03:14:39] SELF_POS: updated reason=DISTANCE lat_e7=374200000 lon_e7=-1220800000 d=5559.75 dt=43887
+[03:14:39] pkt tx t_ms=577853 type=CORE seq=19
+[03:14:39] pkt tx t_ms=578002 type=TAIL1 seq=20 core_seq=19
+[03:14:39] tick: 578125
+[03:14:39] OK; gnss override move dlat_e7=500000 dlon_e7=0
+[03:14:40] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:14:40] tick: 579125
+[03:14:41] nodetable: size=1
+[03:14:41] tick: 580125
+[03:14:42] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:14:42] tick: 581125
+[03:14:42] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:14:43] tick: 582125
+[03:14:44] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:14:44] tick: 583125
+[03:14:45] tick: 584125
+[03:14:46] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:14:46] nodetable: size=1
+[03:14:46] tick: 585125
+[03:14:47] tick: 586125
+[03:14:47] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:14:48] OK; gnss override move dlat_e7=500000 dlon_e7=0
+[03:14:48] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:14:48] tick: 587125
+[03:14:49] tick: 588125
+[03:14:50] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:14:50] tick: 589125
+[03:14:51] nodetable: size=1
+[03:14:51] tick: 590125
+[03:14:52] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:14:52] tick: 591125
+[03:14:52] GNSS override: FIX lat_e7=375200000 lon_e7=-1220800000
+[03:14:53] tick: 592125
+[03:14:54] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:14:54] tick: 593125
+[03:14:55] tick: 594125
+[03:14:56] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:14:56] OK; gnss override NO_FIX
+[03:14:56] nodetable: size=1
+[03:14:56] tick: 595125
+[03:14:57] tick: 596125
+[03:14:57] GNSS override: NO_FIX
+[03:14:58] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:14:58] tick: 597125
+[03:14:59] tick: 598125
+[03:15:00] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:00] tick: 599125
+[03:15:01] nodetable: size=1
+[03:15:01] tick: 600125
+[03:15:02] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:02] tick: 601125
+[03:15:02] GNSS override: NO_FIX
+[03:15:03] tick: 602125
+[03:15:04] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:04] tick: 603125
+[03:15:05] tick: 604125
+[03:15:06] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:06] nodetable: size=1
+[03:15:06] tick: 605125
+[03:15:07] tick: 606125
+[03:15:07] GNSS override: NO_FIX
+[03:15:08] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:08] tick: 607125
+[03:15:09] tick: 608125
+[03:15:10] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:10] tick: 609125
+[03:15:11] nodetable: size=1
+[03:15:11] tick: 610125
+[03:15:12] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:12] tick: 611125
+[03:15:12] GNSS override: NO_FIX
+[03:15:13] tick: 612125
+[03:15:14] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:14] tick: 613125
+[03:15:15] tick: 614125
+[03:15:16] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:16] nodetable: size=1
+[03:15:16] tick: 615125
+[03:15:17] tick: 616125
+[03:15:17] GNSS override: NO_FIX
+[03:15:18] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:18] tick: 617125
+[03:15:19] tick: 618125
+[03:15:20] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:20] tick: 619125
+[03:15:21] nodetable: size=1
+[03:15:21] tick: 620125
+[03:15:22] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:22] tick: 621125
+[03:15:22] GNSS override: NO_FIX
+[03:15:23] tick: 622125
+[03:15:24] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:24] tick: 623125
+[03:15:25] tick: 624125
+[03:15:26] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:26] nodetable: size=1
+[03:15:26] tick: 625125
+[03:15:27] tick: 626125
+[03:15:27] GNSS override: NO_FIX
+[03:15:28] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:28] tick: 627125
+[03:15:29] tick: 628125
+[03:15:30] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:30] tick: 629125
+[03:15:31] nodetable: size=1
+[03:15:31] tick: 630125
+[03:15:32] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:32] tick: 631125
+[03:15:32] GNSS override: NO_FIX
+[03:15:33] tick: 632125
+[03:15:34] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:34] tick: 633125
+[03:15:35] tick: 634125
+[03:15:36] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:36] nodetable: size=1
+[03:15:36] tick: 635125
+[03:15:37] tick: 636125
+[03:15:37] GNSS override: NO_FIX
+[03:15:38] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:38] tick: 637125
+[03:15:39] tick: 638125
+[03:15:40] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:40] tick: 639125
+[03:15:41] nodetable: size=1
+[03:15:41] tick: 640125
+[03:15:42] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:42] tick: 641125
+[03:15:42] GNSS override: NO_FIX
+[03:15:43] tick: 642125
+[03:15:44] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:44] tick: 643125
+[03:15:45] tick: 644125
+[03:15:46] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:46] nodetable: size=1
+[03:15:46] tick: 645125
+[03:15:47] tick: 646125
+[03:15:47] GNSS override: NO_FIX
+[03:15:48] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:48] tick: 647125
+[03:15:49] tick: 648125
+[03:15:50] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:50] tick: 649125
+[03:15:51] nodetable: size=1
+[03:15:51] tick: 650125
+[03:15:52] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:52] tick: 651125
+[03:15:52] GNSS override: NO_FIX
+[03:15:53] tick: 652125
+[03:15:54] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:54] tick: 653125
+[03:15:55] tick: 654125
+[03:15:56] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:56] nodetable: size=1
+[03:15:56] tick: 655125
+[03:15:57] tick: 656125
+[03:15:57] GNSS override: NO_FIX
+[03:15:58] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:15:58] tick: 657125
+[03:15:59] tick: 658125
+[03:16:00] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:00] tick: 659125
+[03:16:01] nodetable: size=1
+[03:16:01] tick: 660125
+[03:16:02] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:02] tick: 661125
+[03:16:02] GNSS override: NO_FIX
+[03:16:03] tick: 662125
+[03:16:04] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:04] tick: 663125
+[03:16:05] tick: 664125
+[03:16:06] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:06] nodetable: size=1
+[03:16:06] tick: 665125
+[03:16:07] tick: 666125
+[03:16:07] GNSS override: NO_FIX
+[03:16:08] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:08] tick: 667125
+[03:16:09] pkt tx t_ms=668013 type=ALIVE seq=21
+[03:16:09] tick: 668125
+[03:16:10] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:10] tick: 669125
+[03:16:11] nodetable: size=1
+[03:16:11] tick: 670125
+[03:16:12] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:12] tick: 671125
+[03:16:12] GNSS override: NO_FIX
+[03:16:13] tick: 672125
+[03:16:14] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:14] tick: 673125
+[03:16:15] tick: 674125
+[03:16:16] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:16] nodetable: size=1
+[03:16:16] tick: 675125
+[03:16:17] tick: 676125
+[03:16:17] GNSS override: NO_FIX
+[03:16:18] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:18] tick: 677125
+[03:16:19] tick: 678125
+[03:16:20] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:20] tick: 679125
+[03:16:21] nodetable: size=1
+[03:16:21] tick: 680125
+[03:16:22] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:22] tick: 681125
+[03:16:22] GNSS override: NO_FIX
+[03:16:23] tick: 682125
+[03:16:24] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:24] tick: 683125
+[03:16:25] tick: 684125
+[03:16:26] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:26] nodetable: size=1
+[03:16:26] tick: 685125
+[03:16:27] tick: 686125
+[03:16:27] GNSS override: NO_FIX
+[03:16:28] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:28] tick: 687125
+[03:16:29] tick: 688125
+[03:16:30] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:30] tick: 689125
+[03:16:31] nodetable: size=1
+[03:16:31] tick: 690125
+[03:16:32] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:32] tick: 691125
+[03:16:32] GNSS override: NO_FIX
+[03:16:33] tick: 692125
+[03:16:34] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:34] tick: 693125
+[03:16:35] tick: 694125
+[03:16:36] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:36] nodetable: size=1
+[03:16:36] tick: 695125
+[03:16:36] OK; gnss override FIX lat_e7=374200000 lon_e7=-1220800000
+[03:16:36] SELF_POS: updated reason=MAX_SILENCE lat_e7=374200000 lon_e7=-1220800000 d=0.00 dt=117543
+[03:16:36] pkt tx t_ms=695400 type=CORE seq=22
+[03:16:36] pkt tx t_ms=695427 type=TAIL1 seq=23 core_seq=22
+[03:16:36] OK; gnss override move dlat_e7=500000 dlon_e7=0
+[03:16:37] tick: 696125
+[03:16:37] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:16:38] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:38] tick: 697125
+[03:16:39] tick: 698125
+[03:16:40] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:40] tick: 699125
+[03:16:41] nodetable: size=1
+[03:16:41] tick: 700125
+[03:16:42] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:42] tick: 701125
+[03:16:42] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:16:43] tick: 702125
+[03:16:44] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:44] tick: 703125
+[03:16:45] tick: 704125
+[03:16:46] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:46] nodetable: size=1
+[03:16:46] tick: 705125
+[03:16:47] tick: 706125
+[03:16:47] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:16:48] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:48] tick: 707125
+[03:16:49] tick: 708125
+[03:16:50] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:50] tick: 709125
+[03:16:51] nodetable: size=1
+[03:16:51] tick: 710125
+[03:16:52] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:52] tick: 711125
+[03:16:52] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:16:53] tick: 712125
+[03:16:54] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:54] tick: 713125
+[03:16:54] SELF_POS: updated reason=DISTANCE lat_e7=374700000 lon_e7=-1220800000 d=5559.75 dt=18000
+[03:16:54] pkt tx t_ms=713473 type=CORE seq=24
+[03:16:54] pkt tx t_ms=713520 type=TAIL1 seq=25 core_seq=24
+[03:16:55] tick: 714125
+[03:16:56] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:56] nodetable: size=1
+[03:16:56] tick: 715125
+[03:16:57] tick: 716125
+[03:16:57] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:16:58] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:16:58] tick: 717125
+[03:16:59] tick: 718125
+[03:17:00] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:00] tick: 719125
+[03:17:01] nodetable: size=1
+[03:17:01] tick: 720125
+[03:17:02] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:02] tick: 721125
+[03:17:02] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:17:03] tick: 722125
+[03:17:04] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:04] tick: 723125
+[03:17:05] tick: 724125
+[03:17:06] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:06] nodetable: size=1
+[03:17:06] tick: 725125
+[03:17:07] tick: 726125
+[03:17:07] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:17:08] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:08] tick: 727125
+[03:17:09] tick: 728125
+[03:17:10] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:10] tick: 729125
+[03:17:11] nodetable: size=1
+[03:17:11] tick: 730125
+[03:17:12] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:12] tick: 731125
+[03:17:12] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:17:13] tick: 732125
+[03:17:14] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:14] tick: 733125
+[03:17:15] tick: 734125
+[03:17:16] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:16] nodetable: size=1
+[03:17:16] tick: 735125
+[03:17:17] tick: 736125
+[03:17:17] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:17:18] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:18] tick: 737125
+[03:17:19] tick: 738125
+[03:17:20] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:20] tick: 739125
+[03:17:21] nodetable: size=1
+[03:17:21] tick: 740125
+[03:17:22] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:22] tick: 741125
+[03:17:22] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:17:23] tick: 742125
+[03:17:24] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:24] tick: 743125
+[03:17:25] tick: 744125
+[03:17:26] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:26] nodetable: size=1
+[03:17:26] tick: 745125
+[03:17:27] tick: 746125
+[03:17:27] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:17:28] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:28] tick: 747125
+[03:17:29] tick: 748125
+[03:17:30] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:30] tick: 749125
+[03:17:31] nodetable: size=1
+[03:17:31] tick: 750125
+[03:17:32] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:32] tick: 751125
+[03:17:32] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:17:33] tick: 752125
+[03:17:34] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:34] tick: 753125
+[03:17:35] tick: 754125
+[03:17:36] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:36] nodetable: size=1
+[03:17:36] tick: 755125
+[03:17:37] tick: 756125
+[03:17:37] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:17:38] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:38] tick: 757125
+[03:17:39] tick: 758125
+[03:17:40] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:40] tick: 759125
+[03:17:41] nodetable: size=1
+[03:17:41] tick: 760125
+[03:17:42] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:42] tick: 761125
+[03:17:42] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:17:43] tick: 762125
+[03:17:44] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:44] tick: 763125
+[03:17:45] tick: 764125
+[03:17:46] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:46] nodetable: size=1
+[03:17:46] tick: 765125
+[03:17:47] tick: 766125
+[03:17:47] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:17:48] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:48] tick: 767125
+[03:17:49] tick: 768125
+[03:17:50] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:50] tick: 769125
+[03:17:51] nodetable: size=1
+[03:17:51] tick: 770125
+[03:17:52] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:52] tick: 771125
+[03:17:52] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:17:53] tick: 772125
+[03:17:54] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:54] tick: 773125
+[03:17:55] tick: 774125
+[03:17:56] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:56] nodetable: size=1
+[03:17:56] tick: 775125
+[03:17:57] tick: 776125
+[03:17:57] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:17:58] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:17:58] tick: 777125
+[03:17:59] tick: 778125
+[03:18:00] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:00] tick: 779125
+[03:18:01] nodetable: size=1
+[03:18:01] tick: 780125
+[03:18:02] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:02] tick: 781125
+[03:18:02] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:18:03] tick: 782125
+[03:18:04] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:04] tick: 783125
+[03:18:05] tick: 784125
+[03:18:06] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:06] nodetable: size=1
+[03:18:06] tick: 785125
+[03:18:07] tick: 786125
+[03:18:07] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:18:08] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:08] tick: 787125
+[03:18:09] tick: 788125
+[03:18:10] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:10] tick: 789125
+[03:18:11] nodetable: size=1
+[03:18:11] tick: 790125
+[03:18:12] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:12] tick: 791125
+[03:18:12] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:18:13] tick: 792125
+[03:18:14] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:14] tick: 793125
+[03:18:15] tick: 794125
+[03:18:16] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:16] nodetable: size=1
+[03:18:16] tick: 795125
+[03:18:17] tick: 796125
+[03:18:17] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:18:18] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:18] tick: 797125
+[03:18:19] tick: 798125
+[03:18:20] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:20] tick: 799125
+[03:18:21] nodetable: size=1
+[03:18:21] tick: 800125
+[03:18:22] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:22] tick: 801125
+[03:18:22] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:18:23] tick: 802125
+[03:18:24] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:24] tick: 803125
+[03:18:24] SELF_POS: updated reason=MAX_SILENCE lat_e7=374700000 lon_e7=-1220800000 d=0.00 dt=90000
+[03:18:24] pkt tx t_ms=803532 type=CORE seq=26
+[03:18:25] pkt tx t_ms=803706 type=TAIL1 seq=27 core_seq=26
+[03:18:25] tick: 804125
+[03:18:26] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:26] nodetable: size=1
+[03:18:26] tick: 805125
+[03:18:27] tick: 806125
+[03:18:27] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:18:28] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:28] tick: 807125
+[03:18:29] tick: 808125
+[03:18:30] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:30] tick: 809125
+[03:18:31] nodetable: size=1
+[03:18:31] tick: 810125
+[03:18:32] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:32] tick: 811125
+[03:18:32] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:18:33] tick: 812125
+[03:18:34] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:34] tick: 813125
+[03:18:35] tick: 814125
+[03:18:36] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:36] nodetable: size=1
+[03:18:36] tick: 815125
+[03:18:37] tick: 816125
+[03:18:37] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:18:38] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:38] tick: 817125
+[03:18:39] tick: 818125
+[03:18:40] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:40] tick: 819125
+[03:18:41] nodetable: size=1
+[03:18:41] tick: 820125
+[03:18:42] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:42] tick: 821125
+[03:18:42] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:18:43] tick: 822125
+[03:18:44] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:44] tick: 823125
+[03:18:45] tick: 824125
+[03:18:46] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:46] nodetable: size=1
+[03:18:46] tick: 825125
+[03:18:47] tick: 826125
+[03:18:47] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:18:48] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:48] tick: 827125
+[03:18:49] tick: 828125
+[03:18:50] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:50] tick: 829125
+[03:18:51] nodetable: size=1
+[03:18:51] tick: 830125
+[03:18:52] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:52] tick: 831125
+[03:18:52] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:18:53] tick: 832125
+[03:18:54] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:54] tick: 833125
+[03:18:55] tick: 834125
+[03:18:56] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:56] nodetable: size=1
+[03:18:56] tick: 835125
+[03:18:57] tick: 836125
+[03:18:57] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:18:58] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:18:58] tick: 837125
+[03:18:59] tick: 838125
+[03:19:00] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:00] tick: 839125
+[03:19:01] nodetable: size=1
+[03:19:01] tick: 840125
+[03:19:02] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:02] tick: 841125
+[03:19:02] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:19:03] tick: 842125
+[03:19:04] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:04] tick: 843125
+[03:19:05] tick: 844125
+[03:19:06] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:06] nodetable: size=1
+[03:19:06] tick: 845125
+[03:19:07] tick: 846125
+[03:19:07] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:19:08] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:08] tick: 847125
+[03:19:09] tick: 848125
+[03:19:10] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:10] tick: 849125
+[03:19:11] nodetable: size=1
+[03:19:11] tick: 850125
+[03:19:12] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:12] tick: 851125
+[03:19:12] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:19:13] tick: 852125
+[03:19:14] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:14] tick: 853125
+[03:19:15] tick: 854125
+[03:19:16] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:16] nodetable: size=1
+[03:19:16] tick: 855125
+[03:19:17] tick: 856125
+[03:19:17] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:19:18] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:18] tick: 857125
+[03:19:19] tick: 858125
+[03:19:20] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:20] tick: 859125
+[03:19:21] nodetable: size=1
+[03:19:21] tick: 860125
+[03:19:22] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:22] tick: 861125
+[03:19:22] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:19:23] tick: 862125
+[03:19:24] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:24] tick: 863125
+[03:19:25] tick: 864125
+[03:19:26] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:26] nodetable: size=1
+[03:19:26] tick: 865125
+[03:19:27] tick: 866125
+[03:19:27] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:19:28] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:28] tick: 867125
+[03:19:29] tick: 868125
+[03:19:30] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:30] tick: 869125
+[03:19:31] nodetable: size=1
+[03:19:31] tick: 870125
+[03:19:32] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:32] tick: 871125
+[03:19:32] GNSS override: FIX lat_e7=374700000 lon_e7=-1220800000
+[03:19:33] tick: 872125
+[03:19:34] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:34] tick: 873125
+[03:19:35] tick: 874125
+[03:19:36] GNSS_UBX rx=37818 ok=45 bad=0 last=45812 fix=FIX_3D lat=572670958 lon=395272135
+[03:19:36] nodetable: size=1
+[03:19:36] tick: 875125
+[03:19:37] tick: 876125

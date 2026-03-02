@@ -1,0 +1,153 @@
+E220 boot: repair failed (read failed)
+[   631][E][Preferences.cpp:202] putUInt(): nvs_set_u32 fail: role_silence_10s KEY_TOO_LONG
+Phase B: role=0 profile=0 source=persisted
+Applied: interval_s=18 maxSilence10s=9 channel=1 (role=0 radio=0) cadence=regis
+=== Node identity ===
+full_id_u64: 0x00003CDC756F23BC
+full_id_mac: 3CDC756F23BC
+short_id: 0168
+GNSS_UBX rx=1 ok=0 bad=0 last=0 fix=NO_FIX lat=0 lon=0
+OK; instrumentation on
+GNSS_UBX hint=NMEA (parser expects UBX NAV-PVT)
+pkt tx t_ms=1298 type=TAIL2 seq=1 core_seq=0
+tick: 1298
+pkt tx t_ms=1778 type=INFO seq=2 core_seq=0
+GNSS: FIX acquired
+SELF_POS: updated reason=FIRST_FIX lat_e7=572545079 lon_e7=395349300 d=0.00 dt=0
+pkt tx t_ms=2050 type=TAIL2 seq=3 core_seq=0
+tick: 2298
+pkt tx t_ms=2306 type=INFO seq=4 core_seq=0
+pkt tx t_ms=2479 type=TAIL2 seq=5 core_seq=0
+pkt tx t_ms=2558 type=INFO seq=6 core_seq=0
+pkt tx t_ms=2879 type=TAIL2 seq=7 core_seq=0
+GNSS_UBX rx=1954 ok=1 bad=0 last=1944 fix=FIX_3D lat=572545079 lon=395349300
+pkt tx t_ms=3007 type=INFO seq=8 core_seq=0
+pkt tx t_ms=3209 type=TAIL2 seq=9 core_seq=0
+tick: 3298
+pkt tx t_ms=3402 type=INFO seq=10 core_seq=0
+pkt tx t_ms=3600 type=TAIL2 seq=11 core_seq=0
+pkt tx t_ms=3835 type=INFO seq=12 core_seq=0
+pkt tx t_ms=4044 type=TAIL2 seq=13 core_seq=0
+pkt tx t_ms=4276 type=INFO seq=14 core_seq=0
+tick: 4298
+pkt tx t_ms=4410 type=TAIL2 seq=15 core_seq=0
+pkt tx t_ms=4519 type=INFO seq=16 core_seq=0
+pkt tx t_ms=4843 type=TAIL2 seq=17 core_seq=0
+pkt tx t_ms=4902 type=INFO seq=18 core_seq=0
+GNSS_UBX rx=3687 ok=3 bad=0 last=3946 fix=FIX_3D lat=572545981 lon=395341861
+nodetable: size=1
+pkt tx t_ms=5126 type=TAIL2 seq=19 core_seq=0
+pkt tx t_ms=5275 type=INFO seq=20 core_seq=0
+tick: 5401
+pkt tx t_ms=5646 type=TAIL2 seq=21 core_seq=0
+pkt tx t_ms=5755 type=INFO seq=22 core_seq=0
+pkt tx t_ms=5782 type=TAIL2 seq=23 core_seq=0
+pkt tx t_ms=6211 type=INFO seq=24 core_seq=0
+pkt tx t_ms=6283 type=TAIL2 seq=25 core_seq=0
+tick: 6401
+pkt tx t_ms=6615 type=INFO seq=26 core_seq=0
+pkt tx t_ms=6789 type=TAIL2 seq=27 core_seq=0
+pkt tx t_ms=7039 type=INFO seq=28 core_seq=0
+GNSS_UBX rx=5585 ok=6 bad=0 last=6945 fix=FIX_3D lat=572547957 lon=395329891
+pkt tx t_ms=7133 type=TAIL2 seq=29 core_seq=0
+pkt tx t_ms=7354 type=INFO seq=30 core_seq=0
+tick: 7401
+pkt tx t_ms=7567 type=TAIL2 seq=31 core_seq=0
+pkt tx t_ms=7854 type=INFO seq=32 core_seq=0
+pkt tx t_ms=8103 type=TAIL2 seq=33 core_seq=0
+pkt tx t_ms=8191 type=INFO seq=34 core_seq=0
+pkt tx t_ms=8318 type=TAIL2 seq=35 core_seq=0
+tick: 8401
+pkt tx t_ms=8489 type=INFO seq=36 core_seq=0
+pkt tx t_ms=8754 type=TAIL2 seq=37 core_seq=0
+pkt tx t_ms=8895 type=INFO seq=38 core_seq=0
+GNSS_UBX rx=7365 ok=8 bad=0 last=8988 fix=FIX_3D lat=572550292 lon=395320841
+pkt tx t_ms=9183 type=TAIL2 seq=39 core_seq=0
+pkt tx t_ms=9315 type=INFO seq=40 core_seq=0
+tick: 9401
+pkt tx t_ms=9566 type=TAIL2 seq=41 core_seq=0
+pkt tx t_ms=9728 type=INFO seq=42 core_seq=0
+pkt tx t_ms=9985 type=TAIL2 seq=43 core_seq=0
+nodetable: size=1
+pkt tx t_ms=10081 type=INFO seq=44 core_seq=0
+pkt tx t_ms=10363 type=TAIL2 seq=45 core_seq=0
+tick: 10401
+pkt tx t_ms=10517 type=INFO seq=46 core_seq=0
+pkt tx t_ms=10660 type=TAIL2 seq=47 core_seq=0
+pkt tx t_ms=10887 type=INFO seq=48 core_seq=0
+pkt tx t_ms=11017 type=TAIL2 seq=49 core_seq=0
+GNSS_UBX rx=9015 ok=10 bad=0 last=10954 fix=FIX_3D lat=572553016 lon=395312753
+pkt tx t_ms=11114 type=INFO seq=50 core_seq=0
+tick: 11401
+pkt tx t_ms=11432 type=TAIL2 seq=51 core_seq=0
+pkt tx t_ms=11556 type=INFO seq=52 core_seq=0
+pkt tx t_ms=11657 type=TAIL2 seq=53 core_seq=0
+pkt tx t_ms=11920 type=INFO seq=54 core_seq=0
+pkt tx t_ms=12081 type=TAIL2 seq=55 core_seq=0
+pkt tx t_ms=12197 type=INFO seq=56 core_seq=0
+tick: 12401
+pkt tx t_ms=12447 type=TAIL2 seq=57 core_seq=0
+pkt tx t_ms=12480 type=INFO seq=58 core_seq=0
+pkt tx t_ms=12812 type=TAIL2 seq=59 core_seq=0
+pkt tx t_ms=12898 type=INFO seq=60 core_seq=0
+pkt tx t_ms=13042 type=TAIL2 seq=61 core_seq=0
+GNSS_UBX rx=10759 ok=12 bad=0 last=13022 fix=FIX_3D lat=572556115 lon=395305643
+pkt tx t_ms=13298 type=INFO seq=62 core_seq=0
+tick: 13401
+pkt tx t_ms=13406 type=TAIL2 seq=63 core_seq=0
+pkt tx t_ms=13464 type=INFO seq=64 core_seq=0
+pkt tx t_ms=13782 type=TAIL2 seq=65 core_seq=0
+pkt tx t_ms=13817 type=INFO seq=66 core_seq=0
+pkt tx t_ms=14220 type=TAIL2 seq=67 core_seq=0
+tick: 14401
+pkt tx t_ms=14428 type=INFO seq=68 core_seq=0
+pkt tx t_ms=14526 type=TAIL2 seq=69 core_seq=0
+pkt tx t_ms=14745 type=INFO seq=70 core_seq=0
+pkt tx t_ms=14770 type=TAIL2 seq=71 core_seq=0
+nodetable: size=1
+GNSS_UBX rx=12433 ok=14 bad=0 last=15050 fix=FIX_3D lat=572559484 lon=395298429
+pkt tx t_ms=15192 type=INFO seq=72 core_seq=0
+tick: 15401
+pkt tx t_ms=15423 type=TAIL2 seq=73 core_seq=0
+pkt tx t_ms=15488 type=INFO seq=74 core_seq=0
+pkt tx t_ms=15761 type=TAIL2 seq=75 core_seq=0
+pkt tx t_ms=15969 type=INFO seq=76 core_seq=0
+pkt tx t_ms=16098 type=TAIL2 seq=77 core_seq=0
+pkt tx t_ms=16151 type=INFO seq=78 core_seq=0
+tick: 16401
+pkt tx t_ms=16450 type=TAIL2 seq=79 core_seq=0
+pkt tx t_ms=16650 type=INFO seq=80 core_seq=0
+pkt tx t_ms=16927 type=TAIL2 seq=81 core_seq=0
+GNSS_UBX rx=14097 ok=16 bad=0 last=16947 fix=FIX_3D lat=572564120 lon=395291716
+pkt tx t_ms=17077 type=INFO seq=82 core_seq=0
+pkt tx t_ms=17185 type=TAIL2 seq=83 core_seq=0
+tick: 17401
+pkt tx t_ms=17588 type=INFO seq=84 core_seq=0
+pkt tx t_ms=17637 type=TAIL2 seq=85 core_seq=0
+pkt tx t_ms=17839 type=INFO seq=86 core_seq=0
+pkt tx t_ms=18065 type=TAIL2 seq=87 core_seq=0
+pkt tx t_ms=18198 type=INFO seq=88 core_seq=0
+tick: 18401
+pkt tx t_ms=18526 type=TAIL2 seq=89 core_seq=0
+pkt tx t_ms=18668 type=INFO seq=90 core_seq=0
+pkt tx t_ms=18819 type=TAIL2 seq=91 core_seq=0
+GNSS_UBX rx=15856 ok=18 bad=0 last=18982 fix=FIX_3D lat=572571472 lon=395287528
+pkt tx t_ms=19066 type=INFO seq=92 core_seq=0
+pkt tx t_ms=19214 type=TAIL2 seq=93 core_seq=0
+tick: 19401
+pkt tx t_ms=19507 type=INFO seq=94 core_seq=0
+pkt tx t_ms=19627 type=TAIL2 seq=95 core_seq=0
+pkt tx t_ms=19869 type=INFO seq=96 core_seq=0
+pkt tx t_ms=20007 type=TAIL2 seq=97 core_seq=0
+nodetable: size=1
+pkt tx t_ms=20130 type=INFO seq=98 core_seq=0
+pkt tx t_ms=20342 type=TAIL2 seq=99 core_seq=0
+tick: 20401
+pkt tx t_ms=20507 type=INFO seq=100 core_seq=0
+pkt tx t_ms=20835 type=TAIL2 seq=101 core_seq=0
+SELF_POS: updated reason=DISTANCE lat_e7=572576287 lon_e7=395281201 d=536.82 dt=19005
+pkt tx t_ms=21060 type=INFO seq=102 core_seq=0
+GNSS_UBX rx=17627 ok=20 bad=0 last=20949 fix=FIX_3D lat=572576287 lon=395281201
+pkt tx t_ms=21202 type=CORE seq=103
+tick: 21401
+pkt tx t_ms=21471 type=TAIL1 seq=104 core_seq=205
