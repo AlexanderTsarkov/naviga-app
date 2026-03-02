@@ -184,7 +184,8 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
   }
 
   // ── Operational (0x04) formation ─────────────────────────────────────────
-  if (telemetry.has_battery || telemetry.has_uptime) {
+  // Guard matches Core/Alive: only enqueue when cadence interval or silence deadline is due.
+  if ((time_for_min || time_for_silence) && (telemetry.has_battery || telemetry.has_uptime)) {
     const uint16_t op_seq = next_seq16();
     protocol::Tail2Fields op{};
     op.node_id         = self_fields.node_id;
@@ -202,7 +203,8 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
   }
 
   // ── Informative (0x05) formation ─────────────────────────────────────────
-  if (telemetry.has_max_silence || telemetry.has_hw_profile || telemetry.has_fw_version) {
+  // Guard matches Core/Alive: only enqueue when cadence interval or silence deadline is due.
+  if ((time_for_min || time_for_silence) && (telemetry.has_max_silence || telemetry.has_hw_profile || telemetry.has_fw_version)) {
     const uint16_t info_seq = next_seq16();
     protocol::InfoFields info{};
     info.node_id         = self_fields.node_id;
