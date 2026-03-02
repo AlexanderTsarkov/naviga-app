@@ -16,11 +16,21 @@ constexpr byte kExpectedRssiEnable = RSSI_ENABLED;
 constexpr byte kExpectedLbtEnable = 0;  // OFF — policy: sense unsupported, jitter-only.
 constexpr byte kExpectedSubPacketSetting = SPS_200_00;
 constexpr byte kExpectedRssiAmbientNoise = RSSI_AMBIENT_NOISE_ENABLED;  // Align with RSSI byte ON.
+constexpr byte kExpectedAirDataRate = AIR_DATA_RATE_000_24;  // 2.4 kbps — OOTB v1-A radio profile 0.
+constexpr byte kExpectedAddressHigh = 0x00;  // Broadcast address: all nodes share ADDH=0, ADDL=0.
+constexpr byte kExpectedAddressLow  = 0x00;
+constexpr byte kExpectedChannel     = 0x01;  // Channel 1 = 410.125 MHz (E220-400T30D, base 410 MHz).
+constexpr byte kExpectedFixedTx     = FT_TRANSPARENT_TRANSMISSION;  // Transparent: receive all on same channel.
 
 // Returns true if critical fields of cfg match expected values.
 bool critical_params_match(const Configuration& cfg) {
   return cfg.SPED.uartBaudRate == kExpectedUartBaudRate &&
          cfg.SPED.uartParity == kExpectedUartParity &&
+         cfg.SPED.airDataRate == kExpectedAirDataRate &&
+         cfg.ADDH == kExpectedAddressHigh &&
+         cfg.ADDL == kExpectedAddressLow &&
+         cfg.CHAN == kExpectedChannel &&
+         cfg.TRANSMISSION_MODE.fixedTransmission == kExpectedFixedTx &&
          cfg.TRANSMISSION_MODE.enableRSSI == kExpectedRssiEnable &&
          cfg.TRANSMISSION_MODE.enableLBT == kExpectedLbtEnable &&
          cfg.OPTION.subPacketSetting == kExpectedSubPacketSetting &&
@@ -31,6 +41,11 @@ bool critical_params_match(const Configuration& cfg) {
 void apply_expected_critical(Configuration* cfg) {
   cfg->SPED.uartBaudRate = kExpectedUartBaudRate;
   cfg->SPED.uartParity = kExpectedUartParity;
+  cfg->SPED.airDataRate = kExpectedAirDataRate;
+  cfg->ADDH = kExpectedAddressHigh;
+  cfg->ADDL = kExpectedAddressLow;
+  cfg->CHAN = kExpectedChannel;
+  cfg->TRANSMISSION_MODE.fixedTransmission = kExpectedFixedTx;
   cfg->TRANSMISSION_MODE.enableRSSI = kExpectedRssiEnable;
   cfg->TRANSMISSION_MODE.enableLBT = kExpectedLbtEnable;
   cfg->OPTION.subPacketSetting = kExpectedSubPacketSetting;
@@ -55,6 +70,11 @@ void describe_mismatch(const Configuration& current, char* out, size_t out_len) 
   };
   if (current.SPED.uartBaudRate != kExpectedUartBaudRate) append("baud");
   if (current.SPED.uartParity != kExpectedUartParity) append("parity");
+  if (current.SPED.airDataRate != kExpectedAirDataRate) append("air_rate");
+  if (current.ADDH != kExpectedAddressHigh) append("addh");
+  if (current.ADDL != kExpectedAddressLow) append("addl");
+  if (current.CHAN != kExpectedChannel) append("chan");
+  if (current.TRANSMISSION_MODE.fixedTransmission != kExpectedFixedTx) append("fixed_tx");
   if (current.TRANSMISSION_MODE.enableRSSI != kExpectedRssiEnable) append("rssi");
   if (current.TRANSMISSION_MODE.enableLBT != kExpectedLbtEnable) append("lbt");
   if (current.OPTION.subPacketSetting != kExpectedSubPacketSetting) append("subpkt");
@@ -109,7 +129,7 @@ bool E220Radio::begin() {
   // Mismatch: repair once (apply expected critical, write, re-read, verify).
   describe_mismatch(*cfg, last_boot_message_, kBootMessageLen);
   apply_expected_critical(cfg);
-  ResponseStatus write_status = radio_.setConfiguration(*cfg, WRITE_CFG_PWR_DWN_LOSE);
+  ResponseStatus write_status = radio_.setConfiguration(*cfg, WRITE_CFG_PWR_DWN_SAVE);
   config.close();
 
   if (write_status.code != E220_SUCCESS) {
@@ -169,24 +189,30 @@ bool E220Radio::recv(uint8_t* out, size_t max_len, size_t* out_len) {
     return false;
   }
 
-  ResponseStructContainer response = rssi_enabled_
-                                         ? radio_.receiveMessageRSSI(static_cast<uint8_t>(max_len))
-                                         : radio_.receiveMessage(static_cast<uint8_t>(max_len));
-  if (response.status.code != E220_SUCCESS || !response.data) {
-    if (response.data) {
-      response.close();
-    }
+  // Use the String-based receiveMessage() which reads until the UART buffer is drained
+  // (no fixed-size requirement). receiveMessage(size) fails with DATA_SIZE_NOT_MATCH
+  // when the actual frame is shorter than the requested size.
+  ResponseContainer response = rssi_enabled_
+                                   ? radio_.receiveMessageRSSI()
+                                   : radio_.receiveMessage();
+  if (response.status.code != E220_SUCCESS) {
     *out_len = 0;
     return false;
   }
 
-  const size_t copy_len = max_len;
-  std::memcpy(out, response.data, copy_len);
-  *out_len = copy_len;
+  const String& data = response.data;
+  const size_t n = static_cast<size_t>(data.length());
+  if (n == 0 || n > max_len) {
+    *out_len = 0;
+    return false;
+  }
+
+  std::memcpy(out, data.c_str(), n);
+  *out_len = n;
+
   if (rssi_enabled_) {
     last_rssi_dbm_ = static_cast<int8_t>(response.rssi);
   }
-  response.close();
   return true;
 }
 
