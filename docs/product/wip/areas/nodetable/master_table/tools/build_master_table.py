@@ -54,7 +54,66 @@ FIELDS_HEADERS = [
     "threshold_rule",
     "staleness_ttl_hint",
     "notes",
+    "producer_status",
+    "source",
 ]
+
+# Best-effort defaults for producer_status (Implemented | Stubbed | Planned) and source (HW | Derived | Injected | Config).
+# Applied to any row missing these keys; add "TODO: verify producer" in notes when uncertain.
+FIELD_DEFAULTS = {
+    "payloadVersion": ("Implemented", "Config"),
+    "node_id": ("Implemented", "HW"),
+    "seq16": ("Implemented", "HW"),
+    "positionLat": ("Implemented", "HW"),
+    "positionLon": ("Implemented", "HW"),
+    "short_id": ("Implemented", "Derived"),
+    "is_self": ("Implemented", "Config"),
+    "pos_valid": ("Implemented", "HW"),
+    "short_id_collision": ("Implemented", "Derived"),
+    "pos_age_s": ("Implemented", "HW"),
+    "last_rx_rssi": ("Implemented", "Injected"),
+    "last_seen_ms": ("Implemented", "Injected"),
+    "last_seen_age_s": ("Implemented", "Derived"),
+    "is_grey": ("Implemented", "Derived"),
+    "in_use": ("Implemented", "Derived"),
+    "ref_core_seq16": ("Implemented", "HW"),
+    "posFlags": ("Implemented", "HW"),
+    "sats": ("Implemented", "HW"),
+    "pos_sats": ("Planned", "Derived"),
+    "pos_quality16": ("Planned", "HW"),
+    "fix_type": ("Planned", "HW"),
+    "pos_accuracy_bucket": ("Planned", "Derived"),
+    "pos_flags_small": ("Planned", "HW"),
+    "battery16": ("Planned", "HW"),
+    "battery_pct7": ("Planned", "HW"),
+    "charging1": ("Planned", "HW"),
+    "eta10m8": ("Planned", "Derived"),
+    "radio8": ("Planned", "HW"),
+    "tx_power_step_u4": ("Planned", "HW"),
+    "channel_throttle_step_u4": ("Planned", "Derived"),
+    "uptime10m_u8": ("Planned", "HW"),
+    "role_id": ("Planned", "Config"),
+    "batteryPercent": ("Implemented", "HW"),
+    "uptimeSec": ("Implemented", "HW"),
+    "maxSilence10s": ("Implemented", "Config"),
+    "hwProfileId": ("Implemented", "Config"),
+    "fwVersionId": ("Implemented", "Config"),
+    "aliveStatus": ("Stubbed", "HW"),
+    "last_applied_tail_ref_core_seq16": ("Implemented", "Derived"),
+    "lastRxAt": ("Implemented", "Injected"),
+    "snrLast": ("Planned", "Injected"),
+    "activityState": ("Implemented", "Derived"),
+    "PositionQuality": ("Implemented", "Derived"),
+    "networkName": ("Planned", "Config"),
+    "localAlias": ("Implemented", "Config"),
+    "last_direct_time": ("Planned", "Injected"),
+    "snr_direct": ("Planned", "Injected"),
+    "rssi_direct": ("Planned", "Injected"),
+    "hops": ("Planned", "Derived"),
+    "next_hop": ("Planned", "Derived"),
+    "pos_history": ("Planned", "HW"),
+    "role_params": ("Planned", "Config"),
+}
 
 # One row per field. Empty string = leave blank. Source: NodeEntry + BLE 26-byte + canon inventory + research/mesh future.
 # BLE record: 0-7 node_id, 8-9 short_id, 10 flags, 11-12 last_seen_age_s, 13-16 lat_e7, 17-20 lon_e7, 21-22 pos_age_s, 23 last_rx_rssi, 24-25 last_seq.
@@ -1629,6 +1688,13 @@ FIELDS_ROWS = [
         "notes": "Role-based delivery params; mesh concept. Non-goal v0.",
     },
 ]
+
+# Inject producer_status and source for implementation-scope tracking (every row must have both).
+for _r in FIELDS_ROWS:
+    key = _r.get("field_key", "")
+    ps, src = FIELD_DEFAULTS.get(key, ("Planned", "Derived"))
+    _r["producer_status"] = _r.get("producer_status", ps)
+    _r["source"] = _r.get("source", src)
 
 PACKETS_HEADERS = [
     "packet_name_canon",
