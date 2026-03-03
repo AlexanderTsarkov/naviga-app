@@ -197,7 +197,7 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
     uint8_t op_frame[protocol::kTail2FrameMax] = {};
     const size_t op_len = protocol::encode_tail2_frame(op, op_frame, sizeof(op_frame));
     if (op_len > 0) {
-      enqueue_slot(kSlotTail2, TxPriority::P2_BEST_EFFORT, TxBestEffortClass::BE_LOW,
+      enqueue_slot(kSlotTail2, TxPriority::P3_THROTTLED, TxBestEffortClass::BE_LOW,
                    PacketLogType::TAIL2, op_frame, op_len, now_ms, 0);
     }
   }
@@ -218,7 +218,7 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
     uint8_t info_frame[protocol::kInfoFrameMax] = {};
     const size_t info_len = protocol::encode_info_frame(info, info_frame, sizeof(info_frame));
     if (info_len > 0) {
-      enqueue_slot(kSlotInfo, TxPriority::P2_BEST_EFFORT, TxBestEffortClass::BE_LOW,
+      enqueue_slot(kSlotInfo, TxPriority::P3_THROTTLED, TxBestEffortClass::BE_LOW,
                    PacketLogType::INFO, info_frame, info_len, now_ms, 0);
     }
   }
@@ -235,8 +235,8 @@ bool BeaconLogic::dequeue_tx(uint8_t* out,
   *out_len = 0;
 
   // Selection order (lower value = higher priority in each dimension):
-  //   1. TxPriority (primary)
-  //   2. TxBestEffortClass be_rank (secondary; only meaningful within P2_BEST_EFFORT)
+  //   1. TxPriority (primary): P0 > P1 > P2 > P3
+  //   2. TxBestEffortClass be_rank (within P2 only; P3 slots use BE_LOW)
   //   3. replaced_count descending (most-starved first)
   //   4. created_at_ms ascending (oldest first)
   int best = -1;
@@ -287,7 +287,15 @@ bool BeaconLogic::dequeue_tx(uint8_t* out,
   if (out_type)     { *out_type     = slot.pkt_type; }
   if (out_core_seq) { *out_core_seq = slot.ref_core_seq16; }
 
-  // Clear the slot.
+  // Starvation increment: every other present slot was due but not sent this round.
+  const size_t best_u = static_cast<size_t>(best);
+  for (size_t i = 0; i < kTxSlotCount; ++i) {
+    if (i != best_u && slots_[i].present) {
+      slots_[i].replaced_count++;
+    }
+  }
+
+  // Clear the selected slot (reset on send).
   slot = TxSlot{};
 
   return true;

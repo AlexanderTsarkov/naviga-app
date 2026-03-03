@@ -17,6 +17,8 @@ This document defines the **v0.1 intent** for TX priority levels, coalesce keys,
 
 Within the same priority, packets are ordered by **expired_counter DESC** (see §3).
 
+**FW implementation:** Operational (0x04) and Informative (0x05) are enqueued at **P3_THROTTLED** in firmware; Core_Tail (Tail1) remains P2; Core_Pos and Alive remain P0. Selection order is P0 > P1 > P2 > P3. Implementation status: implemented in FW; tabletop validation deferred. [#364](https://github.com/AlexanderTsarkov/naviga-app/issues/364), [#365](https://github.com/AlexanderTsarkov/naviga-app/issues/365).
+
 ---
 
 ## 2) Coalesce key

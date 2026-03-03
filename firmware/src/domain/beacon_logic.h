@@ -35,56 +35,44 @@ enum class PacketLogType {
  *                       (e.g. Node_Session_*, Mesh_P0 relay control).
  *                       NOT used by any current OOTB packet type.
  *
- *   P2_BEST_EFFORT    — Best-effort delivery. Ordering within P2 is determined by
- *                       TxBestEffortClass (be_rank): BE_HIGH before BE_LOW, then
- *                       replaced_count (desc), then created_at_ms (asc).
- *                       Current users:
- *                         BE_HIGH — Node_OOTB_Core_Tail (0x03)
- *                         BE_LOW  — Node_OOTB_Operational (0x04), Node_OOTB_Informative (0x05)
+ *   P2_BEST_EFFORT    — Best-effort delivery. Ordering within P2 by replaced_count (desc),
+ *                       then created_at_ms (asc). Current user: Node_OOTB_Core_Tail (0x03).
  *
- *   P3_THROTTLED      — Opportunistic / channel-utilization-throttled traffic.
- *                       Sent only when no P0–P2 slots are pending and channel budget allows.
- *                       Reserved; no current packet type uses this level.
+ *   P3_THROTTLED      — Opportunistic; throttled first under load. Ordering within P3 by
+ *                       replaced_count (desc), then created_at_ms (asc).
+ *                       Current users: Node_OOTB_Operational (0x04), Node_OOTB_Informative (0x05).
  */
 enum class TxPriority : uint8_t {
   P0_MUST_PERIODIC = 0,  ///< Mandatory periodic; Core_Pos + I_Am_Alive.
   P1_SESSION_MESH  = 1,  ///< Reserved: future Session/Mesh control. NOT used today.
   P2_BEST_EFFORT   = 2,  ///< Best-effort; sub-ordered by TxBestEffortClass.
-  P3_THROTTLED     = 3,  ///< Reserved: throttled/opportunistic. NOT used today.
+  P3_THROTTLED     = 3,  ///< Opportunistic; Operational (0x04), Informative (0x05).
 };
 
 /**
  * Sub-priority within P2_BEST_EFFORT (lower value = higher sub-priority).
- *
- * Ordering within the same TxPriority::P2_BEST_EFFORT bucket:
- *   1. be_rank (BE_HIGH before BE_LOW)
- *   2. replaced_count descending (most-starved first)
- *   3. created_at_ms ascending (oldest first)
- *
- * Mapping:
- *   BE_HIGH — Node_OOTB_Core_Tail (0x03): time-bound to its Core sample; send before
- *             Operational/Informative to maximise Core_Tail usefulness.
- *   BE_LOW  — Node_OOTB_Operational (0x04), Node_OOTB_Informative (0x05): slow-state;
- *             fairness between them via replaced_count / created_at_ms.
+ * Only Core_Tail uses P2; be_rank is BE_HIGH for Tail1. P3 slots use BE_LOW for
+ * comparator tie-break (within P3, ordering is by replaced_count desc, created_at_ms asc).
  */
 enum class TxBestEffortClass : uint8_t {
-  BE_HIGH = 0,  ///< Core_Tail (0x03).
-  BE_LOW  = 1,  ///< Operational (0x04), Informative (0x05).
+  BE_HIGH = 0,  ///< Core_Tail (0x03) in P2.
+  BE_LOW  = 1,  ///< Used for P3 slots in comparator (same rank within P3).
 };
 
 /**
  * One pending TX frame slot.
  *
- * Slots are keyed by packet type (one slot per type). Replacement increments
- * replaced_count and preserves created_at_ms so fairness accounting is correct.
+ * Slots are keyed by packet type (one slot per type). replaced_count is the
+ * hybrid expired_counter: +1 on replacement, +1 when starved (due but not sent),
+ * reset when slot is sent (cleared), preserved across replacement.
  */
 struct TxSlot {
   bool     present        = false;
   TxPriority priority     = TxPriority::P2_BEST_EFFORT;
-  TxBestEffortClass be_rank = TxBestEffortClass::BE_LOW;  ///< Sub-priority within P2_BEST_EFFORT.
+  TxBestEffortClass be_rank = TxBestEffortClass::BE_LOW;  ///< P2: BE_HIGH for Tail1; P3: BE_LOW.
   PacketLogType pkt_type  = PacketLogType::CORE;
   uint32_t created_at_ms  = 0;   ///< Set when slot first becomes present; preserved on replace.
-  uint32_t replaced_count = 0;   ///< Incremented each time slot is replaced before being sent.
+  uint32_t replaced_count = 0;   ///< expired_counter: +1 replace, +1 starved, reset on send.
   uint16_t ref_core_seq16 = 0;   ///< For TAIL1 only: the Core_Pos seq16 this tail supplements.
   uint8_t  frame[protocol::kMaxFrameSize] = {};
   size_t   frame_len = 0;
