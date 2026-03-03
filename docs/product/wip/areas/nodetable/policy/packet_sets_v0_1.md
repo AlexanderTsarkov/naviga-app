@@ -50,18 +50,18 @@ The following v0 canon layouts were read from the **existing contracts** (read-o
 
 | Source | Field(s) | Type / size | Notes |
 |--------|----------|-------------|--------|
-| [tail1_packet_encoding_v0.md](../../areas/nodetable/contract/tail1_packet_encoding_v0.md) §3 | ref_core_seq16 | uint16 LE, 2 B | Core linkage key. |
-| [tail1_packet_encoding_v0.md](../../areas/nodetable/contract/tail1_packet_encoding_v0.md) §3.2 | posFlags | uint8, 1 B | Bit 0 = position valid; 1–7 reserved. |
-| [tail1_packet_encoding_v0.md](../../areas/nodetable/contract/tail1_packet_encoding_v0.md) §3.2 | sats | uint8, 1 B | Satellite count; 0 = not present. |
-| [tail2_packet_encoding_v0.md](../../areas/nodetable/contract/tail2_packet_encoding_v0.md) §3.2 | batteryPercent | uint8, 1 B | 0–100; 0xFF = not present. |
-| [tail2_packet_encoding_v0.md](../../areas/nodetable/contract/tail2_packet_encoding_v0.md) §3.2 | uptimeSec | uint32 LE, 4 B | 0xFFFFFFFF = not present. |
-| [info_packet_encoding_v0.md](../../areas/nodetable/contract/info_packet_encoding_v0.md) §3.2 | maxSilence10s | uint8, 1 B | 0x00 = absent. |
-| [info_packet_encoding_v0.md](../../areas/nodetable/contract/info_packet_encoding_v0.md) §3.2 | **hwProfileId** | **uint16 LE, 2 B** | 0xFFFF = not present. |
-| [info_packet_encoding_v0.md](../../areas/nodetable/contract/info_packet_encoding_v0.md) §3.2 | **fwVersionId** | **uint16 LE, 2 B** | 0xFFFF = not present. |
+| [tail1_packet_encoding_v0.md](../../../../areas/nodetable/contract/tail1_packet_encoding_v0.md) §3 | ref_core_seq16 | uint16 LE, 2 B | Core linkage key. |
+| [tail1_packet_encoding_v0.md](../../../../areas/nodetable/contract/tail1_packet_encoding_v0.md) §3.2 | posFlags | uint8, 1 B | Bit 0 = position valid; 1–7 reserved. |
+| [tail1_packet_encoding_v0.md](../../../../areas/nodetable/contract/tail1_packet_encoding_v0.md) §3.2 | sats | uint8, 1 B | Satellite count; 0 = not present. |
+| [tail2_packet_encoding_v0.md](../../../../areas/nodetable/contract/tail2_packet_encoding_v0.md) §3.2 | batteryPercent | uint8, 1 B | 0–100; 0xFF = not present. |
+| [tail2_packet_encoding_v0.md](../../../../areas/nodetable/contract/tail2_packet_encoding_v0.md) §3.2 | uptimeSec | uint32 LE, 4 B | 0xFFFFFFFF = not present. |
+| [info_packet_encoding_v0.md](../../../../areas/nodetable/contract/info_packet_encoding_v0.md) §3.2 | maxSilence10s | uint8, 1 B | 0x00 = absent. |
+| [info_packet_encoding_v0.md](../../../../areas/nodetable/contract/info_packet_encoding_v0.md) §3.2 | **hwProfileId** | **uint16 LE, 2 B** | 0xFFFF = not present. |
+| [info_packet_encoding_v0.md](../../../../areas/nodetable/contract/info_packet_encoding_v0.md) §3.2 | **fwVersionId** | **uint16 LE, 2 B** | 0xFFFF = not present. |
 
 ### 4.2 CONFLICT: HW/FW field width (Informative)
 
-**Existing v0 canon:** `hwProfileId` and `fwVersionId` are **2 bytes each (uint16 LE)** in [info_packet_encoding_v0.md](../../areas/nodetable/contract/info_packet_encoding_v0.md) §3.2. Informative payload is 9 (common) + 1 + 2 + 2 = **14 bytes** max with these fields.
+**Existing v0 canon:** `hwProfileId` and `fwVersionId` are **2 bytes each (uint16 LE)** in [info_packet_encoding_v0.md](../../../../areas/nodetable/contract/info_packet_encoding_v0.md) §3.2. Informative payload is 9 (common) + 1 + 2 + 2 = **14 bytes** max with these fields.
 
 **v0.1 intent:** Node_Informative v0.1 adds `role_id` and keeps max_silence_10s + hw_profile_id + fw_version_id. **No silent change** to hw/fw width.
 
@@ -84,6 +84,6 @@ The following v0 canon layouts were read from the **existing contracts** (read-o
 ## 5) Related
 
 - [tx_priority_and_arbitration_v0_1.md](tx_priority_and_arbitration_v0_1.md) — P0–P3, coalesce_key, expired_counter.
-- [beacon_payload_encoding_v0.md](../../areas/nodetable/contract/beacon_payload_encoding_v0.md) — Canon payload layouts.
-- [tail1_packet_encoding_v0.md](../../areas/nodetable/contract/tail1_packet_encoding_v0.md), [tail2_packet_encoding_v0.md](../../areas/nodetable/contract/tail2_packet_encoding_v0.md), [info_packet_encoding_v0.md](../../areas/nodetable/contract/info_packet_encoding_v0.md) — Canon v0 contracts.
+- [beacon_payload_encoding_v0.md](../../../../areas/nodetable/contract/beacon_payload_encoding_v0.md) — Canon payload layouts.
+- [tail1_packet_encoding_v0.md](../../../../areas/nodetable/contract/tail1_packet_encoding_v0.md), [tail2_packet_encoding_v0.md](../../../../areas/nodetable/contract/tail2_packet_encoding_v0.md), [info_packet_encoding_v0.md](../../../../areas/nodetable/contract/info_packet_encoding_v0.md) — Canon v0 contracts.
 - [#351](https://github.com/AlexanderTsarkov/naviga-app/issues/351), [#352](https://github.com/AlexanderTsarkov/naviga-app/issues/352).

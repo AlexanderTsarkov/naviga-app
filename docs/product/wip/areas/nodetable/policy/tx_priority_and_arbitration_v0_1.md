@@ -43,7 +43,7 @@ Within the same priority, packets are ordered by **expired_counter DESC** (see Â
 
 ## 4) Relation to v0 canon
 
-- v0 canon ([field_cadence_v0](../policy/field_cadence_v0.md), [beacon_payload_encoding_v0](../../areas/nodetable/contract/beacon_payload_encoding_v0.md)) defines **what** is sent (Core / Tail-1 / Tail-2 / Informative) and byte layout. This doc defines **when** and **in what order** within a v0.1 TX policy.
+- v0 canon ([field_cadence_v0](field_cadence_v0.md), [beacon_payload_encoding_v0](../../../../areas/nodetable/contract/beacon_payload_encoding_v0.md)) defines **what** is sent (Core / Tail-1 / Tail-2 / Informative) and byte layout. This doc defines **when** and **in what order** within a v0.1 TX policy.
 - No change to on-air encoding or protocol; this is scheduler/queue policy only.
 
 ---
