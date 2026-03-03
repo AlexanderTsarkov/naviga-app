@@ -60,6 +60,10 @@ CSV files mirror the corresponding XLSX sheet: same headers and row count. They 
 | **threshold_rule** | e.g. "battery >=1% delta". |
 | **staleness_ttl_hint** | If implied by activity policy. |
 | **notes** | Free text, TODOs, open decisions. |
+| **producer_status** | Implementation scope: **Implemented** (field exists in firmware/code and is updated), **Stubbed** (placeholder/constant/override in current code), **Planned** (v0.1 doc/master table but no producer yet). Use as checklist for S03 producer work. |
+| **source** | Where the value comes from: **HW** (sensors/hardware, e.g. GNSS, battery), **Derived** (computed from other fields/policies), **Injected** (receiver-side, e.g. RSSI/SNR/lastRxAt), **Config** (user/profile/settings). |
+
+Together **producer_status** and **source** track implementation scope: e.g. Planned + HW means “v0.1 plans this field from hardware; producer not yet implemented”. Where uncertain, producer_status is set to Planned and notes may include “TODO: verify producer”.
 
 ---
 
