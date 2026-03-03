@@ -1,0 +1,6 @@
+packet_name_canon,legacy_name,purpose,max_payload_budget_by_profile,cadence_default,gating_rule,fields_included
+Alive,BEACON_ALIVE,"No-fix liveness; identity + seq16 only. Alive-bearing, non-position-bearing.",9–10 B payload,"when no fix, within maxSilence",alive when no fix,"payloadVersion, node_id, seq16, aliveStatus (optional)"
+Node_Core_Pos,BEACON_CORE,Minimal sample: WHO + WHERE + freshness. Core only with valid fix.,"LongDist 24, Default 32, Fast 40 (payload only)",every beacon tick when position valid,only with valid GNSS fix,"payloadVersion, node_id, seq16, positionLat, positionLon"
+Node_Core_Tail,BEACON_TAIL1,"Core-attached extension; qualifies one Core sample. Optional, loss-tolerant.",11–13 B payload,Every Tail-1 (when position valid),ref_core_seq16 must match lastCoreSeq,"payloadVersion, node_id, seq16, ref_core_seq16, posFlags (opt), sats (opt)"
+Node_Informative,BEACON_INFO,"Static/config: maxSilence, hwProfileId, fwVersionId. Optional, loss-tolerant.",9–14 B payload,on change + every 10 min,no CoreRef; MUST NOT send on every Operational,"payloadVersion, node_id, seq16, maxSilence10s (opt), hwProfileId (opt), fwVersionId (opt)"
+Node_Operational,BEACON_TAIL2,"Dynamic runtime: battery, uptime. Optional, loss-tolerant.",9–14 B payload,on change + at forced Core,no CoreRef,"payloadVersion, node_id, seq16, batteryPercent (opt), uptimeSec (opt)"

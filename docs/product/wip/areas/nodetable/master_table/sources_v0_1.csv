@@ -1,0 +1,19 @@
+path,description
+app/lib/features/connect/connect_controller.dart,NodeRecordV1; BleNodeTableParser.parsePage; 26-byte record offsets.
+docs/product/areas/nodetable/contract/alive_packet_encoding_v0.md,Alive packet (0x02); no-fix liveness; seq16.
+docs/product/areas/nodetable/contract/beacon_payload_encoding_v0.md,Beacon byte layout; Common prefix; Core/Tail/Operational/Informative.
+docs/product/areas/nodetable/contract/info_packet_encoding_v0.md,"Informative (0x05); maxSilence10s, hwProfileId, fwVersionId."
+docs/product/areas/nodetable/contract/link-telemetry-minset-v0.md,"Link/Metrics & Telemetry minset; ownership, persisted vs derived."
+docs/product/areas/nodetable/contract/tail1_packet_encoding_v0.md,"Core_Tail (0x03); ref_core_seq16; posFlags, sats."
+docs/product/areas/nodetable/contract/tail2_packet_encoding_v0.md,"Operational (0x04); batteryPercent, uptimeSec."
+docs/product/areas/nodetable/index.md,"NodeTable hub; scope, invariants, contract/policy links."
+docs/product/areas/nodetable/policy/activity_state_v0.md,Activity/presence: Unknown/Active/Stale/Lost; thresholds.
+docs/product/areas/nodetable/policy/field_cadence_v0.md,Tiers A/B/C; cadences; degrade order; Operational vs Informative.
+docs/product/areas/nodetable/policy/link_metrics_v0.md,"Receiver-derived: rssiLast/snrLast, rssiRecent/snrRecent."
+docs/product/areas/nodetable/policy/nodetable_fields_inventory_v0.md,Fields inventory; coupling; Tier/cadence/placement worksheet.
+docs/product/areas/nodetable/policy/position_quality_v0.md,Position quality; Tail-1 posFlags/sats; PositionQuality derived.
+docs/product/naviga_mesh_protocol_concept_v1_4.md,"Mesh concept; last_direct_time, pos_history, role params (future)."
+docs/product/wip/areas/nodetable/research/meshastic-nodetable.md,"Meshtastic NodeDB categories; transferability; hops_away, next_hop, last_heard."
+docs/product/wip/areas/nodetable/research/naviga-current-state.md,BLE 26-byte record layout; NodeRecordV1; write/read paths.
+firmware/src/domain/node_table.cpp,get_page/get_snapshot_page BLE layout; upsert_remote; apply_tail1/tail2/info.
+firmware/src/domain/node_table.h,NodeEntry struct; NodeTable class; kRecordBytes=26.
