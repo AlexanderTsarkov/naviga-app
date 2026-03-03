@@ -196,19 +196,19 @@ The firmware TX queue assigns each pending packet type a **priority class**. At 
 |-------|-----------|---------|----------------------|
 | **P0** | `P0_MUST_PERIODIC` | Mandatory periodic. Must not be starved. Drives liveness and position. | `Node_OOTB_Core_Pos` (0x01), `Node_OOTB_I_Am_Alive` (0x02) |
 | **P1** | `P1_SESSION_MESH` | **Reserved.** Future Session/Mesh control packets (e.g. `Node_Session_*`, Mesh relay control). NOT used by any current OOTB packet type. | *(none today)* |
-| **P2** | `P2_BEST_EFFORT` | Best-effort delivery. Sub-ordered by `TxBestEffortClass` (see below). | `Node_OOTB_Core_Tail` (0x03), `Node_OOTB_Operational` (0x04), `Node_OOTB_Informative` (0x05) |
-| **P3** | `P3_THROTTLED` | **Reserved.** Opportunistic / channel-utilization-throttled traffic. Sent only when no P0–P2 slots are pending and channel budget allows. | *(none today)* |
+| **P2** | `P2_BEST_EFFORT` | Best-effort delivery. Sub-ordered by `TxBestEffortClass` (see below). | `Node_OOTB_Core_Tail` (0x03) |
+| **P3** | `P3_THROTTLED` | Opportunistic / channel-utilization-throttled. Sent when no P0–P2 slots are pending and channel budget allows. | `Node_OOTB_Operational` (0x04), `Node_OOTB_Informative` (0x05) |
 
-> **Current OOTB packets use P0 and P2 only.** P1 is reserved for future Session/Mesh control packets. P3 is reserved for throttled opportunistic traffic.
+> **Current OOTB packets use P0 (Core_Pos, Alive), P2 (Core_Tail), and P3 (Operational, Informative).** P1 is reserved for future Session/Mesh control packets. Implementation: [#365](https://github.com/AlexanderTsarkov/naviga-app/issues/365); tabletop validation deferred.
 
 #### Best-effort sub-priority (`TxBestEffortClass`)
 
-Within `P2_BEST_EFFORT`, slots are further ordered by `be_rank`:
+Within `P2_BEST_EFFORT` only (Core_Tail); P3 slots are not sub-ranked by `be_rank`:
 
 | `be_rank` | Code name | Packet types | Rationale |
 |-----------|-----------|--------------|-----------|
-| **BE_HIGH** | `BE_HIGH` | `Node_OOTB_Core_Tail` (0x03) | Time-bound to its Core sample; send before Operational/Informative to maximise Core_Tail usefulness. |
-| **BE_LOW** | `BE_LOW` | `Node_OOTB_Operational` (0x04), `Node_OOTB_Informative` (0x05) | Slow-state; equal sub-priority; fairness via `replaced_count` / `created_at_ms`. |
+| **BE_HIGH** | `BE_HIGH` | `Node_OOTB_Core_Tail` (0x03) | Time-bound to its Core sample; P2 so it is sent before P3 (Operational/Informative). |
+| *(P3)* | — | `Node_OOTB_Operational` (0x04), `Node_OOTB_Informative` (0x05) | P3_THROTTLED; fairness via `replaced_count` / `created_at_ms`. |
 
 #### Full selection order (dequeue)
 
@@ -232,9 +232,9 @@ The priority classes map to the delivery tiers in [field_cadence_v0.md](../produ
 |-----------------------|-----------------|
 | Tier A (Core/Alive) | P0_MUST_PERIODIC |
 | Tier B (Core_Tail) | P2_BEST_EFFORT / BE_HIGH |
-| Tier C (Operational, Informative) | P2_BEST_EFFORT / BE_LOW |
+| Tier C (Operational, Informative) | P3_THROTTLED |
 
-The degrade-under-load order in field_cadence_v0 §4 (keep Tier A, reduce Tier B, drop Tier C first) is enforced by this priority + be_rank ordering.
+The degrade-under-load order in field_cadence_v0 §4 (keep Tier A, reduce Tier B, drop Tier C first) is enforced by this priority ordering (P0 > P2 > P3).
 
 ---
 

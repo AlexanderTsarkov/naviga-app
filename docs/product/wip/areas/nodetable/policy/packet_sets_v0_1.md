@@ -72,7 +72,7 @@ The following v0 canon layouts were read from the **existing contracts** (read-o
 | **Option 1** | Keep **u16** for hw_profile_id and fw_version_id in Informative v0.1. Payload size and LoRa step thresholds remain as in v0. No mapping table. |
 | **Option 2** | Introduce **compact u8 aliases** for v0.1 only (e.g. hw_profile_id_u8, fw_version_id_u8) with a **mapping table** from registry to u8. Wire format would then differ from v0; requires explicit contract update and migration path. |
 
-**Action:** Choose Option 1 or Option 2 in the PR / issue; add a TODO checkbox. Do **not** implement a width change without an explicit decision.
+**Decided:** Keep **hwProfileId** and **fwVersionId** as **uint16 LE (2 B each)** in Informative layout. Option 1. Conflict closed. [#351](https://github.com/AlexanderTsarkov/naviga-app/issues/351), [#364](https://github.com/AlexanderTsarkov/naviga-app/issues/364).
 
 ### 4.3 Naming and supersession (Tail-1 / position quality)
 
@@ -81,7 +81,13 @@ The following v0 canon layouts were read from the **existing contracts** (read-o
 
 ---
 
-## 5) Related
+## 5) Implementation (FW alignment)
+
+Firmware matches this policy: **Core_Pos** and **Alive** use P0; **Node_Core_Tail** (Tail1) uses P2; **Node_Operational** and **Node_Informative** use P3. The hybrid **expired_counter** is implemented as `replaced_count` in the TX queue: +1 on replacement by same coalesce_key, +1 when due/eligible but not sent (starvation), reset on send, preserved across replacement. Intra-priority ordering uses `replaced_count` DESC. Implementation status: implemented in FW; tabletop validation deferred. [#364](https://github.com/AlexanderTsarkov/naviga-app/issues/364), [#365](https://github.com/AlexanderTsarkov/naviga-app/issues/365).
+
+---
+
+## 6) Related
 
 - [tx_priority_and_arbitration_v0_1.md](tx_priority_and_arbitration_v0_1.md) — P0–P3, coalesce_key, expired_counter.
 - [beacon_payload_encoding_v0.md](../../../../areas/nodetable/contract/beacon_payload_encoding_v0.md) — Canon payload layouts.

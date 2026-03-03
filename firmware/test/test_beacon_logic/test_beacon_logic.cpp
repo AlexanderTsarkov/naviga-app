@@ -1339,7 +1339,7 @@ void test_txq_dequeue_empty_returns_false() {
 }
 
 void test_txq_dequeue_core_before_operational() {
-  // Core (P0) must be dequeued before Operational (P2).
+  // Core (P0) must be dequeued before Operational (P3).
   BeaconLogic logic;
   logic.set_min_interval_ms(1000);
   logic.set_max_silence_ms(30000);
@@ -1369,7 +1369,7 @@ void test_txq_dequeue_core_before_operational() {
 }
 
 void test_txq_dequeue_tail1_before_operational() {
-  // Tail-1 (P2/BE_HIGH) must be dequeued before Operational (P2/BE_LOW).
+  // Tail-1 (P2) must be dequeued before Operational (P3).
   BeaconLogic logic;
   logic.set_min_interval_ms(1000);
   logic.set_max_silence_ms(30000);
@@ -1389,7 +1389,7 @@ void test_txq_dequeue_tail1_before_operational() {
   logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
   TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));
 
-  // Now Tail-1 (P1) and Operational (P2) remain. Tail-1 should be next.
+  // Now Tail-1 (P2) and Operational (P3) remain. Tail-1 should be next.
   TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);
   TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
 
@@ -1399,7 +1399,7 @@ void test_txq_dequeue_tail1_before_operational() {
 }
 
 void test_txq_fairness_higher_replaced_count_wins() {
-  // Within same priority (P2), the slot with higher replaced_count is dequeued first.
+  // Within same priority (P3), the slot with higher replaced_count is dequeued first.
   BeaconLogic logic;
   logic.set_min_interval_ms(1000);   // cadence due at t=1000, 2000, 3000
   logic.set_max_silence_ms(120000);
@@ -1414,6 +1414,8 @@ void test_txq_fairness_higher_replaced_count_wins() {
   logic.update_tx_queue(1000, self, telem_op, false);  // time_for_min=true
   TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
   TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotTail2).replaced_count);
+  TEST_ASSERT_EQUAL(static_cast<int>(TxPriority::P3_THROTTLED),
+                    static_cast<int>(logic.slot(kSlotTail2).priority));
 
   // Enqueue Informative once (replaced_count=0).
   SelfTelemetry telem_info{};
@@ -1428,7 +1430,7 @@ void test_txq_fairness_higher_replaced_count_wins() {
   logic.update_tx_queue(3000, self, telem_op, false);  // time_for_min=true
   TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotTail2).replaced_count);
 
-  // Both P2 slots present. Operational has replaced_count=1, Info has replaced_count=0.
+  // Both P3 slots present. Operational has replaced_count=1, Info has replaced_count=0.
   // Operational should be dequeued first (higher replaced_count = more starved).
   uint8_t buf[65] = {};
   size_t out_len = 0;
@@ -1442,7 +1444,7 @@ void test_txq_fairness_higher_replaced_count_wins() {
 }
 
 void test_txq_fairness_older_created_at_wins_on_tie() {
-  // Within same priority and same replaced_count, older created_at_ms wins.
+  // Within same priority (P3) and same replaced_count, older created_at_ms wins.
   BeaconLogic logic;
   logic.set_min_interval_ms(1000);   // cadence due at t=1000, 2000
   logic.set_max_silence_ms(120000);
@@ -1462,7 +1464,7 @@ void test_txq_fairness_older_created_at_wins_on_tie() {
   telem_info.max_silence_10s = 9;
   logic.update_tx_queue(2000, self, telem_info, false);  // time_for_min=true
 
-  // Both replaced_count=0, same priority. Operational (older) should win.
+  // Both replaced_count=0, same priority (P3). Operational (older) should win.
   uint8_t buf[65] = {};
   size_t out_len = 0;
   PacketLogType ptype = PacketLogType::INFO;
@@ -1685,9 +1687,8 @@ void test_txq_p1_never_assigned_in_formation() {
   }
 }
 
-void test_txq_be_high_beats_be_low_within_p2() {
-  // Within P2_BEST_EFFORT, Core_Tail (BE_HIGH) must be dequeued before
-  // Operational (BE_LOW) and Informative (BE_LOW), regardless of creation order.
+void test_txq_p2_tail1_before_p3_operational_informative() {
+  // Core_Tail (P2) must be dequeued before Operational (P3) and Informative (P3).
   BeaconLogic logic;
   logic.set_min_interval_ms(500);    // cadence due at t=500 for Op/Info
   logic.set_max_silence_ms(120000);
@@ -1695,7 +1696,7 @@ void test_txq_be_high_beats_be_low_within_p2() {
   const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
   GeoBeaconFields self = make_self_fields(node_id, true);
 
-  // Enqueue Operational and Informative first (older created_at_ms).
+  // Enqueue Operational and Informative first (P3).
   SelfTelemetry telem{};
   telem.has_battery     = true;
   telem.battery_percent = 90;
@@ -1704,24 +1705,20 @@ void test_txq_be_high_beats_be_low_within_p2() {
   logic.update_tx_queue(500, self, telem, false);  // time_for_min=true
   TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
   TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
+  TEST_ASSERT_EQUAL(static_cast<int>(TxPriority::P3_THROTTLED),
+                    static_cast<int>(logic.slot(kSlotTail2).priority));
+  TEST_ASSERT_EQUAL(static_cast<int>(TxPriority::P3_THROTTLED),
+                    static_cast<int>(logic.slot(kSlotInfo).priority));
   TEST_ASSERT_FALSE(logic.slot(kSlotTail1).present);
 
-  // Now enqueue Core_Tail directly by triggering a Core formation.
-  // Use a fresh logic instance to isolate; instead, manually verify be_rank.
-  // Verify the slot's be_rank directly.
-  TEST_ASSERT_EQUAL(static_cast<int>(TxBestEffortClass::BE_LOW),
-                    static_cast<int>(logic.slot(kSlotTail2).be_rank));
-  TEST_ASSERT_EQUAL(static_cast<int>(TxBestEffortClass::BE_LOW),
-                    static_cast<int>(logic.slot(kSlotInfo).be_rank));
-
-  // Now also enqueue a Core (and thus Core_Tail) at t=1000.
+  // Now enqueue Core (and thus Core_Tail) at t=1000.
   logic.set_min_interval_ms(1000);
   logic.set_max_silence_ms(30000);
   SelfTelemetry telem2{};
   logic.update_tx_queue(1000, self, telem2, true);
   TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);
-  TEST_ASSERT_EQUAL(static_cast<int>(TxBestEffortClass::BE_HIGH),
-                    static_cast<int>(logic.slot(kSlotTail1).be_rank));
+  TEST_ASSERT_EQUAL(static_cast<int>(TxPriority::P2_BEST_EFFORT),
+                    static_cast<int>(logic.slot(kSlotTail1).priority));
 
   // Dequeue Core (P0) first.
   uint8_t buf[65] = {};
@@ -1730,14 +1727,39 @@ void test_txq_be_high_beats_be_low_within_p2() {
   logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
   TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));
 
-  // Next: Core_Tail (P2/BE_HIGH) even though Operational/Info have older created_at_ms.
+  // Next: Core_Tail (P2) even though Operational/Info (P3) have older created_at_ms.
   logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
   TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL1), static_cast<int>(ptype));
 }
 
+void test_txq_starvation_increments_replaced_count() {
+  // When we dequeue one slot, every other present slot gets +1 replaced_count (starvation).
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(30000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.has_battery = true;
+  telem.battery_percent = 90;
+
+  logic.update_tx_queue(1000, self, telem, true);
+  TEST_ASSERT_TRUE(logic.slot(kSlotCore).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotTail2).replaced_count);
+
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  logic.dequeue_tx(buf, sizeof(buf), &out_len);
+  // Core was dequeued; Tail2 was present but not sent → starvation +1.
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotTail2).replaced_count);
+}
+
 void test_txq_priority_ordering_p0_beats_all() {
-  // Verify full ordering: P0 > P2/BE_HIGH > P2/BE_LOW with all 5 slots present.
-  // P1 and P3 are reserved and not assigned by formation.
+  // Verify full ordering: P0 > P2 > P3 with all 5 slots present.
+  // P1 is reserved; Operational and Informative are P3.
   BeaconLogic logic;
   logic.set_min_interval_ms(1000);
   logic.set_max_silence_ms(30000);
@@ -1754,9 +1776,13 @@ void test_txq_priority_ordering_p0_beats_all() {
   logic.update_tx_queue(1000, self, telem, true);
 
   TEST_ASSERT_TRUE(logic.slot(kSlotCore).present);   // P0
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);  // P2/BE_HIGH
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);  // P2/BE_LOW
-  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);   // P2/BE_LOW
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);   // P2
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);  // P3
+  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);   // P3
+  TEST_ASSERT_EQUAL(static_cast<int>(TxPriority::P3_THROTTLED),
+                    static_cast<int>(logic.slot(kSlotTail2).priority));
+  TEST_ASSERT_EQUAL(static_cast<int>(TxPriority::P3_THROTTLED),
+                    static_cast<int>(logic.slot(kSlotInfo).priority));
 
   uint8_t buf[65] = {};
   size_t out_len = 0;
@@ -1766,18 +1792,18 @@ void test_txq_priority_ordering_p0_beats_all() {
   logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
   TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));
 
-  // 2nd dequeue: Core_Tail (P2_BEST_EFFORT / BE_HIGH).
+  // 2nd dequeue: Core_Tail (P2_BEST_EFFORT).
   logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
   TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL1), static_cast<int>(ptype));
 
-  // 3rd and 4th dequeue: P2/BE_LOW (Operational and Informative, order by fairness).
+  // 3rd and 4th dequeue: P3 (Operational and Informative, order by fairness).
   logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
-  const bool third_is_be_low = (ptype == PacketLogType::TAIL2 || ptype == PacketLogType::INFO);
-  TEST_ASSERT_TRUE(third_is_be_low);
+  const bool third_is_p3 = (ptype == PacketLogType::TAIL2 || ptype == PacketLogType::INFO);
+  TEST_ASSERT_TRUE(third_is_p3);
 
   logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
-  const bool fourth_is_be_low = (ptype == PacketLogType::TAIL2 || ptype == PacketLogType::INFO);
-  TEST_ASSERT_TRUE(fourth_is_be_low);
+  const bool fourth_is_p3 = (ptype == PacketLogType::TAIL2 || ptype == PacketLogType::INFO);
+  TEST_ASSERT_TRUE(fourth_is_p3);
 
   TEST_ASSERT_FALSE(logic.has_pending_tx());
 }
@@ -1861,9 +1887,10 @@ int main(int argc, char** argv) {
   // TX queue: Informative replacement + dequeue (gap coverage)
   RUN_TEST(test_txq_informative_replacement_increments_count);
   RUN_TEST(test_txq_informative_dequeued_correctly);
-  // TX queue: P1 reserved; be_rank ordering; full priority ordering
+  // TX queue: P1 reserved; P2 vs P3 ordering; starvation; full priority ordering
   RUN_TEST(test_txq_p1_never_assigned_in_formation);
-  RUN_TEST(test_txq_be_high_beats_be_low_within_p2);
+  RUN_TEST(test_txq_p2_tail1_before_p3_operational_informative);
+  RUN_TEST(test_txq_starvation_increments_replaced_count);
   RUN_TEST(test_txq_priority_ordering_p0_beats_all);
   return UNITY_END();
 }
