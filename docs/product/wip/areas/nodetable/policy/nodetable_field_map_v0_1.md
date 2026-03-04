@@ -63,6 +63,7 @@ Field semantics and update rules are defined in WIP policy docs; the master tabl
 | [seq_ref_version_link_metrics_v0_1.md](seq_ref_version_link_metrics_v0_1.md) | seq16/ref_core_seq16, last_payload_version_seen, last_rx_rssi, snrLast. |
 | [packet_sets_v0_1.md](packet_sets_v0_1.md) | Packet types, payloads, eligibility. |
 | [tx_priority_and_arbitration_v0_1.md](tx_priority_and_arbitration_v0_1.md) | P0–P3, expired_counter, TX queue. |
+| [packet_to_nodetable_mapping_s03.md](packet_to_nodetable_mapping_s03.md) ([#358](https://github.com/AlexanderTsarkov/naviga-app/issues/358)) | Packet → NodeTable mapping (S03): which packet updates which fields, gating, presence (#371, #372). |
 
 ---
 
