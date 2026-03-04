@@ -15,6 +15,7 @@ docs/product/areas/nodetable/policy/position_quality_v0.md,Position quality; Tai
 docs/product/naviga_mesh_protocol_concept_v1_4.md,"Mesh concept; last_direct_time, pos_history, role params (future)."
 docs/product/wip/areas/nodetable/policy/identity_naming_persistence_eviction_v0_1.md,"S03 block: Identity, naming (node_name, authority rule), persistence/eviction scope; out-of-scope networkName, ownership."
 docs/product/wip/areas/nodetable/policy/packet_sets_v0_1.md,Packet sets v0.1; Core_Tail/Operational/Informative payloads; CONFLICT HW/FW width.
+docs/product/wip/areas/nodetable/policy/presence_and_age_semantics_v0_1.md,"S03 minimal presence/age: last_seen_ms, last_seen_age_s, is_stale (rename from is_grey), pos_age_s; expected_interval_s=max_silence_10s*10; grace_s TBD; self TX presence."
 docs/product/wip/areas/nodetable/policy/tx_priority_and_arbitration_v0_1.md,TX priority P0-P3; coalesce_key; hybrid expired_counter (WIP).
 docs/product/wip/areas/nodetable/research/meshastic-nodetable.md,"Meshtastic NodeDB categories; transferability; hops_away, next_hop, last_heard."
 docs/product/wip/areas/nodetable/research/naviga-current-state.md,BLE 26-byte record layout; NodeRecordV1; write/read paths.
