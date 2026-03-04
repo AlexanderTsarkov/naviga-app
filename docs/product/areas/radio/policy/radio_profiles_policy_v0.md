@@ -12,6 +12,7 @@ This policy defines the **v0/V1-A baseline** for radio profile model, persistenc
 - **Purpose:** Formally define the **RadioProfile** model (parameters), **profile persistence** (default vs user, current/previous pointers), **first boot** rule, **factory reset** semantics, and a minimal **conceptual API** (list / select / reset). This is the policy that guarantees a defined boot config and deterministic OOTB behavior.
 - **Scope (v0):** Default profile (immutable); user profiles (add/remove); persisted pointers (CurrentProfileId, optional PreviousProfileId); first boot and factory reset rules; no storage or wire format — only semantics.
 - **Explicit note:** This doc is the **V0/V1-A baseline** that makes OOTB deterministic. Implementation and UI consume this policy; OOTB/UI are not the source of truth for these rules.
+- **Product-level model and NVS schema (S03):** For product-level fields, pointer semantics, NVS key layout, and baseline vs runtime separation, see [radio_profiles_model_s03](../../../wip/areas/radio/policy/radio_profiles_model_s03.md) ([#382](https://github.com/AlexanderTsarkov/naviga-app/issues/382)).
 
 ---
 
