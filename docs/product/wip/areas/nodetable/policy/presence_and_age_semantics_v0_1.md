@@ -13,7 +13,7 @@ This document defines the **S03 minimal** presence and age model for NodeTable: 
 - **last_seen_ms:** Monotonic uptime (ms) of the last **presence event** for this entry. Single source of truth for “when we last had a presence signal” from this node.
 - **Presence event:**
   - **Remote entries:** RX-only updates (any accepted Node_* packet from that node updates last_seen_ms).
-  - **Self entry:** TX heartbeat updates are **allowed** (e.g. Core_Pos, Alive, or other presence-bearing TX) so that self does not appear stale in the UI when the node is transmitting but not receiving its own RX. Exact which TX counts as presence is implementation-defined; follow-up issue may align.
+  - **Self entry:** TX heartbeat updates are **allowed** so that self does not appear stale when the node is transmitting but not receiving its own RX. **Which self-originated TX events update self presence** is defined in §1.D below; see [#372](https://github.com/AlexanderTsarkov/naviga-app/issues/372).
 
 ### B) BLE exported (derived at snapshot time)
 
@@ -22,7 +22,30 @@ This document defines the **S03 minimal** presence and age model for NodeTable: 
 
 ### C) Position axis (independent from presence)
 
-- **pos_age_s:** Age of the last known **position** sample (seconds). Independent from presence; position freshness is a separate axis from “last heard from” presence.
+- **pos_age_s:** Age of the last known **position** sample (seconds). Independent from presence; position freshness is a separate axis from “last heard from” presence. **For self:** pos_age_s is updated **only** when a position-bearing packet is sent — i.e. **Node_Core_Pos** only. Alive is non-position-bearing; Core_Tail extends Core but does not carry new lat/lon; Operational/Informative do not carry position. See §1.D and [packets_v0_1.csv](../master_table/packets_v0_1.csv).
+
+### D) Self presence updates (TX) — S03 canonical rule [#372](https://github.com/AlexanderTsarkov/naviga-app/issues/372)
+
+Which **self-originated TX** events update **self** `last_seen_ms` (and thus keep self from appearing stale). Packet set per [NodeTable master table](../master_table/README.md) [packets_v0_1.csv](../master_table/packets_v0_1.csv); consistent with [ootb_autonomous_start_s03](../../firmware/policy/ootb_autonomous_start_s03.md) §5.
+
+**1) Packets that UPDATE self presence (self last_seen_ms):**
+
+- **Node_Alive** — Alive-bearing; satisfies liveness within maxSilence when no fix. Sent when no GNSS fix, within maxSilence.
+- **Node_Core_Pos** — Position-bearing; minimal WHO+WHERE sample. Sent when valid GNSS fix; every beacon tick when position valid.
+- **Node_Core_Tail** — **Counts as presence when sent**, because in S03 it is **always paired** with a Core (ref_core_seq16 matches lastCoreSeq; “Every Tail-1 (when position valid)” per packets_v0_1.csv). It meaningfully indicates recent position-related activity; therefore self TX of Core_Tail updates self last_seen_ms.
+
+**2) Packets that do NOT update self presence:**
+
+- **Node_Operational** — Dynamic runtime (battery, uptime); optional, loss-tolerant; cadence on-change + at forced Core. Does **not** serve as presence heartbeat; **must NOT** update self last_seen_ms.
+- **Node_Informative** — Static/config (maxSilence, hwProfileId, fwVersionId); optional; cadence on-change + every 10 min. **MUST NOT** send on every Operational; does **not** update self last_seen_ms.
+
+**3) Position freshness (pos_age_s) vs presence:**
+
+- **pos_age_s** for self is updated **only** when the node sends **Node_Core_Pos** (position-bearing). Alive, Core_Tail, Operational, and Informative do **not** update pos_age_s for self (Alive is non-position-bearing; Tail extends Core; Operational/Informative carry no position).
+
+**4) Interaction with is_stale and max_silence:**
+
+- The same **expected_interval_s** and **grace_s** formula (§2) applies to self: `is_stale = (last_seen_age_s > expected_interval_s + grace_s)`. Any **presence-bearing** TX (Alive, Core_Pos, or Core_Tail) updates self last_seen_ms and thus keeps self from going stale within the expected interval. max_silence semantics (node MUST send at least one alive-bearing packet within maxSilence) are satisfied by Alive or Core_Pos (and Core_Tail when sent with Core); Operational/Informative do not satisfy liveness.
 
 ---
 
@@ -67,5 +90,6 @@ The following are **not** promoted to S03 and remain WIP-only / policy-only:
 - [packet_sets_v0_1.md](packet_sets_v0_1.md), [tx_priority_and_arbitration_v0_1.md](tx_priority_and_arbitration_v0_1.md) — Packet and TX policy.
 - [field_cadence_v0](../../../../areas/nodetable/policy/field_cadence_v0.md) — Core/Alive cadence; expected_interval_s source (max_silence_10s).
 - [role_profiles_policy_v0](../../../../areas/domain/policy/role_profiles_policy_v0.md) — maxSilence10s per role; OOTB defaults.
-- [ootb_autonomous_start_s03](../../firmware/policy/ootb_autonomous_start_s03.md) — OOTB trigger/sequence; is_stale/last_seen_age_s derived from presence.
+- [ootb_autonomous_start_s03](../../firmware/policy/ootb_autonomous_start_s03.md) — OOTB trigger/sequence; is_stale/last_seen_age_s derived from presence; packet set and when we start sending what (§5).
+- [NodeTable master table](../master_table/README.md) [packets_v0_1.csv](../master_table/packets_v0_1.csv) — packet set used for self presence rules (§1.D).
 - Master table: field_key **is_stale** (supersedes is_grey); **last_seen_age_s**, **pos_age_s** as S03 minimal fields. grace_s defined in this doc §2.
