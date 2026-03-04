@@ -120,7 +120,7 @@ Implementation ref: `firmware/src/platform/naviga_storage.cpp` (namespace `navig
 
 ### 7.1 OOTB autonomous start
 
-- After Phase A and Phase B, the device has: (1) radio configured with FACTORY default (channel 1, 2.4 k, 21 dBm), (2) role and radio profile pointers resolved (default if none persisted) and persisted for consistency. Phase C starts Alive/Beacon cadence using **provisioned** role and **provisioned** current profile. No UI or backend required for first comms. See [boot_pipeline_v0](../../../../areas/firmware/policy/boot_pipeline_v0.md) §5.
+- After Phase A and Phase B, the device has: (1) radio configured with FACTORY default (channel 1, 2.4 k, 21 dBm), (2) role and radio profile pointers resolved (default if none persisted) and persisted for consistency. Phase C starts Alive/Beacon cadence using **provisioned** role and **provisioned** current profile. No UI or backend required for first comms. See [boot_pipeline_v0](../../../../areas/firmware/policy/boot_pipeline_v0.md) §5. **Trigger/sequence/fallback and NodeTable effects:** [ootb_autonomous_start_s03.md](ootb_autonomous_start_s03.md) ([#354](https://github.com/AlexanderTsarkov/naviga-app/issues/354)).
 
 ### 7.2 NodeTable / telemetry (consumer pointers)
 
@@ -146,3 +146,4 @@ Implementation ref: `firmware/src/platform/naviga_storage.cpp` (namespace `navig
 | [e220_radio_profile_mapping_s03.md](../../radio/policy/e220_radio_profile_mapping_s03.md) ([#383](https://github.com/AlexanderTsarkov/naviga-app/issues/383)) | E220 UART mapping (channel, rate, tx power, RSSI/SNR). |
 | [tx_power_contract_s03.md](../../radio/policy/tx_power_contract_s03.md) ([#384](https://github.com/AlexanderTsarkov/naviga-app/issues/384)) | Baseline vs runtime vs override (reserved). |
 | [NodeTable master table](../../nodetable/master_table/README.md) | Consumer ref: fields_v0_1.csv, packets_v0_1.csv. |
+| [ootb_autonomous_start_s03.md](ootb_autonomous_start_s03.md) ([#354](https://github.com/AlexanderTsarkov/naviga-app/issues/354)) | OOTB autonomous start: trigger, sequence, fallback, when we start sending what, NodeTable effects. |
