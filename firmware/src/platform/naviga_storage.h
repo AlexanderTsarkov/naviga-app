@@ -1,8 +1,40 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 namespace naviga {
+
+// ── Radio profile (product-level, #382) ─────────────────────────────────────
+// Schema and semantics: docs/product/wip/areas/radio/policy/radio_profiles_model_s03.md
+
+/** Schema version for radio profile NVS keys (rprof_ver). */
+constexpr uint8_t kRadioProfileSchemaVersion = 1;
+
+/** Profile id 0 = FACTORY default (virtual, not stored in NVS). */
+constexpr uint32_t kRadioProfileIdFactoryDefault = 0;
+
+enum class RadioProfileKind : uint8_t {
+  FACTORY = 0,
+  USER = 1,
+};
+
+/**
+ * Product-level radio profile record (baseline only; runtime does not mutate this).
+ * Maps to NVS when kind == USER; FACTORY (id 0) is const in FW.
+ */
+struct RadioProfileRecord {
+  uint32_t profile_id = 0;
+  RadioProfileKind kind = RadioProfileKind::FACTORY;
+  uint8_t channel_slot = 1;
+  uint8_t rate_tier = 2;   // product step; adapter maps to air_rate / SF-BW
+  uint8_t tx_power_baseline_step = 0;  // product step 0 = MIN (21 dBm); OOTB uses MIN; adapter maps to module levels
+  static constexpr size_t kMaxLabelLen = 24;
+  char label[kMaxLabelLen] = {0};
+};
+
+/** Fill record with FACTORY default (id 0). Used in Phase A when no NVS profile is needed for OOTB. */
+void get_factory_default_radio_profile(RadioProfileRecord* out);
 
 /**
  * Persisted pointers for Phase B (boot_pipeline_v0) and provisioning (provisioning_interface_v0).
