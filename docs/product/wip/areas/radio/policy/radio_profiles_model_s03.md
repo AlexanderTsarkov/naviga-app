@@ -88,7 +88,7 @@ Existing implementation uses **prof_cur** and **prof_prev** in the same namespac
 
 ## 6) Mapping notes (adapter responsibility)
 
-Product-level fields are mapped to driver/module parameters by the **adapter** (E220 UART, or future SPI). This section is normative only as "what the product model is"; mapping details are in [#383](https://github.com/AlexanderTsarkov/naviga-app/issues/383) (UART) and future SPI spec.
+Product-level fields are mapped to driver/module parameters by the **adapter** (E220 UART, or future SPI). This section is normative only as "what the product model is"; mapping details are in [e220_radio_profile_mapping_s03.md](e220_radio_profile_mapping_s03.md) ([#383](https://github.com/AlexanderTsarkov/naviga-app/issues/383)) (UART) and future SPI spec.
 
 ### 6.1 E220 UART (now)
 
