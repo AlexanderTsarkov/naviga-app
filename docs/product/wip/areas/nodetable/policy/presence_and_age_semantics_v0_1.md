@@ -44,9 +44,15 @@ This document defines the **S03 minimal** presence and age model for NodeTable: 
 
 ---
 
-## 4) Scope note (WIP-only, not in minimal model)
+## 4) Not in S03 (scope exclusions)
 
-- **aliveStatus**, **activityState**, **PositionQuality** remain WIP-only / Planned or Derived and are **not** part of this S03 minimal presence model. No promotion to canon in this doc.
+The following are **not** promoted to S03 and remain WIP-only / policy-only:
+
+- **aliveStatus:** In Alive packet contract (optional 1 B) but **unused/stubbed** in S03 (not sent; not in NodeTable or BLE snapshot). No S03 behaviour depends on it.
+- **activityState:** Policy-only derived concept (Unknown/Active/Stale/Lost from activity_state_v0). Not implemented as an enum in FW or app; not on-air; not in BLE snapshot.
+- **PositionQuality:** Policy-only derived concept (position_quality_v0: Core + Tail-1 + age). Not implemented as a composite type; sent *components* are posFlags/sats in Tail-1.
+
+**S03 minimal presence model** is covered by: **is_stale**, **last_seen_age_s**, **pos_age_s**, and Tail-1 **posFlags** / **sats**. UI can rely on these for presence and position-quality display; no need for aliveStatus, activityState, or PositionQuality as first-class fields in S03.
 
 ---
 

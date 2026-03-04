@@ -99,12 +99,12 @@ FIELD_DEFAULTS = {
     "maxSilence10s": ("Implemented", "Config"),
     "hwProfileId": ("Implemented", "Config"),
     "fwVersionId": ("Implemented", "Config"),
-    "aliveStatus": ("Stubbed", "HW"),
+    "aliveStatus": ("Stubbed", "HW"),  # not promoted S03
     "last_applied_tail_ref_core_seq16": ("Implemented", "Derived"),
     "lastRxAt": ("Implemented", "Injected"),
     "snrLast": ("Planned", "Injected"),
-    "activityState": ("Implemented", "Derived"),
-    "PositionQuality": ("Implemented", "Derived"),
+    "activityState": ("Planned", "Derived"),  # not promoted S03
+    "PositionQuality": ("Planned", "Derived"),  # not promoted S03
     "networkName": ("Planned", "Config"),
     "node_name": ("Planned", "Config"),
     "localAlias": ("Implemented", "Config"),
@@ -1295,12 +1295,12 @@ FIELDS_ROWS = [
         "staleness_ttl_hint": "",
         "notes": "",
     },
-    # --- Alive ---
+    # --- Alive (not promoted to S03) ---
     {
         "field_key": "aliveStatus",
         "scope_class": "Core",
         "knowledge_category": "Activity",
-        "status": "Canon",
+        "status": "WIP",
         "owner": "NodeOwned",
         "in_node_entry_struct": "N",
         "node_entry_member": "",
@@ -1309,7 +1309,7 @@ FIELDS_ROWS = [
         "exported_over_ble": "N",
         "ble_record_offset": "",
         "ble_bytes": "",
-        "sent_on_air": "Y",
+        "sent_on_air": "N",
         "packet_name_canon": "Alive",
         "on_air_contract_ref": "alive_packet_encoding_v0 §3.2",
         "wire_bytes_fixed": "1",
@@ -1324,7 +1324,7 @@ FIELDS_ROWS = [
         "trigger_type": "periodic",
         "threshold_rule": "",
         "staleness_ttl_hint": "",
-        "notes": "Alive packet optional byte.",
+        "notes": "Not promoted to S03; unused/stubbed. Covered by minimal model (presence_and_age_semantics_v0_1).",
     },
     # --- Internal Tail-1 variant-2 ---
     {
@@ -1422,7 +1422,7 @@ FIELDS_ROWS = [
         "field_key": "activityState",
         "scope_class": "Derived",
         "knowledge_category": "Activity",
-        "status": "Canon",
+        "status": "WIP",
         "owner": "Derived",
         "in_node_entry_struct": "N",
         "node_entry_member": "",
@@ -1445,14 +1445,14 @@ FIELDS_ROWS = [
         "default_cadence": "derived on RX",
         "trigger_type": "",
         "threshold_rule": "T_active, T_stale params",
-        "staleness_ttl_hint": "TODO",
-        "notes": "",
+        "staleness_ttl_hint": "",
+        "notes": "Not promoted to S03; policy-only derived. Covered by minimal model (is_stale, last_seen_age_s; presence_and_age_semantics_v0_1).",
     },
     {
         "field_key": "PositionQuality",
         "scope_class": "Derived",
         "knowledge_category": "Position",
-        "status": "Canon",
+        "status": "WIP",
         "owner": "Derived",
         "in_node_entry_struct": "N",
         "node_entry_member": "",
@@ -1476,7 +1476,7 @@ FIELDS_ROWS = [
         "trigger_type": "",
         "threshold_rule": "",
         "staleness_ttl_hint": "",
-        "notes": "Derived; sent components posFlags, sats in Tail-1.",
+        "notes": "Not promoted to S03; policy-only derived. Covered by minimal model (pos_age_s, posFlags/sats; presence_and_age_semantics_v0_1).",
     },
     {
         "field_key": "networkName",
