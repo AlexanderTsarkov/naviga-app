@@ -128,3 +128,4 @@ On **any** accepted Node_* packet (Alive, Core_Pos, Core_Tail, Operational, Info
 | [tail2_packet_encoding_v0](../../../../areas/nodetable/contract/tail2_packet_encoding_v0.md) | Operational payload. |
 | [info_packet_encoding_v0](../../../../areas/nodetable/contract/info_packet_encoding_v0.md) | Informative payload. |
 | [nodetable_field_map_v0_1.md](nodetable_field_map_v0_1.md) | Field-level index for #352; master table as field truth. |
+| [gnss_tail_completeness_and_budgets_s03.md](../contract/gnss_tail_completeness_and_budgets_s03.md) ([#359](https://github.com/AlexanderTsarkov/naviga-app/issues/359)) | GNSS Tail semantics: pos_fix_type, pos_sats, pos_accuracy_bucket, pos_flags_small; Tail completeness; budgets; UI guidance. |
