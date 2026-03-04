@@ -147,3 +147,4 @@ Implementation ref: `firmware/src/platform/naviga_storage.cpp` (namespace `navig
 | [tx_power_contract_s03.md](../../radio/policy/tx_power_contract_s03.md) ([#384](https://github.com/AlexanderTsarkov/naviga-app/issues/384)) | Baseline vs runtime vs override (reserved). |
 | [NodeTable master table](../../nodetable/master_table/README.md) | Consumer ref: fields_v0_1.csv, packets_v0_1.csv. |
 | [ootb_autonomous_start_s03.md](ootb_autonomous_start_s03.md) ([#354](https://github.com/AlexanderTsarkov/naviga-app/issues/354)) | OOTB autonomous start: trigger, sequence, fallback, when we start sending what, NodeTable effects. |
+| [radio_user_settings_review_s03.md](../../radio/policy/radio_user_settings_review_s03.md) ([#356](https://github.com/AlexanderTsarkov/naviga-app/issues/356)) | Radio user settings review (S03): channel, rate tier, txPower step, profile model, Node_Operational. |
