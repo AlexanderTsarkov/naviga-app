@@ -13,10 +13,11 @@ This document is the **index/slice** for the S03 NodeTable scope. It consolidate
 
 ---
 
-## 2) Source of truth (links)
+## 2) Source of truth / Entry points
 
 | What | Location |
 |------|----------|
+| **Field-level entry** (master table index) | [policy/nodetable_field_map_v0_1.md](../policy/nodetable_field_map_v0_1.md) — single entry for #352; declares CSV/XLSX as field truth. |
 | Identity, naming, persistence, eviction | [policy/identity_naming_persistence_eviction_v0_1.md](../policy/identity_naming_persistence_eviction_v0_1.md) |
 | Presence and age (is_stale, last_seen_age_s, pos_age_s) | [policy/presence_and_age_semantics_v0_1.md](../policy/presence_and_age_semantics_v0_1.md) |
 | Seq, ref, payload version, link metrics | [policy/seq_ref_version_link_metrics_v0_1.md](../policy/seq_ref_version_link_metrics_v0_1.md) |
