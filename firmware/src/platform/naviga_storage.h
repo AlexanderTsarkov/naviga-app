@@ -28,7 +28,7 @@ struct RadioProfileRecord {
   RadioProfileKind kind = RadioProfileKind::FACTORY;
   uint8_t channel_slot = 1;
   uint8_t rate_tier = 2;   // product step; adapter maps to air_rate / SF-BW
-  uint8_t tx_power_baseline_step = 0;  // product step; adapter maps to module (E220: module default if not mapped)
+  uint8_t tx_power_baseline_step = 0;  // product step 0 = MIN (21 dBm); OOTB uses MIN; adapter maps to module levels
   static constexpr size_t kMaxLabelLen = 24;
   char label[kMaxLabelLen] = {0};
 };

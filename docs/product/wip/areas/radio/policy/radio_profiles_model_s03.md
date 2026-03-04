@@ -24,13 +24,15 @@ These fields are **product-level abstractions**. They are **not** SF/BW/CR or re
 | **profile_id** | uint32 (opaque id) | Stable identifier. 0 = FACTORY default; 1..n = user profiles. |
 | **kind** | enum | **FACTORY** = immutable, embedded in FW/product; **USER** = created/edited by user, stored in NVS. |
 | **label** | string (optional) | Human-readable name (e.g. "Home", "Long range"). Empty or omitted for FACTORY. |
-| **channel_slot** | uint8 | Logical channel slot (product-defined). Mapping to actual frequency is adapter-specific (e.g. E220 CHAN register). |
+| **channel_slot** | uint8 | Logical channel slot. **Range 0..83** (84 channels). Slot **0 reserved for dev/test**; FACTORY default uses **1**. Mapping to actual frequency is adapter-specific (e.g. E220 CHAN register). |
 | **rate_tier** | enum/step (uint8) | Air rate / modulation tier (product-defined step). Mapping to air_data_rate (E220) or SF/BW/CR (SPI) is adapter-specific. |
-| **tx_power_baseline_step** | enum/step (uint8) | TX power as product step (e.g. 0..4 for E220 steps 21/24/27/30/33 dBm). Mapping to module is adapter-specific; not all modules expose this via config (E220 UART: module default only in S03 unless product mapping added). |
+| **tx_power_baseline_step** | enum/step (uint8) | TX power as product step. **Step 0 = MIN** (minimum transmit power). OOTB FACTORY default MUST use step 0 once mapping is defined: E22-400T30D module default is 30 dBm; product requires OOTB at MIN (21 dBm). Mapping to module levels is adapter-specific (e.g. E220: 0→21, 1→24, 2→27, 3→30 dBm; T33D adds step 4→33). |
 
 **Baseline vs runtime:** The values above define the **profile baseline** (stored, user-editable for USER profiles). **Runtime** state (e.g. actual TX power read back from the module, or RSSI/SNR on RX) does **not** overwrite the stored baseline. Runtime is used for telemetry and display only; see [#384](https://github.com/AlexanderTsarkov/naviga-app/issues/384).
 
 **Backend hint (optional):** A profile may carry an optional **backend_hint** (e.g. E220_UART vs SPI) for mapping; if omitted, the active adapter is used. Prefer keeping mapping in the adapter layer and avoid storing backend_hint in NVS unless needed for multi-adapter products.
+
+**Backend capability note:** E22-400T30D has 4 TX power levels; E22-400T33D has 5 (additional 33 dBm). SPI backend step count and mapping are driver-defined. Adapter MUST map product step 0 to module MIN in all cases for OOTB.
 
 ---
 
@@ -90,9 +92,9 @@ Product-level fields are mapped to driver/module parameters by the **adapter** (
 
 ### 6.1 E220 UART (now)
 
-- **channel_slot** → E220 CHAN register (e.g. slot 1 → 411 MHz). One-to-one or small lookup table.
+- **channel_slot** → E220 CHAN register. Range 0..83; slot 0 reserved (dev/test); factory default = 1 (e.g. 411 MHz). One-to-one or small lookup table.
 - **rate_tier** → E220 air_data_rate (SPED bits [2:0]). E.g. tier 0 = 2.4 kbps (air_rate 2), tier 1 = 4.8 kbps (3). Normalization (min 2) applies in adapter.
-- **tx_power_baseline_step** → E220 does not expose TX power in UART config frame in current product mapping; document as **module default only** until product defines step mapping (e.g. 0..4 → 21/24/27/30/33). When mapping exists, adapter applies at boot; otherwise runtime telemetry may report "unknown" or module default.
+- **tx_power_baseline_step** → Product step 0 = MIN (21 dBm). OOTB MUST use step 0 once adapter mapping exists: E22-400T30D module default is 30 dBm, which is NOT acceptable for OOTB; adapter applies step 0 → 21 dBm. T30D: 4 levels (0..3); T33D: 5 levels (0..4). Mapping and application at boot are adapter responsibility; see [#383](https://github.com/AlexanderTsarkov/naviga-app/issues/383).
 - **RSSI:** Enabling RSSI append is **module-critical** (see [module_boot_config_v0](../../../areas/firmware/policy/module_boot_config_v0.md)); it affects **runtime** metrics (last_rx_rssi). Not a profile field.
 - **SNR:** E220 does not provide SNR; adapter/runtime use sentinel (e.g. NA) for SNR. See link metrics policy.
 

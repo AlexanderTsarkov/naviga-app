@@ -145,9 +145,9 @@ void get_factory_default_radio_profile(RadioProfileRecord* out) {
   *out = RadioProfileRecord{};
   out->profile_id = kRadioProfileIdFactoryDefault;
   out->kind = RadioProfileKind::FACTORY;
-  out->channel_slot = 1;
-  out->rate_tier = 2;   // 2.4 kbps product default; adapter maps to air_rate
-  out->tx_power_baseline_step = 0;  // product step; E220: module default if not mapped
+  out->channel_slot = 1;   // slot 0 reserved dev/test; 1 = factory default
+  out->rate_tier = 2;      // 2.4 kbps product default; adapter maps to air_rate
+  out->tx_power_baseline_step = 0;  // step 0 = MIN (21 dBm); OOTB uses MIN per product model
 }
 
 }  // namespace naviga
