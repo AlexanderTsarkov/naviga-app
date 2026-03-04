@@ -3,7 +3,7 @@
 **Status:** Canon (policy).  
 **Work Area:** Product Specs WIP · **Parent:** [#214](https://github.com/AlexanderTsarkov/naviga-app/issues/214) · **Umbrella:** [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 
-This policy defines the **v0 boot pipeline**: ordered phases from power-on to first radio comms (Alive/Beacon), with clear invariants per phase. It does not define UI, mesh/JOIN, or channel discovery; radio profile semantics are in [#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211) — this doc only references them.
+This policy defines the **v0 boot pipeline**: ordered phases from power-on to first radio comms (Alive/Beacon), with clear invariants per phase. It does not define UI, mesh/JOIN, or channel discovery; radio profile semantics are in [#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211) — this doc only references them. **S03 provisioning baseline:** [#353](https://github.com/AlexanderTsarkov/naviga-app/issues/353); hardware provisioning + boot placement: [#381](https://github.com/AlexanderTsarkov/naviga-app/issues/381). **Umbrella:** [#351](https://github.com/AlexanderTsarkov/naviga-app/issues/351).
 
 ---
 
@@ -22,19 +22,21 @@ This policy defines the **v0 boot pipeline**: ordered phases from power-on to fi
 
 ---
 
-## 3) Phase A: HW bring-up (module boot configs)
+## 3) Phase A: Hardware provisioning (module boot configs)
 
-- FW brings hardware modules (radio, GNSS, and any others required for comms) to the **required Naviga operating mode**.
-- **Strategy:** Where a module uses **one-time init**, it sets a "configured" state (e.g. persisted flag); **then on every boot** FW MUST **verify** that critical module config matches the expected state and **repair** (re-init or re-apply config) on mismatch. For **critical** module configs (parameters required for comms), verify-and-repair on boot is **required**; see [module_boot_config_v0](module_boot_config_v0.md) ([#215](https://github.com/AlexanderTsarkov/naviga-app/issues/215)) for which parameters are critical per module.
-- **Invariant by end of Phase A:** All modules needed for comms are in the correct state for Naviga. Critical configs are verified (and repaired if needed) every boot; one-time init alone is not sufficient unless explicitly documented per parameter elsewhere.
+- **Phase A = Hardware provisioning:** FW brings **GNSS** and **radio module** (and any other modules required for comms) to the **required Naviga operating mode**, including **verify-and-heal** per [module_boot_config_v0](module_boot_config_v0.md) ([#215](https://github.com/AlexanderTsarkov/naviga-app/issues/215)).
+- **Strategy:** For each module, FW MUST **verify** critical config on every boot and **repair** (re-init or re-apply config) on mismatch. One-time init alone is not sufficient unless explicitly documented per parameter in [module_boot_config_v0](module_boot_config_v0.md). See that doc for the verify/heal contract and failure behavior (RepairFailed must not brick the device; §5).
+- **OOTB invariant:** By end of Phase A, the **radio** MUST be configured for OOTB comms using the **FACTORY default RadioProfile**: channel, air-rate (modulation preset), and **tx power baseline** as defined by the product. This ensures the device can transmit and receive on first boot without any persisted profile or UI. User-selectable profiles and persistence are applied in Phase B; Phase A does not depend on NVS for radio operability.
+- **Invariant by end of Phase A:** All modules needed for comms are in the correct state for Naviga (or an observable fault state is set and best-effort continues; see [module_boot_config_v0](module_boot_config_v0.md) §4). Critical configs are verified (and repaired if needed) every boot.
 
 ---
 
-## 4) Phase B: Provision mandatory runtime settings
+## 4) Phase B: Role and profile selection + persistence (for rollback and future UI)
 
-- **Role provisioning:** If no persisted role exists → apply **default role** and persist. Role is required for comms (e.g. DOG_COLLAR vs HUMAN per [field_cadence_v0](../../nodetable/policy/field_cadence_v0.md) §6).
-- **RadioProfile provisioning:** Apply default/current/previous per [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)): first-boot rule (no persisted CurrentProfileId → apply default and persist), CurrentProfileId/PreviousProfileId semantics. Do not duplicate that policy here — only require that FW has **provisioned** a current profile (and optional previous) before Phase C.
-- **Invariant:** **Role** and **radio profile** (current) are **both** required for comms. OOTB MUST guarantee defaults exist so that "first comms" does not depend on UI or backend.
+- **Phase B = selection + persistence:** Phase B **selects** the active role and radio profile (default if none persisted) and **persists** default/current/previous pointers and records so that rollback and future UI/BLE can use them. **Persistence is not a prerequisite for OOTB working:** on first boot, Phase A has already applied the FACTORY default RadioProfile to the radio; Phase B ensures the in-memory and persisted state (pointers/records) are consistent for cadence, rollback, and later provisioning interface use.
+- **Role provisioning:** If no persisted role exists → apply **default role** and persist. Role is required for comms (e.g. cadence params per [field_cadence_v0](../../nodetable/policy/field_cadence_v0.md) §6).
+- **RadioProfile provisioning:** Apply default/current/previous per [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)): first-boot rule (no persisted CurrentProfileId → apply default and persist), CurrentProfileId/PreviousProfileId semantics. The **radio hardware** is already configured in Phase A with the FACTORY default; Phase B persists the logical "current" pointer/record for consistency and future UI.
+- **Invariant:** **Role** and **radio profile** (current) are **both** resolved for comms. OOTB MUST guarantee defaults exist so that "first comms" does not depend on UI or backend. Persistence supports rollback and future provisioning; it does not block first-boot OOTB.
 
 ---
 
@@ -67,7 +69,9 @@ By the time first radio comms (Alive or Beacon) are sent:
 
 ## 8) Related
 
-- **Radio profiles:** [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)).
+- **Module boot config (verify/heal, failure behavior):** [module_boot_config_v0](module_boot_config_v0.md) ([#215](https://github.com/AlexanderTsarkov/naviga-app/issues/215)) — Phase A hardware provisioning follows this doc; RepairFailed behavior §4.
+- **Radio profiles:** [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)); FACTORY default profile applied in Phase A for OOTB.
+- **Provisioning interface:** [provisioning_interface_v0](provisioning_interface_v0.md) ([#221](https://github.com/AlexanderTsarkov/naviga-app/issues/221)) — writes pointers/records that Phase B reads.
 - **Field cadence / first-fix:** [field_cadence_v0](../../nodetable/policy/field_cadence_v0.md) §2.1 ([PR #213](https://github.com/AlexanderTsarkov/naviga-app/pull/213)).
 - **Beacon / Alive encoding:** [beacon_payload_encoding_v0](../../nodetable/contract/beacon_payload_encoding_v0.md), [alive_packet_encoding_v0](../../nodetable/contract/alive_packet_encoding_v0.md) ([PR #205](https://github.com/AlexanderTsarkov/naviga-app/pull/205)).
-- **Module boot config (E220, GNSS):** [module_boot_config_v0](module_boot_config_v0.md) ([#215](https://github.com/AlexanderTsarkov/naviga-app/issues/215)).
+- **S03:** [#381](https://github.com/AlexanderTsarkov/naviga-app/issues/381) (hardware provisioning + boot placement), [#353](https://github.com/AlexanderTsarkov/naviga-app/issues/353) (epic), [#351](https://github.com/AlexanderTsarkov/naviga-app/issues/351) (umbrella).

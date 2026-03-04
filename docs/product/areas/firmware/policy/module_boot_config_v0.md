@@ -3,7 +3,7 @@
 **Status:** Canon (policy).  
 **Work Area:** Product Specs WIP · **Parent:** [#215](https://github.com/AlexanderTsarkov/naviga-app/issues/215) · **Umbrella:** [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 
-This policy defines **device-level** module boot configuration: parameters to set/verify on startup and the **boot strategy** (verify-and-repair vs one-time init) per module. **This is not user radio profile selection** — that is [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)). User profile (channel, modulation preset, txPower) is applied **after** module config; this doc covers the modem/GNSS/NFC/power **device state** required for predictable operation. Ordering of boot phases (when this runs) is in [boot_pipeline_v0](boot_pipeline_v0.md) ([#214](https://github.com/AlexanderTsarkov/naviga-app/issues/214)) Phase A.
+This policy defines **device-level** module boot configuration: parameters to set/verify on startup and the **boot strategy** (verify-and-repair vs one-time init) per module. Ordering of boot phases is in [boot_pipeline_v0](boot_pipeline_v0.md) ([#214](https://github.com/AlexanderTsarkov/naviga-app/issues/214)) — **Phase A = hardware provisioning** (this doc); Phase B = role/profile selection + persistence. **S03:** [#381](https://github.com/AlexanderTsarkov/naviga-app/issues/381), [#353](https://github.com/AlexanderTsarkov/naviga-app/issues/353), [#351](https://github.com/AlexanderTsarkov/naviga-app/issues/351). **Module-critical vs profile-applied:** Parameters that are **module-critical** (e.g. RSSI append, UART framing) are required for the module to operate correctly regardless of user choice. Parameters that are **profile-applied** (channel, rate tier, tx power baseline) are set from the **FACTORY default RadioProfile** in Phase A to achieve OOTB operability; user-selectable profiles (future UI/BLE) are applied via Phase B and [provisioning_interface_v0](provisioning_interface_v0.md). See §2 (E220) and §3 (GNSS) for the verify/heal contract; §5 for failure behavior.
 
 ---
 
@@ -16,6 +16,10 @@ This policy defines **device-level** module boot configuration: parameters to se
 ---
 
 ## 2) E220 / E22 modem boot config (device-level)
+
+**Verify/heal contract:** On every boot, FW **reads** the module configuration (getConfiguration). If **critical** parameters do not match the expected values (from FACTORY default profile where applicable), FW **applies** the correct values (setConfiguration, WRITE_CFG_PWR_DWN_SAVE) and **re-reads** to verify. Outcome is **Ok** (no change needed), **Repaired** (mismatch corrected), or **RepairFailed** (apply or verify failed). See §5 for behavior when RepairFailed.
+
+**Module-critical vs profile-applied:** **Module-critical** parameters are those required for the modem to function correctly regardless of user profile: UART baud/parity, RSSI enable, LBT, sub-packet setting, RSSI ambient. **Profile-applied** parameters are those that define OOTB operability and come from the **FACTORY default RadioProfile** (product-defined): **channel**, **air_data_rate** (rate tier), and **tx power baseline**. In S03 OOTB, only the FACTORY default profile is applied at boot; user profiles (future UI/BLE) are not applied in Phase A. Tx power baseline: where the module supports it via UART config, it MUST be set from the FACTORY default in Phase A; where the module does not expose tx power in config (e.g. E220 UART), document as "module default only" until product mapping exists.
 
 **Critical parameters (verify-and-repair every boot):** The following **MUST** be verified on every boot and repaired on mismatch: **Enable RSSI Byte**, **LBT Enable**, **UART baud/parity**, **air_data_rate (preset)**, **sub-packet**, **RSSI ambient/enable**, **channel**. All other parameters may use one-time init or init-on-change (see table).
 
@@ -57,9 +61,35 @@ The boot sequence for `E22Radio::begin(preset)` / `E220Radio::begin(preset)`:
 
 **Boot strategy summary (GNSS):** **Minimal verify-on-boot** — baud/protocol and responsiveness (that the link is usable); **repair on mismatch**. **Full config** (message set, rate, required outputs) on **first boot or when needed**; no concrete timing constants in this policy.
 
+**Verify/heal contract (GNSS):** FW opens the GNSS UART at product-defined baud, sends the required UBX config (e.g. enable NAV-PVT) each boot. **Verify** = at least one byte received within a timeout (link alive). If verify fails, FW may retry init/verify once. There is no readback of baud/protocol from the receiver; "repair" is re-send config and retry. Outcome: **Ok** (link responsive), **Repaired** (retry succeeded), or **RepairFailed** (link not responsive after retries). See §4 for RepairFailed behavior.
+
 ---
 
-## 4) NFC / power placeholders (TBD)
+## 4) Failure behavior (Ok / Repaired / RepairFailed)
+
+Embedded devices have no screen; the policy MUST define how failures are observable and that the device never bricks.
+
+**Outcomes:**
+
+| Outcome | Meaning |
+|--------|---------|
+| **Ok** | No repair needed; module config already matched expected state. |
+| **Repaired** | Mismatch was detected and successfully corrected; readback verify passed. |
+| **RepairFailed** | Apply failed, or readback verify failed after apply (e.g. module did not accept config). |
+
+**RepairFailed requirement:** **MUST NOT brick the device.** FW MUST continue best-effort: e.g. allow Phase B and Phase C to run so that the device may still participate on the air with whatever state the module is in, or degrade gracefully (e.g. radio comms disabled but diag available). The choice of "continue with degraded radio" vs "do not start comms" is implementation-defined but MUST be documented; in all cases the device MUST set an **observable fault state** so that diagnostics and future signaling can inform the user.
+
+**Observable fault state:** FW MUST set a **fault/diag flag or status** (e.g. boot_config_result = RepairFailed) that can be read by diagnostics, provisioning status, or BLE. This state MUST be available for **progressive signaling**:
+
+- **Now:** Logs and a diag field (e.g. status command, or field exposed to host). No protocol design required; only the requirement that the outcome is observable.
+- **Later:** Emergency or fault LED (product-defined), so that a user can see "something is wrong" without a phone.
+- **Later:** User-visible notification when the phone connects (e.g. "Radio config repair failed at boot"). No BLE protocol or UI design in this doc; only the requirement that the fault state can be used for such notification when the stack exists.
+
+This ensures that RepairFailed is never silent and that the product can evolve from log-only to LED to phone notification without a policy change.
+
+---
+
+## 5) NFC / power placeholders (TBD)
 
 The following are **explicitly TBD** to avoid silent gaps. No normative values in v0.
 
@@ -75,8 +105,10 @@ When defined, add parameter table and boot strategy per module; until then this 
 
 ---
 
-## 5) Related
+## 6) Related
 
-- **Boot pipeline (ordering):** [boot_pipeline_v0](boot_pipeline_v0.md) ([#214](https://github.com/AlexanderTsarkov/naviga-app/issues/214)) — Phase A uses this doc for "what to verify/repair."
-- **User radio profile (not this doc):** [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)) — channel, modulation preset, txPower are **user/profile** choices applied after module boot config.
+- **Boot pipeline (ordering):** [boot_pipeline_v0](boot_pipeline_v0.md) ([#214](https://github.com/AlexanderTsarkov/naviga-app/issues/214)) — Phase A = hardware provisioning using this doc; Phase B = role/profile persistence. OOTB invariant: Phase A applies FACTORY default RadioProfile (incl. tx power baseline).
+- **Radio profiles:** [radio_profiles_policy_v0](../../radio/policy/radio_profiles_policy_v0.md) ([#211](https://github.com/AlexanderTsarkov/naviga-app/issues/211)) — default vs user profiles; **FACTORY default** is the product's default applied in Phase A for OOTB; user/profile selection and persistence are Phase B and [provisioning_interface_v0](provisioning_interface_v0.md).
+- **Provisioning interface:** [provisioning_interface_v0](provisioning_interface_v0.md) ([#221](https://github.com/AlexanderTsarkov/naviga-app/issues/221)) — writes role/radio pointers and records; Phase B reads them.
 - **Beacon / encoding:** [beacon_payload_encoding_v0](../../nodetable/contract/beacon_payload_encoding_v0.md), [field_cadence_v0](../../nodetable/policy/field_cadence_v0.md).
+- **S03:** [#381](https://github.com/AlexanderTsarkov/naviga-app/issues/381) (hardware provisioning + boot placement), [#353](https://github.com/AlexanderTsarkov/naviga-app/issues/353) (epic), [#351](https://github.com/AlexanderTsarkov/naviga-app/issues/351) (umbrella).
