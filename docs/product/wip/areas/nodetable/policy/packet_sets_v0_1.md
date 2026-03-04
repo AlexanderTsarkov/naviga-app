@@ -4,6 +4,8 @@
 
 This document defines the **v0.1** packet sets and TX eligibility rules for Node_Core_Tail, Node_Operational, and Node_Informative. It extends the v0 canon layout intent with packed fields and eligibility; **canon v0 contracts remain normative** for existing wire formats. Any mismatch with v0 canon is called out in § Discovery and conflicts.
 
+**Identity & naming:** See [identity_naming_persistence_eviction_v0_1.md](identity_naming_persistence_eviction_v0_1.md) for the S03 block (node_id, is_self, short_id, short_id_collision, node_name, authority rule, persistence/eviction scope).
+
 ---
 
 ## 1) Node_Core_Tail v0.1

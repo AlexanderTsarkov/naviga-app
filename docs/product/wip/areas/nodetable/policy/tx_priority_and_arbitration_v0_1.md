@@ -52,6 +52,7 @@ Within the same priority, packets are ordered by **expired_counter DESC** (see �
 
 ## 5) Related
 
+- [identity_naming_persistence_eviction_v0_1.md](identity_naming_persistence_eviction_v0_1.md) — S03 Identity/Naming + Persistence/Eviction block (frozen).
 - [packet_sets_v0_1.md](packet_sets_v0_1.md) — Packet definitions v0.1 and eligibility rules.
 - [field_cadence_v0.md](field_cadence_v0.md) — Canon tiers and cadence.
 - [#351](https://github.com/AlexanderTsarkov/naviga-app/issues/351), [#352](https://github.com/AlexanderTsarkov/naviga-app/issues/352).
