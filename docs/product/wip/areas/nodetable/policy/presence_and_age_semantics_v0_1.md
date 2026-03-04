@@ -28,9 +28,14 @@ This document defines the **S03 minimal** presence and age model for NodeTable: 
 
 ## 2) Threshold source-of-truth
 
-- **expected_interval_s** = `max_silence_10s * 10`  
-  The node’s advertised **max_silence_10s** (from Node_Informative or config) is used as “I must be heard at least this often”; expected_interval_s (seconds) is derived from it. Single numeric source for “expected presence interval.”
-- **grace_s:** Hysteresis (seconds) to avoid literal timeout on jitter. **Value TBD;** document as constant or config. Follow-up issue: decide value and where it lives (FW / app / both).
+- **expected_interval_s** = `max_silence_10s * 10` (seconds).  
+  The node’s advertised **max_silence_10s** (from Node_Informative or role profile) is used as “I must be heard at least this often”; expected_interval_s is derived from it. Single numeric source for “expected presence interval.” See [role_profiles_policy_v0](../../../../areas/domain/policy/role_profiles_policy_v0.md) (maxSilence10s), [field_cadence_v0](../../../../areas/nodetable/policy/field_cadence_v0.md).
+- **grace_s** (seconds): Hysteresis to avoid false stale due to airtime/jitter; mandatory Core_Pos/Alive may arrive slightly late. **Canonical formula (FW-owned, not user-configurable):**
+  - `grace_s = clamp(3, 30, round(expected_interval_s * 0.10))`  
+  Units: seconds. Bounds: minimum 3 s, maximum 30 s. Derived from expected_interval_s only; embedded-first policy constant.
+- **is_stale** = `(last_seen_age_s > expected_interval_s + grace_s)`.
+
+**Why FW-owned:** grace_s is a **firmware policy constant** derived from expected_interval_s. It is **not** user-configurable; embedded devices own presence/staleness policy so that BLE snapshot and future UI/tx power escalation/activity state can rely on a single source of truth without app/FW drift. Future actions after max_silence (e.g. UI “node missing” or tx power escalation) can build on this threshold; this doc does not implement them.
 
 ---
 
@@ -60,4 +65,7 @@ The following are **not** promoted to S03 and remain WIP-only / policy-only:
 
 - [identity_naming_persistence_eviction_v0_1.md](identity_naming_persistence_eviction_v0_1.md) — S03 Identity/Naming block.
 - [packet_sets_v0_1.md](packet_sets_v0_1.md), [tx_priority_and_arbitration_v0_1.md](tx_priority_and_arbitration_v0_1.md) — Packet and TX policy.
-- Master table: field_key **is_stale** (supersedes is_grey); **last_seen_age_s**, **pos_age_s** as S03 minimal fields.
+- [field_cadence_v0](../../../../areas/nodetable/policy/field_cadence_v0.md) — Core/Alive cadence; expected_interval_s source (max_silence_10s).
+- [role_profiles_policy_v0](../../../../areas/domain/policy/role_profiles_policy_v0.md) — maxSilence10s per role; OOTB defaults.
+- [ootb_autonomous_start_s03](../../firmware/policy/ootb_autonomous_start_s03.md) — OOTB trigger/sequence; is_stale/last_seen_age_s derived from presence.
+- Master table: field_key **is_stale** (supersedes is_grey); **last_seen_age_s**, **pos_age_s** as S03 minimal fields. grace_s defined in this doc §2.
