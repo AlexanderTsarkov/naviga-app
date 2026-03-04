@@ -11,7 +11,7 @@ This doc defines the **product-level RadioProfile data model** and **NVS storage
 
 - **Purpose:** Define product-level profile fields, pointer semantics (default/current/previous), baseline vs runtime separation, and NVS schema (namespace, keys, versioning) so that Phase A can apply FACTORY default at boot without NVS, Phase B can persist pointers/records for rollback and future UI, and S04 can list/read/select/create profiles against this schema.
 - **Scope:** Schema and model only; no BLE protocol, no UI, no SPI driver implementation. Mapping to E220 UART (and later SPI) is documented as notes; adapter layer owns the mapping.
-- **Non-goals:** No automatic TX power control algorithms; no JOIN/Mesh/CAD/LBT. Runtime telemetry vs baseline contract is in [#384](https://github.com/AlexanderTsarkov/naviga-app/issues/384); UART mapping spec is [#383](https://github.com/AlexanderTsarkov/naviga-app/issues/383).
+- **Non-goals:** No automatic TX power control algorithms; no JOIN/Mesh/CAD/LBT. Runtime telemetry vs baseline contract is in [tx_power_contract_s03.md](tx_power_contract_s03.md) ([#384](https://github.com/AlexanderTsarkov/naviga-app/issues/384)); UART mapping spec is [#383](https://github.com/AlexanderTsarkov/naviga-app/issues/383).
 
 ---
 
@@ -82,7 +82,7 @@ Existing implementation uses **prof_cur** and **prof_prev** in the same namespac
 ## 5) Baseline vs runtime separation
 
 - **Baseline:** The stored profile content (channel_slot, rate_tier, tx_power_baseline_step) that is applied to the module at boot or when the user selects a profile. It is **not** mutated by runtime behavior (e.g. RSSI on RX, or module readback of actual TX power).
-- **Runtime:** Values observed at runtime (e.g. last TX power read back from module, last_rx_rssi, snr). Used for telemetry and NodeTable/display only. **Must not** overwrite the persisted profile baseline. See [#384](https://github.com/AlexanderTsarkov/naviga-app/issues/384) for the contract.
+- **Runtime:** Values observed at runtime (e.g. last TX power read back from module, last_rx_rssi, snr). Used for telemetry and NodeTable/display only. **Must not** overwrite the persisted profile baseline. See [tx_power_contract_s03.md](tx_power_contract_s03.md) ([#384](https://github.com/AlexanderTsarkov/naviga-app/issues/384)) for the contract.
 
 ---
 
@@ -131,5 +131,5 @@ No BLE protocol or UI is defined here; only that the storage and model support t
 - **Boot pipeline:** [boot_pipeline_v0](../../../areas/firmware/policy/boot_pipeline_v0.md) — Phase A applies FACTORY default; Phase B persists pointers/records.
 - **Module boot config:** [module_boot_config_v0](../../../areas/firmware/policy/module_boot_config_v0.md) — module-critical vs profile-applied; FACTORY default applied in Phase A.
 - **Provisioning interface:** [provisioning_interface_v0](../../../areas/firmware/policy/provisioning_interface_v0.md) — role/radio get/set/reset; writes pointers.
-- **UART mapping spec:** [#383](https://github.com/AlexanderTsarkov/naviga-app/issues/383). **TX power contract (baseline vs runtime):** [#384](https://github.com/AlexanderTsarkov/naviga-app/issues/384).
+- **UART mapping spec:** [#383](https://github.com/AlexanderTsarkov/naviga-app/issues/383). **TX power contract (baseline vs runtime):** [tx_power_contract_s03.md](tx_power_contract_s03.md) ([#384](https://github.com/AlexanderTsarkov/naviga-app/issues/384)).
 - **Current NVS impl:** `firmware/src/platform/naviga_storage.{h,cpp}` — namespace `naviga`, keys prof_cur, prof_prev. Product-level struct **RadioProfileRecord** (profile_id, kind, channel_slot, rate_tier, tx_power_baseline_step, label) and **get_factory_default_radio_profile()** added for schema alignment (#382); rprof_ver and USER profile load/save can be added in follow-up. Constants: **kRadioProfileSchemaVersion**, **kRadioProfileIdFactoryDefault**.
