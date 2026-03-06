@@ -92,6 +92,7 @@ Firmware matches this policy: **Core_Pos** and **Alive** use P0; **Node_Core_Tai
 ## 6) Related
 
 - [tx_priority_and_arbitration_v0_1.md](tx_priority_and_arbitration_v0_1.md) — P0–P3, coalesce_key, expired_counter.
+- [packet_context_tx_rules_v0_1.md](../../radio/policy/packet_context_tx_rules_v0_1.md) ([#407](https://github.com/AlexanderTsarkov/naviga-app/issues/407)) — Agreed v0.2 packet context and TX rules (Node_Pos_Full, Node_Status).
 - [beacon_payload_encoding_v0.md](../../../../areas/nodetable/contract/beacon_payload_encoding_v0.md) — Canon payload layouts.
 - [tail1_packet_encoding_v0.md](../../../../areas/nodetable/contract/tail1_packet_encoding_v0.md), [tail2_packet_encoding_v0.md](../../../../areas/nodetable/contract/tail2_packet_encoding_v0.md), [info_packet_encoding_v0.md](../../../../areas/nodetable/contract/info_packet_encoding_v0.md) — Canon v0 contracts.
 - [#351](https://github.com/AlexanderTsarkov/naviga-app/issues/351), [#352](https://github.com/AlexanderTsarkov/naviga-app/issues/352).

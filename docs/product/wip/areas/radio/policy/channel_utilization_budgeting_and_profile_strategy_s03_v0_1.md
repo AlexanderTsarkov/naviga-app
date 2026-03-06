@@ -108,6 +108,7 @@ Exact values and role IDs from [role_profiles_policy_v0](../../../../areas/domai
 | [e220_radio_profile_mapping_s03](e220_radio_profile_mapping_s03.md) ([#383](https://github.com/AlexanderTsarkov/naviga-app/issues/383)) | E220 mapping. |
 | [tx_power_contract_s03](tx_power_contract_s03.md) ([#384](https://github.com/AlexanderTsarkov/naviga-app/issues/384)) | TX power baseline vs runtime. |
 | [tx_priority_and_arbitration_v0_1](../../nodetable/policy/tx_priority_and_arbitration_v0_1.md) | P0–P3, throttling, expiry. |
+| [packet_context_tx_rules_v0_1](packet_context_tx_rules_v0_1.md) ([#407](https://github.com/AlexanderTsarkov/naviga-app/issues/407)) | Agreed v0.2 packet context and TX rules (Node_Pos_Full, Node_Status). |
 
 ---
 
