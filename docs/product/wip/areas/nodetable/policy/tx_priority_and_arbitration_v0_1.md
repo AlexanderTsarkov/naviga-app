@@ -54,5 +54,6 @@ Within the same priority, packets are ordered by **expired_counter DESC** (see �
 
 - [identity_naming_persistence_eviction_v0_1.md](identity_naming_persistence_eviction_v0_1.md) — S03 Identity/Naming + Persistence/Eviction block (frozen).
 - [packet_sets_v0_1.md](packet_sets_v0_1.md) — Packet definitions v0.1 and eligibility rules.
+- [packet_context_tx_rules_v0_1.md](../../radio/policy/packet_context_tx_rules_v0_1.md) ([#407](https://github.com/AlexanderTsarkov/naviga-app/issues/407)) — Agreed v0.2 packet context and TX rules (Node_Pos_Full, Node_Status).
 - [field_cadence_v0.md](field_cadence_v0.md) — Canon tiers and cadence.
 - [#351](https://github.com/AlexanderTsarkov/naviga-app/issues/351), [#352](https://github.com/AlexanderTsarkov/naviga-app/issues/352).
