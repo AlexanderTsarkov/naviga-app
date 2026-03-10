@@ -1,8 +1,16 @@
 # Current product state
 
-**Last updated:** 2026-03-01  
-**Iteration tag:** S02  
+**Last updated:** 2026-03-10  
+**Iteration tag:** S02 / S03 promotion  
 **Scope:** Embedded-first (firmware → radio → domain → BLE bridge → mobile later).
+
+---
+
+## Source of truth (canon vs implementation)
+
+**Canon docs define semantics.** Normative product and domain semantics are defined by documents under [docs/product/areas/](areas/). Policy and implementation must align to canon; canon overrides legacy and as-implemented behaviour when stated.
+
+**Current firmware implementation is reference / previous implementation only.** It may illustrate current behaviour and inform defaults, but it is not the source of truth. OOTB and UI behaviour may be used as examples or indicators of current state only when explicitly marked non-normative; they must not define product truth. See [docs_promotion_policy_v0](policy/docs_promotion_policy_v0.md) §6 and [ai_model_policy](../dev/ai_model_policy.md).
 
 ---
 
@@ -52,6 +60,7 @@
 |-----------|------------|------------|--------|
 | **OOTB** | (baseline) | Beacon + NodeTable baseline; E220 UART; serial provisioning; no BLE. | Reference only. |
 | **S02** | 2026-02 – 2026-03 | V1-A closure. TX queue fairness / degrade order (Core > Tail-1 > Operational/Informative). Tail split: Operational (0x04) vs Informative (0x05). Boot pipeline Phase A/B/C; role/radio from NVS. E22 adapter + RadioPreset; GNSS scenario emulator. Docs: Stale link fixes, legacy/OOTB banners, _working index, canon archive. | [#277](https://github.com/AlexanderTsarkov/naviga-app/issues/277) (gate), [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224) (epic); [#322](https://github.com/AlexanderTsarkov/naviga-app/pull/322), [#341](https://github.com/AlexanderTsarkov/naviga-app/pull/341), [#344](https://github.com/AlexanderTsarkov/naviga-app/pull/344), [#345](https://github.com/AlexanderTsarkov/naviga-app/pull/345)–[#349](https://github.com/AlexanderTsarkov/naviga-app/pull/349). |
+| **S03 promotion (c)+(d)** | 2026-03-10 | spec_map updated for 14 S03 promoted docs (canon paths, Promote=Promoted). current_state: source-of-truth / reference-implementation disclaimer added. Canon navigation: Dashboard and §4 traffic_model → canon; no normative WIP refs for promoted S03 material. Step (e) final integrity sweep remains open. | [#412](https://github.com/AlexanderTsarkov/naviga-app/issues/412), [#413](https://github.com/AlexanderTsarkov/naviga-app/pull/413) (step b). |
 
 ---
 
