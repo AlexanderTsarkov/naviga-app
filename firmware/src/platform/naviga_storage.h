@@ -118,4 +118,22 @@ bool load_seq16(uint16_t* out);
  */
 bool save_seq16(uint16_t value);
 
+// ── NodeTable snapshot (#418) ─────────────────────────────────────────────────
+// Narrow persistence-specific format; not the 26-byte BLE export.
+
+/** Max bytes for one NodeTable snapshot blob (header + records). */
+constexpr size_t kMaxNodeTableSnapshotBytes = 5120;
+
+/**
+ * Save NodeTable snapshot blob to NVS (key "nt_snap"). Length stored separately.
+ * Returns true on success.
+ */
+bool save_nodetable_snapshot(const uint8_t* data, size_t len);
+
+/**
+ * Load NodeTable snapshot blob from NVS. Returns true if loaded; *out_len set.
+ * Caller provides buffer; payload length must be <= cap.
+ */
+bool load_nodetable_snapshot(uint8_t* out, size_t cap, size_t* out_len);
+
 }  // namespace naviga

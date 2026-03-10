@@ -184,6 +184,29 @@ void M1Runtime::log_peer_dump(uint32_t now_ms) {
   }
 }
 
+bool M1Runtime::nodetable_dirty() const {
+  return node_table_.is_dirty();
+}
+
+void M1Runtime::clear_nodetable_dirty() {
+  node_table_.clear_dirty();
+}
+
+size_t M1Runtime::build_nodetable_snapshot(uint8_t* out, size_t out_cap) {
+  if (!out || out_cap == 0) return 0;
+  return domain::build_nodetable_snapshot(node_table_, out, out_cap);
+}
+
+bool M1Runtime::restore_nodetable_snapshot(const uint8_t* data, size_t len) {
+  if (!data || len == 0) return false;
+  const uint64_t self_id = device_info_.node_id;
+  size_t n = domain::restore_from_nodetable_snapshot(
+      data, len, self_id, restore_scratch_, domain::NodeTable::kMaxNodes);
+  if (n == 0) return false;
+  node_table_.restore_from_entries(restore_scratch_, n);
+  return true;
+}
+
 void M1Runtime::handle_tx(uint32_t now_ms) {
   if (!send_policy_.has_pending()) {
     // Formation pass: update the TX queue with current self state and telemetry.

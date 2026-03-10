@@ -5,8 +5,13 @@
 
 #include "../../src/domain/node_table.h"
 #include "../../src/domain/node_table.cpp"
+#include "../../src/domain/nodetable_snapshot.h"
+#include "../../src/domain/nodetable_snapshot.cpp"
 
 using naviga::domain::NodeTable;
+using naviga::domain::NodeEntry;
+using naviga::domain::build_nodetable_snapshot;
+using naviga::domain::restore_from_nodetable_snapshot;
 
 namespace {
 
@@ -348,6 +353,91 @@ void test_short_id_non_reserved_unchanged() {
   TEST_ASSERT_EQUAL_UINT16(0x4BB0, NodeTable::compute_short_id(node_id));
 }
 
+// #418: snapshot build then restore yields same persisted fields; is_self derived from self_node_id.
+void test_nodetable_snapshot_restore_is_self_derived() {
+  NodeTable table;
+  table.set_expected_interval_s(18);
+  const uint64_t self_id = 0x1111111111111111ULL;
+  const uint64_t remote_id = 0x2222222222222222ULL;
+  table.init_self(self_id, 1000);
+  table.upsert_remote(remote_id, true, 1000000, 2000000, 5, -50, 10, 2000);
+
+  uint8_t buf[5120];
+  const size_t len = build_nodetable_snapshot(table, buf, sizeof(buf));
+  TEST_ASSERT_GREATER_THAN(0, len);
+
+  NodeTable restored;
+  restored.set_expected_interval_s(18);
+  NodeEntry entries[NodeTable::kMaxNodes];
+  const size_t n = restore_from_nodetable_snapshot(buf, len, self_id, entries, NodeTable::kMaxNodes);
+  TEST_ASSERT_EQUAL(2, n);
+  restored.restore_from_entries(entries, n);
+
+  TEST_ASSERT_EQUAL(2, restored.size());
+  NodeEntry e_self{}, e_remote{};
+  TEST_ASSERT_TRUE(restored.find_entry_for_test(self_id, &e_self));
+  TEST_ASSERT_TRUE(restored.find_entry_for_test(remote_id, &e_remote));
+  TEST_ASSERT_TRUE(e_self.is_self);
+  TEST_ASSERT_FALSE(e_remote.is_self);
+  TEST_ASSERT_EQUAL_UINT64(self_id, e_self.node_id);
+  TEST_ASSERT_EQUAL_UINT64(remote_id, e_remote.node_id);
+  // last_seen_ms not persisted (canon: uptime, not reboot-safe); restore sets 0 for all entries.
+  TEST_ASSERT_EQUAL_UINT32(0, e_self.last_seen_ms);
+  TEST_ASSERT_EQUAL_UINT32(0, e_remote.last_seen_ms);
+}
+
+// #418: excluded fields (last_seq, last_rx_rssi, last_applied_tail_ref) are not persisted; restore sets them 0.
+void test_nodetable_snapshot_excluded_fields_not_authoritative() {
+  NodeTable table;
+  table.set_expected_interval_s(18);
+  table.init_self(0xAAAAAAAAAAAAAAAAULL, 1000);
+  table.upsert_remote(0xBBBBBBBBBBBBBBBBULL, true, 0, 0, 0, -60, 99, 2000);
+
+  uint8_t buf[5120];
+  const size_t len = build_nodetable_snapshot(table, buf, sizeof(buf));
+  TEST_ASSERT_GREATER_THAN(0, len);
+
+  NodeEntry entries[NodeTable::kMaxNodes];
+  const size_t n = restore_from_nodetable_snapshot(buf, len, 0xAAAAAAAAAAAAAAAAULL, entries, NodeTable::kMaxNodes);
+  TEST_ASSERT_EQUAL(2, n);
+  for (size_t i = 0; i < n; ++i) {
+    TEST_ASSERT_EQUAL_UINT32(0, entries[i].last_seen_ms);  // no persisted presence anchor
+    TEST_ASSERT_EQUAL(0, entries[i].last_seq);
+    TEST_ASSERT_EQUAL(0, entries[i].last_rx_rssi);
+    TEST_ASSERT_FALSE(entries[i].has_applied_tail_ref_core_seq16);
+  }
+}
+
+// #418: corrupt/empty snapshot => restore returns 0 (clean start).
+void test_nodetable_snapshot_corrupt_returns_zero() {
+  NodeEntry entries[NodeTable::kMaxNodes];
+  uint8_t bad[] = { 'X', 'Y', 1, 0, 0 };
+  const size_t n = restore_from_nodetable_snapshot(bad, sizeof(bad), 1, entries, NodeTable::kMaxNodes);
+  TEST_ASSERT_EQUAL(0, n);
+}
+
+// #418: legacy v1 snapshot (40-byte record layout) is rejected; reader expects v2 (37-byte). Clean start.
+void test_nodetable_snapshot_old_version_rejected() {
+  NodeEntry entries[NodeTable::kMaxNodes];
+  uint8_t v1_header[] = { 'N', 'T', 1, 0, 0 };  // magic + version 1 + count 0
+  const size_t n = restore_from_nodetable_snapshot(v1_header, sizeof(v1_header), 1, entries, NodeTable::kMaxNodes);
+  TEST_ASSERT_EQUAL(0, n);
+}
+
+// #418: dirty flag set after mutation, clear_dirty clears.
+void test_nodetable_dirty_cleared_after_clear() {
+  NodeTable table;
+  table.set_expected_interval_s(18);
+  table.init_self(1, 1000);
+  TEST_ASSERT_TRUE(table.is_dirty());
+  table.clear_dirty();
+  TEST_ASSERT_FALSE(table.is_dirty());
+  table.upsert_remote(2, false, 0, 0, 0, 0, 0, 2000);
+  TEST_ASSERT_TRUE(table.is_dirty());
+  table.clear_dirty();
+  TEST_ASSERT_FALSE(table.is_dirty());
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_self_init_and_serialization);
@@ -365,5 +455,10 @@ int main(int argc, char** argv) {
   RUN_TEST(test_short_id_reserved_zero_fix);
   RUN_TEST(test_short_id_reserved_ffff_fix);
   RUN_TEST(test_short_id_non_reserved_unchanged);
+  RUN_TEST(test_nodetable_snapshot_restore_is_self_derived);
+  RUN_TEST(test_nodetable_snapshot_excluded_fields_not_authoritative);
+  RUN_TEST(test_nodetable_snapshot_corrupt_returns_zero);
+  RUN_TEST(test_nodetable_snapshot_old_version_rejected);
+  RUN_TEST(test_nodetable_dirty_cleared_after_clear);
   return UNITY_END();
 }

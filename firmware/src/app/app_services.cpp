@@ -304,6 +304,15 @@ void AppServices::init() {
       runtime_.set_initial_seq16(restored_seq);
     }
   }
+  // #418: restore NodeTable from snapshot (after local identity known). Absent/corrupt => clean start.
+  {
+    constexpr size_t kSnapshotBufSize = naviga::kMaxNodeTableSnapshotBytes;
+    uint8_t buf[kSnapshotBufSize];
+    size_t len = 0;
+    if (load_nodetable_snapshot(buf, kSnapshotBufSize, &len) && len > 0) {
+      runtime_.restore_nodetable_snapshot(buf, len);
+    }
+  }
   provisioning_->set_instrumentation_flag(&instrumentation_enabled_);
   provisioning_->set_gnss_override(&gnss_override_);
   runtime_.set_instrumentation_logger(app_instrumentation_log, this);
@@ -452,6 +461,18 @@ void AppServices::tick(uint32_t now_ms) {
     if (save_seq16(sent_seq)) {
       last_persisted_seq16_ = sent_seq;
       has_persisted_seq16_ = true;
+    }
+  }
+  // #418: NodeTable snapshot save with debounce (dirty + min interval 30 s).
+  constexpr uint32_t kMinNodetableSaveIntervalMs = 30000U;
+  if (runtime_.nodetable_dirty() &&
+      (last_nodetable_save_ms_ == 0 || (now_ms - last_nodetable_save_ms_) >= kMinNodetableSaveIntervalMs)) {
+    constexpr size_t kSnapshotBufSize = naviga::kMaxNodeTableSnapshotBytes;
+    uint8_t buf[kSnapshotBufSize];
+    const size_t len = runtime_.build_nodetable_snapshot(buf, kSnapshotBufSize);
+    if (len > 0 && save_nodetable_snapshot(buf, len)) {
+      runtime_.clear_nodetable_dirty();
+      last_nodetable_save_ms_ = now_ms;
     }
   }
   OledStatusData oled_data{};

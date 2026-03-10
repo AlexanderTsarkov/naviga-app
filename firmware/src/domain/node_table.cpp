@@ -93,6 +93,7 @@ void NodeTable::init_self(uint64_t node_id, uint32_t now_ms) {
     entry.pos_age_s = 0;
     self_index_ = existing;
     recompute_collisions();
+    set_dirty();
     return;
   }
 
@@ -134,6 +135,7 @@ void NodeTable::init_self(uint64_t node_id, uint32_t now_ms) {
   self_index_ = index;
   size_++;
   recompute_collisions();
+  set_dirty();
 }
 
 void NodeTable::update_self_position(int32_t lat_e7,
@@ -149,6 +151,7 @@ void NodeTable::update_self_position(int32_t lat_e7,
   entry.lon_e7 = lon_e7;
   entry.pos_age_s = pos_age_s;
   entry.last_seen_ms = now_ms;
+  set_dirty();
 }
 
 void NodeTable::touch_self(uint32_t now_ms) {
@@ -156,6 +159,7 @@ void NodeTable::touch_self(uint32_t now_ms) {
     return;
   }
   entries_[static_cast<size_t>(self_index_)].last_seen_ms = now_ms;
+  set_dirty();
 }
 
 bool NodeTable::upsert_remote(uint64_t node_id,
@@ -199,6 +203,7 @@ bool NodeTable::upsert_remote(uint64_t node_id,
           break;
       }
     }
+    set_dirty();
     return true;
   }
 
@@ -233,6 +238,7 @@ bool NodeTable::upsert_remote(uint64_t node_id,
   }
   size_++;
   recompute_collisions();
+  set_dirty();
   return true;
 }
 
@@ -290,6 +296,7 @@ bool NodeTable::apply_tail1(uint64_t node_id,
   }
   entry.last_seen_ms = now_ms;
   entry.last_rx_rssi = rssi_dbm;
+  set_dirty();
   return true;
 }
 
@@ -322,6 +329,7 @@ bool NodeTable::apply_tail2(uint64_t node_id,
     new_entry.last_rx_rssi = rssi_dbm;
     size_++;
     recompute_collisions();
+    set_dirty();
     idx = free_idx;
   }
 
@@ -332,6 +340,7 @@ bool NodeTable::apply_tail2(uint64_t node_id,
   if (order == Seq16Order::Same || order == Seq16Order::Older) {
     entry.last_seen_ms = now_ms;
     entry.last_rx_rssi = rssi_dbm;
+    set_dirty();
     return true;
   }
 
@@ -347,6 +356,7 @@ bool NodeTable::apply_tail2(uint64_t node_id,
   }
   entry.last_seen_ms = now_ms;
   entry.last_rx_rssi = rssi_dbm;
+  set_dirty();
   return true;
 }
 
@@ -380,6 +390,7 @@ bool NodeTable::apply_info(uint64_t node_id,
     new_entry.last_rx_rssi = rssi_dbm;
     size_++;
     recompute_collisions();
+    set_dirty();
     idx = free_idx;
   }
 
@@ -390,6 +401,7 @@ bool NodeTable::apply_info(uint64_t node_id,
   if (order == Seq16Order::Same || order == Seq16Order::Older) {
     entry.last_seen_ms = now_ms;
     entry.last_rx_rssi = rssi_dbm;
+    set_dirty();
     return true;
   }
 
@@ -409,6 +421,7 @@ bool NodeTable::apply_info(uint64_t node_id,
   }
   entry.last_seen_ms = now_ms;
   entry.last_rx_rssi = rssi_dbm;
+  set_dirty();
   return true;
 }
 
@@ -579,6 +592,39 @@ size_t NodeTable::get_snapshot_page(uint16_t snapshot_id,
   }
 
   return offset;
+}
+
+void NodeTable::for_each_used_entry(std::function<void(const NodeEntry&)> fn) const {
+  for (size_t i = 0; i < entries_.size(); ++i) {
+    if (entries_[i].in_use) {
+      fn(entries_[i]);
+    }
+  }
+}
+
+void NodeTable::restore_from_entries(const NodeEntry* entries, size_t count) {
+  if (!entries || count > kMaxNodes) {
+    return;
+  }
+  for (size_t i = 0; i < entries_.size(); ++i) {
+    entries_[i].in_use = false;
+  }
+  size_ = 0;
+  self_index_ = -1;
+  for (size_t c = 0; c < count; ++c) {
+    const int idx = find_free_index();
+    if (idx < 0) {
+      break;
+    }
+    entries_[static_cast<size_t>(idx)] = entries[c];
+    entries_[static_cast<size_t>(idx)].in_use = true;
+    if (entries[c].is_self) {
+      self_index_ = idx;
+    }
+    size_++;
+  }
+  recompute_collisions();
+  // Do not set dirty; restore is load, not user mutation.
 }
 
 #if defined(NAVIGA_TEST)
