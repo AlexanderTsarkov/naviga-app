@@ -42,7 +42,7 @@ uint64_t get_u64_le(const uint8_t* p) {
   return v;
 }
 
-/** Persisted subset only (#418). Does NOT persist: is_self, short_id_collision, last_rx_rssi, last_seq, last_applied_tail_ref*. */
+/** Persisted subset only (#418). Does NOT persist: last_seen_ms (uptime, not reboot-safe), is_self, short_id_collision, last_rx_rssi, last_seq, last_applied_tail_ref*. */
 size_t pack_record(const NodeEntry& e, uint8_t* out) {
   put_u64_le(out + 0, e.node_id);
   put_u16_le(out + 8, e.short_id);
@@ -53,30 +53,29 @@ size_t pack_record(const NodeEntry& e, uint8_t* out) {
   put_u32_le(out + 11, static_cast<uint32_t>(e.pos_valid ? e.lat_e7 : 0));
   put_u32_le(out + 15, static_cast<uint32_t>(e.pos_valid ? e.lon_e7 : 0));
   put_u16_le(out + 19, e.pos_valid ? e.pos_age_s : 0);
-  put_u32_le(out + 21, e.last_seen_ms);
-  put_u16_le(out + 25, e.last_core_seq16);
+  put_u16_le(out + 21, e.last_core_seq16);
   uint8_t flags2 = 0;
   if (e.has_pos_flags) flags2 |= 0x01;
   if (e.has_sats) flags2 |= 0x02;
-  out[27] = flags2;
-  out[28] = e.pos_flags;
-  out[29] = e.sats;
+  out[23] = flags2;
+  out[24] = e.pos_flags;
+  out[25] = e.sats;
   uint8_t flags3 = 0;
   if (e.has_battery) flags3 |= 0x01;
   if (e.has_uptime) flags3 |= 0x02;
   if (e.has_max_silence) flags3 |= 0x04;
   if (e.has_hw_profile) flags3 |= 0x08;
   if (e.has_fw_version) flags3 |= 0x10;
-  out[30] = flags3;
-  out[31] = e.battery_percent;
-  put_u32_le(out + 32, e.uptime_sec);
-  out[36] = e.max_silence_10s;
-  put_u16_le(out + 37, e.hw_profile_id);
-  put_u16_le(out + 39, e.fw_version_id);
+  out[26] = flags3;
+  out[27] = e.battery_percent;
+  put_u32_le(out + 28, e.uptime_sec);
+  out[32] = e.max_silence_10s;
+  put_u16_le(out + 33, e.hw_profile_id);
+  put_u16_le(out + 35, e.fw_version_id);
   return kNodeTableSnapshotRecordBytes;
 }
 
-/** Unpack to NodeEntry; unpack_record sets derived/prohibited to 0/false; caller sets is_self. */
+/** Unpack to NodeEntry; unpack_record sets derived/prohibited to 0/false; caller sets is_self. last_seen_ms not in blob; set 0 (no presence anchor after restore). */
 void unpack_record(const uint8_t* in, NodeEntry* e) {
   e->node_id = get_u64_le(in + 0);
   e->short_id = get_u16_le(in + 8);
@@ -85,24 +84,25 @@ void unpack_record(const uint8_t* in, NodeEntry* e) {
   e->lat_e7 = static_cast<int32_t>(get_u32_le(in + 11));
   e->lon_e7 = static_cast<int32_t>(get_u32_le(in + 15));
   e->pos_age_s = get_u16_le(in + 19);
-  e->last_seen_ms = get_u32_le(in + 21);
-  e->last_core_seq16 = get_u16_le(in + 25);
-  const uint8_t flags2 = in[27];
+  e->last_core_seq16 = get_u16_le(in + 21);
+  const uint8_t flags2 = in[23];
   e->has_pos_flags = (flags2 & 0x01) != 0;
   e->has_sats = (flags2 & 0x02) != 0;
-  e->pos_flags = in[28];
-  e->sats = in[29];
-  const uint8_t flags3 = in[30];
+  e->pos_flags = in[24];
+  e->sats = in[25];
+  const uint8_t flags3 = in[26];
   e->has_battery = (flags3 & 0x01) != 0;
   e->has_uptime = (flags3 & 0x02) != 0;
   e->has_max_silence = (flags3 & 0x04) != 0;
   e->has_hw_profile = (flags3 & 0x08) != 0;
   e->has_fw_version = (flags3 & 0x10) != 0;
-  e->battery_percent = in[31];
-  e->uptime_sec = get_u32_le(in + 32);
-  e->max_silence_10s = in[36];
-  e->hw_profile_id = get_u16_le(in + 37);
-  e->fw_version_id = get_u16_le(in + 39);
+  e->battery_percent = in[27];
+  e->uptime_sec = get_u32_le(in + 28);
+  e->max_silence_10s = in[32];
+  e->hw_profile_id = get_u16_le(in + 33);
+  e->fw_version_id = get_u16_le(in + 35);
+  // No persisted presence anchor (canon: last_seen_ms is uptime, not reboot-safe)
+  e->last_seen_ms = 0;
   // Derived / prohibited: not persisted
   e->is_self = false;
   e->short_id_collision = false;

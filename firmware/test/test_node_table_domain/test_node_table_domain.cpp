@@ -381,8 +381,9 @@ void test_nodetable_snapshot_restore_is_self_derived() {
   TEST_ASSERT_FALSE(e_remote.is_self);
   TEST_ASSERT_EQUAL_UINT64(self_id, e_self.node_id);
   TEST_ASSERT_EQUAL_UINT64(remote_id, e_remote.node_id);
-  TEST_ASSERT_EQUAL_UINT32(1000, e_self.last_seen_ms);
-  TEST_ASSERT_EQUAL_UINT32(2000, e_remote.last_seen_ms);
+  // last_seen_ms not persisted (canon: uptime, not reboot-safe); restore sets 0 for all entries.
+  TEST_ASSERT_EQUAL_UINT32(0, e_self.last_seen_ms);
+  TEST_ASSERT_EQUAL_UINT32(0, e_remote.last_seen_ms);
 }
 
 // #418: excluded fields (last_seq, last_rx_rssi, last_applied_tail_ref) are not persisted; restore sets them 0.
@@ -400,6 +401,7 @@ void test_nodetable_snapshot_excluded_fields_not_authoritative() {
   const size_t n = restore_from_nodetable_snapshot(buf, len, 0xAAAAAAAAAAAAAAAAULL, entries, NodeTable::kMaxNodes);
   TEST_ASSERT_EQUAL(2, n);
   for (size_t i = 0; i < n; ++i) {
+    TEST_ASSERT_EQUAL_UINT32(0, entries[i].last_seen_ms);  // no persisted presence anchor
     TEST_ASSERT_EQUAL(0, entries[i].last_seq);
     TEST_ASSERT_EQUAL(0, entries[i].last_rx_rssi);
     TEST_ASSERT_FALSE(entries[i].has_applied_tail_ref_core_seq16);
