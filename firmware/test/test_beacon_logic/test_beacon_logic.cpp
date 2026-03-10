@@ -83,6 +83,72 @@ void test_tx_cadence() {
   TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, out_len);
 }
 
+// #417: Default start — first packet carries seq16 = 1 (canon: fresh start).
+void test_seq16_default_first_packet_is_one() {
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  GeoBeaconFields fields{};
+  fields.node_id   = 0x0000334455667788ULL;
+  fields.pos_valid = 1;
+  fields.lat_deg   = 55.7558;
+  fields.lon_deg   = 37.6173;
+  uint8_t buffer[kTestBufSize] = {};
+  size_t out_len = 0;
+  TEST_ASSERT_TRUE(logic.build_tx(1000, fields, buffer, sizeof(buffer), &out_len));
+  TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, out_len);
+  // Seq16 at payload offset 7-8; frame = header(2) + payload.
+  TEST_ASSERT_EQUAL_UINT16(1, read_u16_le(buffer + 2 + 7));
+}
+
+// #417: set_initial_seq16(restored) → first packet uses restored + 1 (canon rx_semantics_v0 §5.3).
+void test_seq16_set_initial_then_first_packet_is_initial_plus_one() {
+  BeaconLogic logic;
+  logic.set_initial_seq16(42);
+  logic.set_min_interval_ms(1000);
+  GeoBeaconFields fields{};
+  fields.node_id   = 0x0000334455667788ULL;
+  fields.pos_valid = 1;
+  fields.lat_deg   = 55.7558;
+  fields.lon_deg   = 37.6173;
+  uint8_t buffer[kTestBufSize] = {};
+  size_t out_len = 0;
+  TEST_ASSERT_TRUE(logic.build_tx(1000, fields, buffer, sizeof(buffer), &out_len));
+  TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, out_len);
+  TEST_ASSERT_EQUAL_UINT16(43, read_u16_le(buffer + 2 + 7));
+}
+
+// #417: set_initial_seq16(100) → first next_seq16() returns 101 (via encoded packet).
+void test_seq16_set_initial_100_first_packet_is_101() {
+  BeaconLogic logic;
+  logic.set_initial_seq16(100);
+  logic.set_min_interval_ms(1000);
+  GeoBeaconFields fields{};
+  fields.node_id   = 1;
+  fields.pos_valid = 1;
+  fields.lat_deg   = 0.0;
+  fields.lon_deg   = 0.0;
+  uint8_t buffer[kTestBufSize] = {};
+  size_t out_len = 0;
+  TEST_ASSERT_TRUE(logic.build_tx(1000, fields, buffer, sizeof(buffer), &out_len));
+  TEST_ASSERT_EQUAL_UINT16(101, read_u16_le(buffer + 2 + 7));
+}
+
+// #417 wraparound: set_initial_seq16(65535) → first packet seq16 == 0 (valid; must be persisted).
+void test_seq16_wraparound_first_packet_is_zero() {
+  BeaconLogic logic;
+  logic.set_initial_seq16(65535);
+  logic.set_min_interval_ms(1000);
+  GeoBeaconFields fields{};
+  fields.node_id   = 1;
+  fields.pos_valid = 1;
+  fields.lat_deg   = 0.0;
+  fields.lon_deg   = 0.0;
+  uint8_t buffer[kTestBufSize] = {};
+  size_t out_len = 0;
+  TEST_ASSERT_TRUE(logic.build_tx(1000, fields, buffer, sizeof(buffer), &out_len));
+  TEST_ASSERT_EQUAL_UINT16(0, read_u16_le(buffer + 2 + 7));
+}
+
 // Role-derived cadence: max_silence_ms forces TX when min_interval not yet reached.
 // With fix → CORE frame (17 B).
 void test_tx_max_silence_triggers_core() {
@@ -1811,6 +1877,10 @@ void test_txq_priority_ordering_p0_beats_all() {
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_tx_cadence);
+  RUN_TEST(test_seq16_default_first_packet_is_one);
+  RUN_TEST(test_seq16_set_initial_then_first_packet_is_initial_plus_one);
+  RUN_TEST(test_seq16_set_initial_100_first_packet_is_101);
+  RUN_TEST(test_seq16_wraparound_first_packet_is_zero);
   RUN_TEST(test_tx_max_silence_triggers_core);
   RUN_TEST(test_tx_no_fix_at_max_silence_sends_alive);
   RUN_TEST(test_tx_min_interval_no_update_no_send);

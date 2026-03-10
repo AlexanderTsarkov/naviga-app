@@ -147,6 +147,18 @@ uint16_t M1Runtime::geo_seq() const {
   return beacon_logic_.seq();
 }
 
+void M1Runtime::set_initial_seq16(uint16_t value) {
+  beacon_logic_.set_initial_seq16(value);
+}
+
+bool M1Runtime::get_last_sent_seq16(uint16_t* out) const {
+  if (!out || !has_last_sent_seq16_) {
+    return false;
+  }
+  *out = last_sent_seq16_;
+  return true;
+}
+
 bool M1Runtime::ble_connected() const {
   return ble_transport_.connected();
 }
@@ -228,6 +240,13 @@ void M1Runtime::handle_tx(uint32_t now_ms) {
   if (ok) {
     stats_.tx_count++;
     stats_.last_tx_ms = now_ms;
+    // Persist the seq16 that was actually sent (#417): Common prefix at payload offset 7-8, frame = header(2) + payload.
+    // Store value and validity separately so seq16 0 (wraparound) is persisted.
+    if (pending_len_ >= 11) {
+      last_sent_seq16_ = static_cast<uint16_t>(pending_payload_[9])
+          | (static_cast<uint16_t>(pending_payload_[10]) << 8);
+      has_last_sent_seq16_ = true;
+    }
     if (instrumentation_log_fn_ && instrumentation_ctx_) {
       char line[96];
       if (is_tail_type(last_tx_type_)) {

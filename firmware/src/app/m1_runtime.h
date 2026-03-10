@@ -51,6 +51,12 @@ class M1Runtime {
   uint16_t geo_seq() const;
   bool ble_connected() const;
 
+  /** Set initial seq16 before first formation (#417 restore). Forwards to BeaconLogic. */
+  void set_initial_seq16(uint16_t value);
+
+  /** If a packet was successfully sent, set *out to its seq16 and return true; else return false. Valid for seq16 0 (wraparound). (#417) */
+  bool get_last_sent_seq16(uint16_t* out) const;
+
   /** Optional instrumentation: when set, TX/RX and peer dump are logged. */
   void set_instrumentation_logger(void (*log_line_fn)(const char* line, void* ctx), void* ctx);
   void log_peer_dump(uint32_t now_ms);
@@ -89,6 +95,8 @@ class M1Runtime {
   size_t pending_len_ = 0;
   domain::PacketLogType last_tx_type_ = domain::PacketLogType::CORE;
   uint16_t last_tx_core_seq_ = 0;
+  uint16_t last_sent_seq16_ = 0;   ///< Seq16 of last successfully sent frame (#417); valid iff has_last_sent_seq16_.
+  bool has_last_sent_seq16_ = false;  ///< True after at least one successful TX (so seq16 0 after wrap is valid).
   bool allow_core_send_ = false;
   domain::SelfTelemetry self_telemetry_{};
 

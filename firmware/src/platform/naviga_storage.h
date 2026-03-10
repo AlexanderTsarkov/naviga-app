@@ -103,4 +103,19 @@ bool save_pointers(uint32_t current_role_id,
  */
 bool factory_reset_pointers();
 
+// ── Seq16 persistence (#417) ─────────────────────────────────────────────────
+// Canon: rx_semantics_v0 §5.3 — restore on boot; first TX after reboot uses restored + 1.
+
+/**
+ * Load persisted seq16 from NVS (namespace "naviga", key "seq16").
+ * Returns true if key exists and value was read; *out is set. If key missing, *out unchanged, returns false.
+ */
+bool load_seq16(uint16_t* out);
+
+/**
+ * Save seq16 to NVS. Per-TX write policy (#417): persist after each successful send.
+ * Returns true on success.
+ */
+bool save_seq16(uint16_t value);
+
 }  // namespace naviga

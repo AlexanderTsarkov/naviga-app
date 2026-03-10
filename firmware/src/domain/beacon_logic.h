@@ -115,6 +115,9 @@ class BeaconLogic {
   void set_min_interval_ms(uint32_t min_interval_ms);
   void set_max_silence_ms(uint32_t max_silence_ms);
 
+  /** Set initial seq so next next_seq16() returns value + 1. Call only before any formation (#417). */
+  void set_initial_seq16(uint16_t value);
+
   // ── Legacy single-packet TX API (preserved for existing tests) ──────────────
 
   /** \a allow_core_at_min_interval: when false and trigger is min_interval, do not send (NO_SEND).
