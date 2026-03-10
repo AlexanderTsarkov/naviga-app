@@ -7,6 +7,7 @@
 #include "domain/beacon_send_policy.h"
 #include "domain/logger.h"
 #include "domain/node_table.h"
+#include "domain/nodetable_snapshot.h"
 #include "naviga/hal/interfaces.h"
 #include "platform/ble_esp32_transport.h"
 #include "../../protocol/ble_status_bridge.h"
@@ -61,6 +62,14 @@ class M1Runtime {
   void set_instrumentation_logger(void (*log_line_fn)(const char* line, void* ctx), void* ctx);
   void log_peer_dump(uint32_t now_ms);
 
+  // #418: NodeTable snapshot persistence (narrow format; restore derives is_self, etc.).
+  bool nodetable_dirty() const;
+  void clear_nodetable_dirty();
+  /** Build snapshot blob into out; returns bytes written, 0 on error. */
+  size_t build_nodetable_snapshot(uint8_t* out, size_t out_cap);
+  /** Restore table from snapshot blob; uses self identity to set is_self. Returns true on success. */
+  bool restore_nodetable_snapshot(const uint8_t* data, size_t len);
+
  private:
   void handle_tx(uint32_t now_ms);
   void handle_rx(uint32_t now_ms);
@@ -102,6 +111,8 @@ class M1Runtime {
 
   void (*instrumentation_log_fn_)(const char* line, void* ctx) = nullptr;
   void* instrumentation_ctx_ = nullptr;
+
+  domain::NodeEntry restore_scratch_[domain::NodeTable::kMaxNodes] = {};
 };
 
 } // namespace naviga

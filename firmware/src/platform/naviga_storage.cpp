@@ -15,6 +15,8 @@ constexpr char kKeyProfileIntervalSec[] = "role_interval_s";
 constexpr char kKeyProfileSilence10s[] = "role_silence_10";
 constexpr char kKeyProfileDistM[] = "role_dist_m";
 constexpr char kKeySeq16[] = "seq16";
+constexpr char kKeyNodeTableSnapshotLen[] = "nt_snap_len";
+constexpr char kKeyNodeTableSnapshot[] = "nt_snap";
 
 constexpr uint16_t kDefaultMinIntervalSec = 18;
 constexpr uint8_t kDefaultMaxSilence10s = 9;
@@ -169,6 +171,37 @@ bool save_seq16(uint16_t value) {
   if (!prefs.begin(kNamespace, false)) return false;
   prefs.putUInt(kKeySeq16, static_cast<uint32_t>(value));
   prefs.end();
+  return true;
+}
+
+bool save_nodetable_snapshot(const uint8_t* data, size_t len) {
+  if (!data || len > kMaxNodeTableSnapshotBytes) return false;
+  Preferences prefs;
+  if (!prefs.begin(kNamespace, false)) return false;
+  prefs.putUInt(kKeyNodeTableSnapshotLen, static_cast<uint32_t>(len));
+  prefs.putBytes(kKeyNodeTableSnapshot, data, len);
+  prefs.end();
+  return true;
+}
+
+bool load_nodetable_snapshot(uint8_t* out, size_t cap, size_t* out_len) {
+  if (!out || !out_len || cap == 0) return false;
+  *out_len = 0;
+  Preferences prefs;
+  if (!prefs.begin(kNamespace, true)) return false;
+  if (!prefs.isKey(kKeyNodeTableSnapshotLen)) {
+    prefs.end();
+    return false;
+  }
+  const size_t len = prefs.getUInt(kKeyNodeTableSnapshotLen, 0);
+  prefs.end();
+  if (len == 0 || len > cap) return false;
+  Preferences prefs2;
+  if (!prefs2.begin(kNamespace, true)) return false;
+  const size_t read = prefs2.getBytes(kKeyNodeTableSnapshot, out, len);
+  prefs2.end();
+  if (read != len) return false;
+  *out_len = len;
   return true;
 }
 

@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 
 namespace naviga {
 namespace domain {
@@ -187,13 +188,23 @@ class NodeTable {
                            uint8_t* out_buffer,
                            size_t out_capacity) const;
 
+  // #418: persistence dirty tracking and restore.
+  bool is_dirty() const { return dirty_; }
+  void clear_dirty() { dirty_ = false; }
+  /** Call fn for each in-use entry (order unspecified). Used by snapshot build. */
+  void for_each_used_entry(std::function<void(const NodeEntry&)> fn) const;
+  /** Replace table with entries (e.g. from restore). Does not set dirty. */
+  void restore_from_entries(const NodeEntry* entries, size_t count);
+
  private:
+  void set_dirty() { dirty_ = true; }
   uint16_t expected_interval_s_ = 0;
   uint16_t grace_s_ = 0;
 
   std::array<NodeEntry, kMaxNodes> entries_{};
   size_t size_ = 0;
   int self_index_ = -1;
+  bool dirty_ = false;  ///< #418: set on any mutation; cleared after snapshot save.
 
   uint16_t snapshot_id_ = 0;
   uint32_t snapshot_time_ms_ = 0;

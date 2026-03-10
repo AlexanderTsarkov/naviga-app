@@ -49,6 +49,8 @@ class AppServices {
   // #417: per-TX persistence; validity separate so seq16 0 (wraparound) is persisted.
   uint16_t last_persisted_seq16_ = 0;
   bool has_persisted_seq16_ = false;
+  // #418: NodeTable snapshot save debounce (dirty + min interval).
+  uint32_t last_nodetable_save_ms_ = 0;
 };
 
 }  // namespace naviga
