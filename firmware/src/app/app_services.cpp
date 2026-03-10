@@ -297,6 +297,13 @@ void AppServices::init() {
   runtime_.init(full_id, short_id_, uptime_ms(), device_info, radio, radio_ready,
                 radio ? radio->rssi_available() : false, effective_interval_s, min_interval_ms, max_silence_ms,
                 &event_logger_, nullptr);
+  // #417: restore seq16 so first TX after reboot uses restored + 1 (canon rx_semantics_v0 §5.3).
+  {
+    uint16_t restored_seq = 0;
+    if (load_seq16(&restored_seq) && restored_seq > 0) {
+      runtime_.set_initial_seq16(restored_seq);
+    }
+  }
   provisioning_->set_instrumentation_flag(&instrumentation_enabled_);
   provisioning_->set_gnss_override(&gnss_override_);
   runtime_.set_instrumentation_logger(app_instrumentation_log, this);
@@ -438,6 +445,12 @@ void AppServices::tick(uint32_t now_ms) {
   runtime_.set_self_telemetry(self_telemetry_);
 
   runtime_.tick(now_ms);
+  // #417: per-TX persistence — persist the seq16 that was actually sent (from frame), only when it changed.
+  if (runtime_.last_sent_seq16() != 0 && runtime_.last_sent_seq16() != last_persisted_seq16_) {
+    if (save_seq16(runtime_.last_sent_seq16())) {
+      last_persisted_seq16_ = runtime_.last_sent_seq16();
+    }
+  }
   OledStatusData oled_data{};
   oled_data.bt_short = bt_short_;
   oled_data.firmware_version = kFirmwareVersion;

@@ -14,6 +14,7 @@ constexpr char kKeyPreviousRadio[] = "prof_prev";
 constexpr char kKeyProfileIntervalSec[] = "role_interval_s";
 constexpr char kKeyProfileSilence10s[] = "role_silence_10";
 constexpr char kKeyProfileDistM[] = "role_dist_m";
+constexpr char kKeySeq16[] = "seq16";
 
 constexpr uint16_t kDefaultMinIntervalSec = 18;
 constexpr uint8_t kDefaultMaxSilence10s = 9;
@@ -148,6 +149,27 @@ void get_factory_default_radio_profile(RadioProfileRecord* out) {
   out->channel_slot = 1;   // slot 0 reserved dev/test; 1 = factory default
   out->rate_tier = 2;      // 2.4 kbps product default; adapter maps to air_rate
   out->tx_power_baseline_step = 0;  // step 0 = MIN (21 dBm); OOTB uses MIN per product model
+}
+
+bool load_seq16(uint16_t* out) {
+  if (!out) return false;
+  Preferences prefs;
+  if (!prefs.begin(kNamespace, true)) return false;
+  if (!prefs.isKey(kKeySeq16)) {
+    prefs.end();
+    return false;
+  }
+  *out = static_cast<uint16_t>(prefs.getUInt(kKeySeq16, 0));
+  prefs.end();
+  return true;
+}
+
+bool save_seq16(uint16_t value) {
+  Preferences prefs;
+  if (!prefs.begin(kNamespace, false)) return false;
+  prefs.putUInt(kKeySeq16, static_cast<uint32_t>(value));
+  prefs.end();
+  return true;
 }
 
 }  // namespace naviga

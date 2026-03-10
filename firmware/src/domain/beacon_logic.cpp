@@ -16,6 +16,10 @@ void BeaconLogic::set_max_silence_ms(uint32_t max_silence_ms) {
   max_silence_ms_ = max_silence_ms;
 }
 
+void BeaconLogic::set_initial_seq16(uint16_t value) {
+  seq_ = value;
+}
+
 uint16_t BeaconLogic::next_seq16() {
   seq_ = static_cast<uint16_t>(seq_ + 1u);
   return seq_;
