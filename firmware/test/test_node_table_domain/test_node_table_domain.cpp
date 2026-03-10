@@ -10,6 +10,7 @@
 
 using naviga::domain::NodeTable;
 using naviga::domain::NodeEntry;
+using naviga::domain::kSnrLastUnsupported;
 using naviga::domain::build_nodetable_snapshot;
 using naviga::domain::restore_from_nodetable_snapshot;
 
@@ -386,7 +387,7 @@ void test_nodetable_snapshot_restore_is_self_derived() {
   TEST_ASSERT_EQUAL_UINT32(0, e_remote.last_seen_ms);
 }
 
-// #418: excluded fields (last_seq, last_rx_rssi, last_applied_tail_ref) are not persisted; restore sets them 0.
+// #418: excluded fields (last_seq, last_rx_rssi, last_applied_tail_ref, snr_last, last_payload_version_seen) are not persisted; restore sets them to defaults.
 void test_nodetable_snapshot_excluded_fields_not_authoritative() {
   NodeTable table;
   table.set_expected_interval_s(18);
@@ -405,6 +406,8 @@ void test_nodetable_snapshot_excluded_fields_not_authoritative() {
     TEST_ASSERT_EQUAL(0, entries[i].last_seq);
     TEST_ASSERT_EQUAL(0, entries[i].last_rx_rssi);
     TEST_ASSERT_FALSE(entries[i].has_applied_tail_ref_core_seq16);
+    TEST_ASSERT_EQUAL(kSnrLastUnsupported, entries[i].snr_last);  // #419: not persisted; restore uses sentinel
+    TEST_ASSERT_EQUAL(0xFF, entries[i].last_payload_version_seen);  // debug-only; not persisted
   }
 }
 
@@ -422,6 +425,24 @@ void test_nodetable_snapshot_old_version_rejected() {
   uint8_t v1_header[] = { 'N', 'T', 1, 0, 0 };  // magic + version 1 + count 0
   const size_t n = restore_from_nodetable_snapshot(v1_header, sizeof(v1_header), 1, entries, NodeTable::kMaxNodes);
   TEST_ASSERT_EQUAL(0, n);
+}
+
+// #419: S03 structural alignment — new entries have snr_last sentinel and last_payload_version_seen unset.
+void test_nodetable_s03_snr_last_and_debug_defaults() {
+  NodeTable table;
+  table.set_expected_interval_s(10);
+  const uint64_t self_id = 0x1111111111111111ULL;
+  const uint64_t remote_id = 0x2222222222222222ULL;
+  table.init_self(self_id, 1000);
+  table.upsert_remote(remote_id, true, 0, 0, 0, -50, 10, 2000);
+
+  NodeEntry e_self{}, e_remote{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(self_id, &e_self));
+  TEST_ASSERT_TRUE(table.find_entry_for_test(remote_id, &e_remote));
+  TEST_ASSERT_EQUAL(kSnrLastUnsupported, e_self.snr_last);
+  TEST_ASSERT_EQUAL(kSnrLastUnsupported, e_remote.snr_last);
+  TEST_ASSERT_EQUAL(0xFF, e_self.last_payload_version_seen);
+  TEST_ASSERT_EQUAL(0xFF, e_remote.last_payload_version_seen);
 }
 
 // #418: dirty flag set after mutation, clear_dirty clears.
@@ -459,6 +480,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_nodetable_snapshot_excluded_fields_not_authoritative);
   RUN_TEST(test_nodetable_snapshot_corrupt_returns_zero);
   RUN_TEST(test_nodetable_snapshot_old_version_rejected);
+  RUN_TEST(test_nodetable_s03_snr_last_and_debug_defaults);
   RUN_TEST(test_nodetable_dirty_cleared_after_clear);
   return UNITY_END();
 }

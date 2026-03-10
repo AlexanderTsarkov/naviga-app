@@ -104,13 +104,15 @@ void unpack_record(const uint8_t* in, NodeEntry* e) {
   e->fw_version_id = get_u16_le(in + 35);
   // No persisted presence anchor (canon: last_seen_ms is uptime, not reboot-safe)
   e->last_seen_ms = 0;
-  // Derived / prohibited: not persisted
+  // Derived / injected / debug: not persisted (#418 narrow subset)
   e->is_self = false;
   e->short_id_collision = false;
   e->last_rx_rssi = 0;
   e->last_seq = 0;
   e->last_applied_tail_ref_core_seq16 = 0;
   e->has_applied_tail_ref_core_seq16 = false;
+  e->snr_last = kSnrLastUnsupported;
+  e->last_payload_version_seen = 0xFF;
   e->in_use = true;
 }
 

@@ -8,56 +8,59 @@
 namespace naviga {
 namespace domain {
 
+/** Sentinel for snr_last when radio does not provide SNR (e.g. E22 UART backend). Per link_metrics_v0; not persisted. */
+constexpr int8_t kSnrLastUnsupported = 127;
+
 struct NodeEntry {
+  // --- Core_Pos / Identity (primary key) ---
   uint64_t node_id = 0;
-  uint16_t short_id = 0;
-  bool is_self = false;
-  bool pos_valid = false;
-  bool short_id_collision = false;
-  int32_t lat_e7 = 0;
-  int32_t lon_e7 = 0;
+
+  // --- Core_Pos (position) ---
+  bool   pos_valid = false;
+  int32_t lat_e7   = 0;
+  int32_t lon_e7   = 0;
   uint16_t pos_age_s = 0;
-  int8_t last_rx_rssi = 0;
-  // Global per-node sequence counter: last accepted seq16 from ANY Node_* packet type
-  // (Core, Alive, Tail-1, Tail-2, Info). Used as the (nodeId48, seq16) dedupe key
-  // per rx_semantics_v0 §1. MUST NOT be interpreted as "last Core seq" or "last
-  // position freshness" — those roles belong to last_core_seq16 and pos_age_s.
+
+  // --- Core / Activity (seq16, ref_core_seq16, Tail-1 apply tracking) ---
+  // Global per-node sequence counter: last accepted seq16 from ANY Node_* packet type (Core, Alive, Tail-1, Tail-2, Info).
+  // Dedupe key (nodeId48, seq16) per rx_semantics_v0 §1. Not "last Core seq" — that is last_core_seq16.
   uint16_t last_seq = 0;
-  uint32_t last_seen_ms = 0;
-  bool in_use = false;
+  uint16_t last_core_seq16 = 0;  ///< seq16 of last accepted Node_OOTB_Core_Pos; Tail-1 ref_core_seq16 match key.
+  bool     has_core_seq16  = false;
+  uint16_t last_applied_tail_ref_core_seq16 = 0;  ///< Variant 2: at most one Tail-1 per Core sample.
+  bool     has_applied_tail_ref_core_seq16  = false;
 
-  // Core_Tail binding: seq16 of the last accepted Node_OOTB_Core_Pos for this node.
-  // Compared against ref_core_seq16 from incoming Core_Tail frames to enforce
-  // the CoreRef-lite gate (tail1_packet_encoding_v0 §4.1).
-  uint16_t last_core_seq16 = 0;
-  bool     has_core_seq16  = false;  ///< false until first Core received.
-
-  // Variant 2 invariant: at most one Core_Tail per Core_Pos sample.
-  // Tracks the ref_core_seq16 of the last successfully applied Core_Tail.
-  // If a new Core_Tail arrives with the same ref_core_seq16 (even with a
-  // different seq16), it is treated as an unexpected duplicate and ignored.
-  uint16_t last_applied_tail_ref_core_seq16 = 0;
-  bool     has_applied_tail_ref_core_seq16  = false;  ///< false until first Tail-1 applied.
-
-  // Tail-1 optional fields (position quality for last Core sample).
+  // --- Core_Tail (Tail-1 position quality) ---
   bool    has_pos_flags = false;
   uint8_t pos_flags     = 0x00;
   bool    has_sats      = false;
   uint8_t sats          = 0x00;
 
-  // Node_OOTB_Operational (0x04) fields — dynamic runtime.
-  bool     has_battery       = false;
-  uint8_t  battery_percent   = 0xFF;    ///< 0xFF = not present.
-  bool     has_uptime        = false;
-  uint32_t uptime_sec        = 0xFFFFFFFFu; ///< 0xFFFFFFFF = not present.
+  // --- Operational (Node_OOTB_Operational 0x04) ---
+  bool     has_battery   = false;
+  uint8_t  battery_percent = 0xFF;  ///< 0xFF = not present.
+  bool     has_uptime    = false;
+  uint32_t uptime_sec    = 0xFFFFFFFFu;  ///< 0xFFFFFFFF = not present.
 
-  // Node_OOTB_Informative (0x05) fields — static / user-config.
-  bool     has_max_silence   = false;
-  uint8_t  max_silence_10s   = 0;       ///< 0 = absent/unknown; unit = 10 s.
-  bool     has_hw_profile    = false;
-  uint16_t hw_profile_id     = 0xFFFF;  ///< 0xFFFF = not present.
-  bool     has_fw_version    = false;
-  uint16_t fw_version_id     = 0xFFFF;  ///< 0xFFFF = not present.
+  // --- Informative (Node_OOTB_Informative 0x05) ---
+  bool     has_max_silence = false;
+  uint8_t  max_silence_10s = 0;  ///< unit = 10 s; 0 = absent/unknown.
+  bool     has_hw_profile  = false;
+  uint16_t hw_profile_id   = 0xFFFF;
+  bool     has_fw_version  = false;
+  uint16_t fw_version_id   = 0xFFFF;
+
+  // --- Self / Identity (derived or local) ---
+  uint16_t short_id          = 0;  ///< CRC16-CCITT over node_id LE; display only; not protocol key.
+  bool     is_self           = false;
+  bool     short_id_collision = false;
+
+  // --- Derived / Injected / Debug (receiver-side; link_metrics_v0) ---
+  uint32_t last_seen_ms = 0;   ///< lastRxAt; canon. Exported as lastSeenAgeS at BLE/snapshot export.
+  int8_t   last_rx_rssi = 0;   ///< rssiLast; updated on any accepted RX.
+  int8_t   snr_last     = kSnrLastUnsupported;  ///< snrLast; E22 UNSUPPORTED → NA sentinel until producer wired.
+  uint8_t  last_payload_version_seen = 0xFF;   ///< Debug/injected only; not persisted. 0xFF = not set.
+  bool     in_use       = false;  ///< Internal slot occupancy; not in BLE/snapshot.
 };
 
 class NodeTable {
