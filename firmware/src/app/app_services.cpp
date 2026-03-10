@@ -445,10 +445,13 @@ void AppServices::tick(uint32_t now_ms) {
   runtime_.set_self_telemetry(self_telemetry_);
 
   runtime_.tick(now_ms);
-  // #417: per-TX persistence — persist the seq16 that was actually sent (from frame), only when it changed.
-  if (runtime_.last_sent_seq16() != 0 && runtime_.last_sent_seq16() != last_persisted_seq16_) {
-    if (save_seq16(runtime_.last_sent_seq16())) {
-      last_persisted_seq16_ = runtime_.last_sent_seq16();
+  // #417: per-TX persistence — persist the seq16 that was actually sent (validity separate from value; seq16 0 after wrap is valid).
+  uint16_t sent_seq = 0;
+  if (runtime_.get_last_sent_seq16(&sent_seq) &&
+      (!has_persisted_seq16_ || sent_seq != last_persisted_seq16_)) {
+    if (save_seq16(sent_seq)) {
+      last_persisted_seq16_ = sent_seq;
+      has_persisted_seq16_ = true;
     }
   }
   OledStatusData oled_data{};

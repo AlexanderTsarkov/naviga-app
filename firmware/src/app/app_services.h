@@ -46,8 +46,9 @@ class AppServices {
   domain::SelfTelemetry self_telemetry_{};
   // maxSilence10s from the active role profile; persisted from init() for tick() use.
   uint8_t effective_max_silence_10s_ = 0;
-  // #417: last persisted seq16 for per-TX write; avoid duplicate writes.
+  // #417: per-TX persistence; validity separate so seq16 0 (wraparound) is persisted.
   uint16_t last_persisted_seq16_ = 0;
+  bool has_persisted_seq16_ = false;
 };
 
 }  // namespace naviga
