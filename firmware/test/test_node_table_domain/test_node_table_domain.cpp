@@ -416,6 +416,14 @@ void test_nodetable_snapshot_corrupt_returns_zero() {
   TEST_ASSERT_EQUAL(0, n);
 }
 
+// #418: legacy v1 snapshot (40-byte record layout) is rejected; reader expects v2 (37-byte). Clean start.
+void test_nodetable_snapshot_old_version_rejected() {
+  NodeEntry entries[NodeTable::kMaxNodes];
+  uint8_t v1_header[] = { 'N', 'T', 1, 0, 0 };  // magic + version 1 + count 0
+  const size_t n = restore_from_nodetable_snapshot(v1_header, sizeof(v1_header), 1, entries, NodeTable::kMaxNodes);
+  TEST_ASSERT_EQUAL(0, n);
+}
+
 // #418: dirty flag set after mutation, clear_dirty clears.
 void test_nodetable_dirty_cleared_after_clear() {
   NodeTable table;
@@ -450,6 +458,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_nodetable_snapshot_restore_is_self_derived);
   RUN_TEST(test_nodetable_snapshot_excluded_fields_not_authoritative);
   RUN_TEST(test_nodetable_snapshot_corrupt_returns_zero);
+  RUN_TEST(test_nodetable_snapshot_old_version_rejected);
   RUN_TEST(test_nodetable_dirty_cleared_after_clear);
   return UNITY_END();
 }

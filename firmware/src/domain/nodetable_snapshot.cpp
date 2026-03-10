@@ -10,7 +10,8 @@ namespace {
 
 constexpr uint8_t kSnapshotMagic0 = 'N';
 constexpr uint8_t kSnapshotMagic1 = 'T';
-constexpr uint8_t kSnapshotVersion = 1;
+/** Snapshot format version; bump when record layout changes. v1 = 40-byte (had last_seen_ms); v2 = 37-byte. */
+constexpr uint8_t kSnapshotVersion = 2;
 
 void put_u16_le(uint8_t* p, uint16_t v) {
   p[0] = static_cast<uint8_t>(v & 0xFF);
