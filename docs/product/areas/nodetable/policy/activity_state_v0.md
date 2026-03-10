@@ -27,7 +27,7 @@ This policy defines the **v0 derived** activity/presence state for nodes: inputs
 | **seq16** | Core (BeaconCore) | Freshness marker per node; canonical in [beacon_payload_encoding_v0](../contract/beacon_payload_encoding_v0.md) §4.1. Used to detect duplicates, repeats, and out-of-order delivery. |
 | **lastRxAt** | Receiver-derived | Time (receiver clock) when the last packet from this node was accepted. Updated on any received packet that passes version/node checks; time base is implementation-defined (monotonic or wall-clock) but must be consistent for ordering. |
 | **ageSec** (lastSeenAge) | Receiver-derived | Elapsed time since lastRxAt; i.e. “time since last received packet from this node”. Used for state derivation and UI. |
-| **Cadence / forced Core** | Policy | Core cadence and “forced Core” rules (when Core must be sent) come from [field_cadence_v0](field_cadence_v0.md) and [traffic_model_v0](../../../wip/areas/radio/policy/traffic_model_v0.md). They inform expected silence bounds; exact thresholds are **parameterized** below, not fixed in this doc. |
+| **Cadence / forced Core** | Policy | Core cadence and “forced Core” rules (when Core must be sent) come from [field_cadence_v0](field_cadence_v0.md) and [traffic_model_v0](../../radio/policy/traffic_model_v0.md). They inform expected silence bounds; exact thresholds are **parameterized** below, not fixed in this doc. |
 
 ---
 
@@ -103,5 +103,5 @@ No magic numbers: implementations and product policy choose T_active, T_stale, T
 - **Field cadence:** [field_cadence_v0](field_cadence_v0.md) — Core/Tail tiers, Core only with valid fix; maxSilence via Alive when no fix.
 - **RX semantics:** [rx_semantics_v0](rx_semantics_v0.md) — accepted/duplicate/ooo; lastRxAt and Activity on Alive.
 - **Beacon encoding:** [beacon_payload_encoding_v0](../contract/beacon_payload_encoding_v0.md) — seq16 in Common prefix; Core_Tail `ref_core_seq16` (Core linkage key). **Alive:** [alive_packet_encoding_v0](../contract/alive_packet_encoding_v0.md). **Informative (maxSilence10s):** [info_packet_encoding_v0](../contract/info_packet_encoding_v0.md).
-- **Traffic model:** [traffic_model_v0](../../../wip/areas/radio/policy/traffic_model_v0.md) — frame limits, beacon-only forwarding.
+- **Traffic model:** [traffic_model_v0](../../radio/policy/traffic_model_v0.md) — frame limits, beacon-only forwarding.
 - **NodeTable hub:** [../index.md](../index.md) §5 — Activity (derived states, lastSeenAge, policy-supplied boundary).
