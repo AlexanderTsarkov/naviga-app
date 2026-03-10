@@ -66,7 +66,7 @@ All rows cite at least one source doc. **Proposed Tier**, **Default cadence**, a
 - [ ] **Tier A is strict:** WHO + WHERE + freshness (+ required liveness signal if decided); no extra telemetry in Core.
 - [ ] **Attached-to-Core fields** are not placed in Tail unless CoreRef exists (not in v0); position/freshness ride in same BeaconCore frame.
 - [ ] **ProductMaxFrameBytes=96** respected; no fragmentation; Core fits within profile-class payload budgets.
-- [ ] **OOTB public remains beacon-only;** extras (UserMessage, GeoObject, GeoObjectActivation) session-only per [traffic_model_v0](../../../wip/areas/radio/policy/traffic_model_v0.md).
+- [ ] **OOTB public remains beacon-only;** extras (UserMessage, GeoObject, GeoObjectActivation) session-only per [traffic_model_v0](../../radio/policy/traffic_model_v0.md).
 - [ ] **Mesh-lite beacon-only forwarding v0;** extras direct-link only (no relays).
 - [ ] **Proposed Tier / cadence / packet placement** filled for all fields that are sent in beacon; receiver-only fields need no packet placement.
 - [ ] **Encoding alignment:** Once owner decisions are stable, [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) and [field_cadence_v0.md](field_cadence_v0.md) updated as needed (no layout change in this worksheet step).

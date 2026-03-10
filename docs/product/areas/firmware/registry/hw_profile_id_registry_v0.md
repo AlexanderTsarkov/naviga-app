@@ -30,6 +30,6 @@ This document defines the **hwProfileId** registry: allocation discipline, reser
 
 ## 3) Related
 
-- **Semantics (what/why/how):** [hw_profile_id_semantics_s03.md](../../wip/areas/firmware/policy/hw_profile_id_semantics_s03.md) ([#406](https://github.com/AlexanderTsarkov/naviga-app/issues/406)) — S03 WIP policy; encoding, lifecycle, “must not affect decoding,” implied attributes.
+- **Semantics (what/why/how):** [hw_profile_id_semantics_v0.md](../policy/hw_profile_id_semantics_v0.md) ([#406](https://github.com/AlexanderTsarkov/naviga-app/issues/406)) — canon policy; encoding, lifecycle, “must not affect decoding,” implied attributes.
 - **Canon contract:** [info_packet_encoding_v0.md](../../nodetable/contract/info_packet_encoding_v0.md) — §3.2 hwProfileId uint16 LE, §4.3 sentinel 0xFFFF.
 - **E220 / TX power (why SKU matters):** [e220_radio_profile_mapping_s03.md](../../radio/policy/e220_radio_profile_mapping_s03.md) ([#383](https://github.com/AlexanderTsarkov/naviga-app/issues/383)), [tx_power_contract_s03.md](../../radio/policy/tx_power_contract_s03.md) ([#384](https://github.com/AlexanderTsarkov/naviga-app/issues/384)).

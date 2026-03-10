@@ -30,5 +30,5 @@ This document defines the **fwVersionId** registry: allocation discipline, reser
 
 ## 3) Related
 
-- **Semantics (what/why/how):** [fw_version_id_semantics_s03.md](../../wip/areas/firmware/policy/fw_version_id_semantics_s03.md) ([#405](https://github.com/AlexanderTsarkov/naviga-app/issues/405)) — S03 WIP policy; encoding, lifecycle, “must not affect decoding.”
+- **Semantics (what/why/how):** [fw_version_id_semantics_v0.md](../policy/fw_version_id_semantics_v0.md) ([#405](https://github.com/AlexanderTsarkov/naviga-app/issues/405)) — canon policy; encoding, lifecycle, “must not affect decoding.”
 - **Canon contract:** [info_packet_encoding_v0.md](../../nodetable/contract/info_packet_encoding_v0.md) — §3.2 fwVersionId uint16 LE, §4.3 sentinel 0xFFFF.

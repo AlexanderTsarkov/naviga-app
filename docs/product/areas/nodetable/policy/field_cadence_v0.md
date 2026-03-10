@@ -12,7 +12,7 @@ This policy defines the **v0 mapping** of NodeTable-related fields into delivery
 
 - **Tiers:** Tier A (Core), Tier B (Tail-1), Tier C (Tail-2) define **what** must be delivered with what urgency. Core = WHO + WHERE + freshness; if Core is not delivered, product value collapses. Tail tiers are operational or diagnostic and can lag.
 - **Cadences:** Each tier has **numeric** default cadences (not "frequent"/"rare" only). Under load, a fixed **degrade order** applies: keep Tier A, then reduce Tier B rate, then drop Tier C first.
-- **Why this exists:** Prevents scope creep, keeps Core payload small for [traffic model](../../../wip/areas/radio/policy/traffic_model_v0.md) and ProductMaxFrameBytes=96, and gives mesh-lite a clear priority ordering (Core > Tail).
+- **Why this exists:** Prevents scope creep, keeps Core payload small for [traffic model](../../radio/policy/traffic_model_v0.md) and ProductMaxFrameBytes=96, and gives mesh-lite a clear priority ordering (Core > Tail).
 
 ---
 
@@ -93,7 +93,7 @@ Source: fields from [link-telemetry-minset](../contract/link-telemetry-minset-v0
 | Role | Allowed packet classes | Mesh priority (Tier A) | Extras (UserMessage, Geo*, etc.) |
 |------|------------------------|------------------------|----------------------------------|
 | **DOG_COLLAR** | **BeaconCore / BeaconTail only.** No UserMessage, GeoObject, GeoObjectActivation. | Higher; Tier A may get higher maxHops for Core only. | Never (hard to reconfigure; reliability over features). |
-| **HUMAN** | BeaconCore / BeaconTail; extras allowed only in Session/Group mode per [traffic_model_v0](../../../wip/areas/radio/policy/traffic_model_v0.md). | Normal. | Only when in Session/Group. |
+| **HUMAN** | BeaconCore / BeaconTail; extras allowed only in Session/Group mode per [traffic_model_v0](../../radio/policy/traffic_model_v0.md). | Normal. | Only when in Session/Group. |
 
 **DOG_COLLAR rationale:** Collar is highest reliability priority and is not a comms device; no extras on public or otherwise. HUMAN: normal rules; extras only when user has selected Session/Group and there is a presumed recipient.
 
@@ -101,7 +101,7 @@ Source: fields from [link-telemetry-minset](../contract/link-telemetry-minset-v0
 
 ## 7) Frame limits interaction
 
-- **ProductMaxFrameBytes v0 = 96** (from [traffic_model_v0](../../../wip/areas/radio/policy/traffic_model_v0.md)). **Fragmentation is not allowed.**
+- **ProductMaxFrameBytes v0 = 96** (from [traffic_model_v0](../../radio/policy/traffic_model_v0.md)). **Fragmentation is not allowed.**
 - **Tiering** MUST be used so that **Tier A (Core) fits within strict size budgets**. Core payload MUST stay short enough to meet profile-class limits in the encoding contract; Tail content is carried in BeaconTail and may be omitted under load per degrade order.
 
 ---
@@ -115,7 +115,7 @@ Source: fields from [link-telemetry-minset](../contract/link-telemetry-minset-v0
 
 ## 9) Related
 
-- **Traffic model:** [../../../wip/areas/radio/policy/traffic_model_v0.md](../../../wip/areas/radio/policy/traffic_model_v0.md) — BeaconCore/BeaconTail, ProductMaxFrameBytes, OOTB vs Session/Group.
+- **Traffic model:** [traffic_model_v0](../../radio/policy/traffic_model_v0.md) — BeaconCore/BeaconTail, ProductMaxFrameBytes, OOTB vs Session/Group.
 - **Beacon encoding (layout):** [../contract/beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) — byte layout only; Core/Tail split driven by this policy.
 - **Minset:** [../contract/link-telemetry-minset-v0.md](../contract/link-telemetry-minset-v0.md) — field set and semantics.
 - **NodeTable hub:** [../index.md](../index.md) — [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147).
