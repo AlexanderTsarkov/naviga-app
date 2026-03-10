@@ -42,10 +42,18 @@ Research outputs for the current iteration go under `_working/research/` (see CL
 
 Other hw_tests subfolders: `2026-02-23_s02_266` (provision/reboot), `2026-02-23_s02_267` (OOTB baseline), `2026-02-23_s02_268` (radio smoke), `2026-02-23_s02_276_tail_proof` (tail proof). See each folder’s `notes.md` for issue links.
 
-## Current iteration (template)
+## Current iteration
 
-- **Iteration ID/Name:** *(read from [ITERATION.md](ITERATION.md); do not invent)*
+- **Iteration ID/Name:** S03__2026-03__Execution.v1 (from [ITERATION.md](ITERATION.md))
 - **Work Area:** Implementation (primary), Test (allowed)
-- **Tech Area(s):** Firmware / Mobile App / Backend / Hardware / Protocol / Architecture
-- **Related Issue(s)/PR(s):** *(optional)*
-- **Goal / DoD / Status:** *(optional)*
+- **Tech Area(s):** Firmware, Protocol, Radio, Persistence, Testing
+- **Execution umbrella:** [#416](https://github.com/AlexanderTsarkov/naviga-app/issues/416) — S03 Execution planning: implement canon slice (code+tests plan)
+- **P0 issues:** #417, #418, #419, #420, #421, #422
+- **Referenced trackers:** #296, #355
+- **Goal / DoD:** Implement canon slice per #416; P0 complete + CI green + bench sanity evidence captured
+
+### How we work in S03 execution
+
+- **Keep here:** logs, bench evidence, investigation notes, and other artifacts that support the current implementation/test iteration.
+- **Product specs stay in** [docs/product/](../docs/product/) and [docs/product/wip/](../docs/product/wip/); do not add WIP product specs to `_working/`.
+- **Execution entry point:** #416 (not the planning umbrella #351). Work branches and PRs should link to #416 and the relevant P0 sub-issue.
