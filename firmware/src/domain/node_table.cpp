@@ -162,6 +162,17 @@ void NodeTable::touch_self(uint32_t now_ms) {
   set_dirty();
 }
 
+// ── RX/apply semantics (#421: canon rx_semantics_v0, packet_to_nodetable_mapping_v0) ─
+//
+// upsert_remote (Core_Pos / Alive) and apply_tail1 / apply_tail2 / apply_info implement
+// accepted vs duplicate vs out-of-order per rx_semantics_v0 §1 (seq16 wrap rule).
+// - Newer: apply payload; update last_seen_ms, last_rx_rssi, last_seq; Core path updates
+//   last_core_seq16/has_core_seq16 for Tail-1 ref gate only (runtime-local, not BLE/persisted).
+// - Same/Older: refresh last_seen_ms and last_rx_rssi only; MUST NOT overwrite position/telemetry.
+// Tail–Core correlation uses last_core_seq16 and last_applied_tail_ref_core_seq16 as
+// runtime-local decoder state only (nodetable_master_field_table_v0 §7); not canonical
+// NodeTable product truth; not exported to BLE; not persisted.
+
 bool NodeTable::upsert_remote(uint64_t node_id,
                               bool pos_valid,
                               int32_t lat_e7,
@@ -242,6 +253,8 @@ bool NodeTable::upsert_remote(uint64_t node_id,
   return true;
 }
 
+// apply_tail1: ref_core_seq16 must match last_core_seq16 (runtime-local); at most one Tail
+// per Core sample. Applies only pos_flags/sats; MUST NOT touch position (rx_semantics_v0 §4).
 bool NodeTable::apply_tail1(uint64_t node_id,
                             uint16_t seq16,
                             uint16_t ref_core_seq16,
