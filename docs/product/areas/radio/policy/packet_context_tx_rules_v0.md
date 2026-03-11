@@ -9,7 +9,7 @@ Consolidated outcome for packet context and TX rules: current v0.1 behavior (bas
 
 ## 1) Current v0.1 behavior (from code)
 
-What the firmware does today — **baseline**, not the v0.2 target.
+What the firmware does today — **baseline**, not the v0.2 target. Implementation: `firmware/src/domain/beacon_logic.cpp` (`update_tx_queue`) mirrors this table (#420).
 
 | Aspect | Current code behavior |
 |--------|------------------------|

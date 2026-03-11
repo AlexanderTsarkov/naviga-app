@@ -125,7 +125,21 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
   return true;
 }
 
-// ── Slot-based TX queue API ──────────────────────────────────────────────────
+// ── Slot-based TX queue API (#420: canon packet_context_tx_rules_v0 §1) ───────
+//
+// Formation rules mirror docs/product/areas/radio/policy/packet_context_tx_rules_v0.md
+// §1 "Current v0.1 behavior". Single clock: last_tx_ms_ updated only when Core or Alive
+// enqueued. Trigger/earliest/deadline/coalesce per table:
+//
+//   Core_Pos:  pos_valid AND ((time_for_min AND allow_core) OR time_for_silence)
+//   Alive:     !pos_valid AND time_for_silence
+//   Core_Tail: only when Core_Pos enqueued same pass; ref_core_seq16 in payload
+//   Op (0x04): (time_for_min || time_for_silence) AND (has_battery || has_uptime)
+//   Info (0x05): (time_for_min || time_for_silence) AND (has_max_silence || has_hw_profile || has_fw_version)
+//
+// Payload fields: wire names (uptime_sec etc.) match v0 contracts; canon product name
+// uptime_10m is equivalent (unit conversion at app layer). hw_profile_id/fw_version_id
+// remain uint16 per packet_sets_v0.
 
 void BeaconLogic::update_tx_queue(uint32_t now_ms,
                                   const protocol::GeoBeaconFields& self_fields,

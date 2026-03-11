@@ -138,15 +138,13 @@ class BeaconLogic {
    * Formation pass: inspect self_fields and telemetry, form packets, and enqueue
    * them into the slot-based TX queue.
    *
-   * Rules:
-   * - Core_Pos: enqueued when pos_valid and (min_interval elapsed or max_silence hit).
-   *   When Core_Pos is enqueued, Core_Tail is also enqueued immediately with
-   *   ref_core_seq16 = core_seq16. If the Core slot is replaced (new position before
-   *   old one was sent), the Tail slot is also replaced.
-   * - Alive: enqueued when !pos_valid and max_silence would be violated.
-   *   Alive and Core are mutually exclusive in the same formation pass.
-   * - Operational (0x04): enqueued when telemetry.has_battery or telemetry.has_uptime.
-   * - Informative (0x05): enqueued when any informative field is present.
+   * Rules mirror packet_context_tx_rules_v0.md §1 (v0.1 table). See beacon_logic.cpp
+   * for the explicit trigger table. Summary:
+   * - Core_Pos: pos_valid AND ((time_for_min AND allow_core) OR time_for_silence).
+   *   When Core_Pos is enqueued, Core_Tail is also enqueued same pass with ref_core_seq16.
+   * - Alive: !pos_valid AND time_for_silence.
+   * - Operational (0x04): (time_for_min || time_for_silence) AND (has_battery || has_uptime).
+   * - Informative (0x05): (time_for_min || time_for_silence) AND (has_max_silence || has_hw_profile || has_fw_version).
    *
    * @param now_ms              Current time.
    * @param self_fields         Self position/identity fields.
