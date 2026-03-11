@@ -1358,6 +1358,30 @@ void test_txq_empty_telemetry_no_operational_no_informative() {
   // Core and Tail1 may be present (unrelated to telemetry gate).
 }
 
+void test_txq_op_info_not_enqueued_before_cadence() {
+  // #420: Op and Info are gated by (time_for_min || time_for_silence). When elapsed
+  // is below both min_interval and max_silence, neither Operational nor Informative
+  // must be enqueued, even if telemetry has data (canon cadence gate).
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(30000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.has_battery     = true;
+  telem.battery_percent = 80;
+  telem.has_max_silence = true;
+  telem.max_silence_10s = 9;
+
+  // First formation at t=500: elapsed=500 < min_interval and < max_silence.
+  logic.update_tx_queue(500, self, telem, false);
+
+  TEST_ASSERT_FALSE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotInfo).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
+}
+
 void test_txq_uptime_only_enqueues_operational_not_informative() {
   // has_uptime=true → 0x04 enqueued; has_max_silence=false → 0x05 NOT enqueued.
   BeaconLogic logic;
@@ -1937,8 +1961,9 @@ int main(int argc, char** argv) {
   RUN_TEST(test_txq_alive_enqueued_when_no_fix_at_max_silence);
   RUN_TEST(test_txq_operational_enqueued_independently);
   RUN_TEST(test_txq_informative_enqueued_independently);
-  // TX queue: telemetry gate (empty telemetry → no 0x04/0x05)
+  // TX queue: telemetry gate + cadence gate (#420)
   RUN_TEST(test_txq_empty_telemetry_no_operational_no_informative);
+  RUN_TEST(test_txq_op_info_not_enqueued_before_cadence);
   RUN_TEST(test_txq_uptime_only_enqueues_operational_not_informative);
   RUN_TEST(test_txq_max_silence_only_enqueues_informative_not_operational);
   // TX queue: dequeue / priority / fairness
