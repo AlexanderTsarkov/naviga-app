@@ -87,8 +87,9 @@ The following strategies may be adopted in a future iteration; they are **out of
 
 ---
 
-## 6) Related
+## 6) Implementation and related
 
+- **Implementation (#421):** `firmware/src/domain/node_table.cpp` — `upsert_remote` (Core_Pos/Alive), `apply_tail1`, `apply_tail2`, `apply_info`. Tail–Core ref fields are runtime-local decoder state only (not BLE, not persisted); see [nodetable_master_field_table_v0.md](nodetable_master_field_table_v0.md) §7.
 - **Beacon encoding:** [beacon_payload_encoding_v0](../contract/beacon_payload_encoding_v0.md) — Core/Tail layouts; §3.1 position-bearing vs alive-bearing.
 - **Alive encoding:** [alive_packet_encoding_v0](../contract/alive_packet_encoding_v0.md).
 - **Field cadence:** [field_cadence_v0](field_cadence_v0.md) — Core only with valid fix; maxSilence via Alive when no fix.
