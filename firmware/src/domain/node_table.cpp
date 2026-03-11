@@ -483,7 +483,9 @@ size_t NodeTable::get_page(uint32_t now_ms,
     write_u32_le(out_buffer + offset + 17, static_cast<uint32_t>(entry.pos_valid ? entry.lon_e7 : 0));
     write_u16_le(out_buffer + offset + 21, entry.pos_valid ? entry.pos_age_s : 0);
     out_buffer[offset + 23] = static_cast<uint8_t>(entry.last_rx_rssi);
-    write_u16_le(out_buffer + offset + 24, entry.last_seq);
+    // #419: last_seq not in BLE per canon; offset 24 = snr_last (127 = NA), 25 = reserved.
+    out_buffer[offset + 24] = static_cast<uint8_t>(entry.snr_last);
+    out_buffer[offset + 25] = 0;
 
     offset += kRecordBytes;
   }
@@ -586,7 +588,8 @@ size_t NodeTable::get_snapshot_page(uint16_t snapshot_id,
     write_u32_le(out_buffer + offset + 17, static_cast<uint32_t>(entry.pos_valid ? entry.lon_e7 : 0));
     write_u16_le(out_buffer + offset + 21, entry.pos_valid ? entry.pos_age_s : 0);
     out_buffer[offset + 23] = static_cast<uint8_t>(entry.last_rx_rssi);
-    write_u16_le(out_buffer + offset + 24, entry.last_seq);
+    out_buffer[offset + 24] = static_cast<uint8_t>(entry.snr_last);
+    out_buffer[offset + 25] = 0;
 
     offset += kRecordBytes;
   }

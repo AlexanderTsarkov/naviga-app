@@ -287,7 +287,7 @@ void test_rx_core_success_updates_node_table() {
   TEST_ASSERT_EQUAL_UINT32(NodeTable::kRecordBytes, bytes);
   TEST_ASSERT_EQUAL_UINT64(fields.node_id, read_u64_le(page));
   TEST_ASSERT_EQUAL_INT8(-55, static_cast<int8_t>(page[23]));
-  TEST_ASSERT_EQUAL_UINT16(fields.seq, read_u16_le(page + 24));
+  TEST_ASSERT_EQUAL_UINT8(127, page[24]);  // #419: snr_last (127 = NA); last_seq not in BLE
 }
 
 // ── RX: Alive dispatch ──────────────────────────────────────────────────────

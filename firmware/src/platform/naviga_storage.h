@@ -121,8 +121,8 @@ bool save_seq16(uint16_t value);
 // ── NodeTable snapshot (#418) ─────────────────────────────────────────────────
 // Narrow persistence-specific format; not the 26-byte BLE export.
 
-/** Max bytes for one NodeTable snapshot blob (header + records). */
-constexpr size_t kMaxNodeTableSnapshotBytes = 5120;
+/** Max bytes for one NodeTable snapshot blob (header + records). v4 record = 68 bytes; 100 nodes = 6805. */
+constexpr size_t kMaxNodeTableSnapshotBytes = 8192;
 
 /**
  * Save NodeTable snapshot blob to NVS (key "nt_snap"). Length stored separately.
