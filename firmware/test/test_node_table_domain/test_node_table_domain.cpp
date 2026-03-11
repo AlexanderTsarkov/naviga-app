@@ -43,7 +43,7 @@ struct RecordView {
   int32_t lon_e7 = 0;
   uint16_t pos_age_s = 0;
   int8_t last_rx_rssi = 0;
-  uint16_t last_seq = 0;
+  int8_t snr_last = 0;  // #419: BLE has snr_last at 24; last_seq not in BLE per canon.
 };
 
 RecordView decode_record(const uint8_t* data) {
@@ -56,7 +56,7 @@ RecordView decode_record(const uint8_t* data) {
   out.lon_e7 = static_cast<int32_t>(read_u32_le(data + 17));
   out.pos_age_s = read_u16_le(data + 21);
   out.last_rx_rssi = static_cast<int8_t>(data[23]);
-  out.last_seq = read_u16_le(data + 24);
+  out.snr_last = static_cast<int8_t>(data[24]);  // 127 = NA
   return out;
 }
 
@@ -108,7 +108,7 @@ void test_self_init_and_serialization() {
   TEST_ASSERT_EQUAL_INT32(0, record.lon_e7);
   TEST_ASSERT_EQUAL_UINT16(0, record.pos_age_s);
   TEST_ASSERT_EQUAL_INT8(0, record.last_rx_rssi);
-  TEST_ASSERT_EQUAL_UINT16(0, record.last_seq);
+  TEST_ASSERT_EQUAL_INT8(naviga::domain::kSnrLastNa, record.snr_last);
 }
 
 void test_remote_upsert_and_fields() {
@@ -134,7 +134,10 @@ void test_remote_upsert_and_fields() {
   TEST_ASSERT_EQUAL_INT32(-456, record.lon_e7);
   TEST_ASSERT_EQUAL_UINT16(7, record.pos_age_s);
   TEST_ASSERT_EQUAL_INT8(-30, record.last_rx_rssi);
-  TEST_ASSERT_EQUAL_UINT16(42, record.last_seq);
+  TEST_ASSERT_EQUAL_INT8(naviga::domain::kSnrLastNa, record.snr_last);
+  NodeEntry entry{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(remote_id, &entry));
+  TEST_ASSERT_EQUAL_UINT16(42, entry.last_seq);
 }
 
 void test_grey_transition() {
@@ -246,9 +249,10 @@ void test_rx_semantics_duplicate_same_seq_position_unchanged() {
   TEST_ASSERT_TRUE(find_record(buffer, bytes, remote_id, &record));
   TEST_ASSERT_EQUAL_INT32(123, record.lat_e7);
   TEST_ASSERT_EQUAL_INT32(-456, record.lon_e7);
-  TEST_ASSERT_EQUAL_UINT16(42, record.last_seq);
-  /* lastRxAt / link metrics updated: rssi from duplicate packet. */
   TEST_ASSERT_EQUAL_INT8(-50, record.last_rx_rssi);
+  NodeEntry entry{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(remote_id, &entry));
+  TEST_ASSERT_EQUAL_UINT16(42, entry.last_seq);
 }
 
 /* RX semantics v0: out-of-order older seq → do not overwrite position; update lastRxAt + rssi. */
@@ -268,8 +272,10 @@ void test_rx_semantics_ooo_older_seq_position_unchanged() {
   TEST_ASSERT_TRUE(find_record(buffer, bytes, remote_id, &record));
   TEST_ASSERT_EQUAL_INT32(10, record.lat_e7);
   TEST_ASSERT_EQUAL_INT32(20, record.lon_e7);
-  TEST_ASSERT_EQUAL_UINT16(10, record.last_seq);
   TEST_ASSERT_EQUAL_INT8(-60, record.last_rx_rssi);
+  NodeEntry entry{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(remote_id, &entry));
+  TEST_ASSERT_EQUAL_UINT16(10, entry.last_seq);
 }
 
 /* RX semantics v0: newer seq → full update (position + last_seq + lastRxAt). */
@@ -287,7 +293,9 @@ void test_rx_semantics_newer_seq_updates_position() {
   TEST_ASSERT_TRUE(find_record(buffer, bytes, remote_id, &record));
   TEST_ASSERT_EQUAL_INT32(3, record.lat_e7);
   TEST_ASSERT_EQUAL_INT32(4, record.lon_e7);
-  TEST_ASSERT_EQUAL_UINT16(6, record.last_seq);
+  NodeEntry entry{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(remote_id, &entry));
+  TEST_ASSERT_EQUAL_UINT16(6, entry.last_seq);
 }
 
 /* RX semantics v0: seq16 wrap — incoming 0 when last 65535 is newer; position must update. */
@@ -305,7 +313,9 @@ void test_rx_semantics_seq16_wrap_newer() {
   TEST_ASSERT_TRUE(find_record(buffer, bytes, remote_id, &record));
   TEST_ASSERT_EQUAL_INT32(300, record.lat_e7);
   TEST_ASSERT_EQUAL_INT32(400, record.lon_e7);
-  TEST_ASSERT_EQUAL_UINT16(0, record.last_seq);
+  NodeEntry entry{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(remote_id, &entry));
+  TEST_ASSERT_EQUAL_UINT16(0, entry.last_seq);
 }
 
 /* RX semantics v0: seq16 wrap — incoming 65535 when last 0 is older; position must not update. */
@@ -323,7 +333,9 @@ void test_rx_semantics_seq16_wrap_older() {
   TEST_ASSERT_TRUE(find_record(buffer, bytes, remote_id, &record));
   TEST_ASSERT_EQUAL_INT32(10, record.lat_e7);
   TEST_ASSERT_EQUAL_INT32(20, record.lon_e7);
-  TEST_ASSERT_EQUAL_UINT16(0, record.last_seq);
+  NodeEntry entry{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(remote_id, &entry));
+  TEST_ASSERT_EQUAL_UINT16(0, entry.last_seq);
 }
 
 // Canonical ShortId: CRC16-CCITT-FALSE over 6-byte LE of NodeID48.
@@ -384,9 +396,14 @@ void test_nodetable_snapshot_restore_is_self_derived() {
   // last_seen_ms not persisted (canon: uptime, not reboot-safe); restore sets 0 for all entries.
   TEST_ASSERT_EQUAL_UINT32(0, e_self.last_seen_ms);
   TEST_ASSERT_EQUAL_UINT32(0, e_remote.last_seen_ms);
+  // Persisted product fields round-trip (e.g. pos_age_s).
+  TEST_ASSERT_EQUAL_UINT16(5, e_remote.pos_age_s);
+  // Legacy ref-state not persisted; restore sets 0/false.
+  TEST_ASSERT_FALSE(e_remote.has_core_seq16);
+  TEST_ASSERT_EQUAL_UINT16(0, e_remote.last_core_seq16);
 }
 
-// #418: excluded fields (last_seq, last_rx_rssi, last_applied_tail_ref) are not persisted; restore sets them 0.
+// #418: excluded fields (last_seq, last_rx_rssi, last_applied_tail_ref*, last_core_seq16, has_core_seq16) not persisted; restore sets them 0/false.
 void test_nodetable_snapshot_excluded_fields_not_authoritative() {
   NodeTable table;
   table.set_expected_interval_s(18);
@@ -401,10 +418,12 @@ void test_nodetable_snapshot_excluded_fields_not_authoritative() {
   const size_t n = restore_from_nodetable_snapshot(buf, len, 0xAAAAAAAAAAAAAAAAULL, entries, NodeTable::kMaxNodes);
   TEST_ASSERT_EQUAL(2, n);
   for (size_t i = 0; i < n; ++i) {
-    TEST_ASSERT_EQUAL_UINT32(0, entries[i].last_seen_ms);  // no persisted presence anchor
+    TEST_ASSERT_EQUAL_UINT32(0, entries[i].last_seen_ms);
     TEST_ASSERT_EQUAL(0, entries[i].last_seq);
     TEST_ASSERT_EQUAL(0, entries[i].last_rx_rssi);
     TEST_ASSERT_FALSE(entries[i].has_applied_tail_ref_core_seq16);
+    TEST_ASSERT_FALSE(entries[i].has_core_seq16);
+    TEST_ASSERT_EQUAL_UINT16(0, entries[i].last_core_seq16);
   }
 }
 
@@ -416,12 +435,13 @@ void test_nodetable_snapshot_corrupt_returns_zero() {
   TEST_ASSERT_EQUAL(0, n);
 }
 
-// #418: legacy v1 snapshot (40-byte record layout) is rejected; reader expects v2 (37-byte). Clean start.
+// #418/#419: v1/v2 rejected; v3 and v4 accepted.
 void test_nodetable_snapshot_old_version_rejected() {
   NodeEntry entries[NodeTable::kMaxNodes];
-  uint8_t v1_header[] = { 'N', 'T', 1, 0, 0 };  // magic + version 1 + count 0
-  const size_t n = restore_from_nodetable_snapshot(v1_header, sizeof(v1_header), 1, entries, NodeTable::kMaxNodes);
-  TEST_ASSERT_EQUAL(0, n);
+  uint8_t v1_header[] = { 'N', 'T', 1, 0, 0 };
+  TEST_ASSERT_EQUAL(0, restore_from_nodetable_snapshot(v1_header, sizeof(v1_header), 1, entries, NodeTable::kMaxNodes));
+  uint8_t v2_header[] = { 'N', 'T', 2, 0, 0 };
+  TEST_ASSERT_EQUAL(0, restore_from_nodetable_snapshot(v2_header, sizeof(v2_header), 1, entries, NodeTable::kMaxNodes));
 }
 
 // #418: dirty flag set after mutation, clear_dirty clears.
