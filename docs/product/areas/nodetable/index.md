@@ -47,6 +47,8 @@ Canon semantics are in the linked contract and policy docs; this list is a stric
 | [link_metrics_v0](policy/link_metrics_v0.md) | Receiver-derived link metrics: rssiLast/snrLast, rssiRecent/snrRecent; update rules. |
 | [nodetable_fields_inventory_v0](policy/nodetable_fields_inventory_v0.md) | Fields inventory, coupling rules, Tier/cadence/placement owner worksheet. |
 | [position_quality_v0](policy/position_quality_v0.md) | Position quality: Tail-1 posFlags/sats; PositionQuality derived from Core + Tail-1. |
+| [nodetable_snapshot_format_v0](policy/nodetable_snapshot_format_v0.md) | NVS persistence snapshot format (v3/v4) and restore policy (#418); persisted vs runtime vs derived. |
+| [nodetable_master_field_table_v0](policy/nodetable_master_field_table_v0.md) | Canonical master field table (#419); identity, position, BLE, persisted, legacy excluded. |
 
 ---
 
