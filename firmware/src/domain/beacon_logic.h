@@ -115,6 +115,14 @@ class BeaconLogic {
   void set_min_interval_ms(uint32_t min_interval_ms);
   void set_max_silence_ms(uint32_t max_silence_ms);
 
+  /** #422 Path B: Status (Op/Info) anti-burst and T_status_max. Default 30s. */
+  void set_min_status_interval_ms(uint32_t ms);
+  /** #422 Path B: Bounded periodic refresh for status; at least one Op/Info per this interval. Default 300s. */
+  void set_T_status_max_ms(uint32_t ms);
+
+  /** #422: Notify when a P3 (Operational or Informative) frame was handed to TX / sent. Updates last_status_tx_ms and bootstrap count. */
+  void on_status_sent(uint32_t now_ms);
+
   /** Set initial seq so next next_seq16() returns value + 1. Call only before any formation (#417). */
   void set_initial_seq16(uint16_t value);
 
@@ -205,6 +213,13 @@ class BeaconLogic {
   uint32_t max_silence_ms_ = 30000;
   uint32_t last_tx_ms_ = 0;
   uint16_t seq_ = 0;
+
+  // #422 Path B: Status (Op/Info) lifecycle — min interval, T_status_max, bootstrap.
+  uint32_t min_status_interval_ms_ = 30000;   ///< 30s anti-burst (packet_context_tx_rules_v0 §2a).
+  uint32_t T_status_max_ms_ = 300000;          ///< 300s bounded refresh.
+  uint32_t last_status_tx_ms_ = 0;             ///< When we last sent a P3 (Op or Info); 0 = never.
+  uint32_t last_status_enqueue_ms_ = 0;        ///< When we last enqueued a P3; 0 = never.
+  uint8_t  status_bootstrap_count_ = 0;        ///< Bootstrap sends so far (max 2 per §2a).
 
   // Slot-based TX queue.
   TxSlot slots_[kTxSlotCount] = {};
