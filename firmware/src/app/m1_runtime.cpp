@@ -63,6 +63,9 @@ void M1Runtime::init(uint64_t self_id,
 
   beacon_logic_.set_min_interval_ms(min_interval_ms);
   beacon_logic_.set_max_silence_ms(max_silence_ms);
+  // #422 Path B: Status (Op/Info) lifecycle per packet_context_tx_rules_v0 §2a.
+  beacon_logic_.set_min_status_interval_ms(30000);   // 30s anti-burst
+  beacon_logic_.set_T_status_max_ms(300000);         // 300s = 10 min bounded refresh
 
   self_fields_ = {};
   self_fields_.node_id = self_id;
@@ -263,6 +266,10 @@ void M1Runtime::handle_tx(uint32_t now_ms) {
   if (ok) {
     stats_.tx_count++;
     stats_.last_tx_ms = now_ms;
+    // #422: Notify BeaconLogic when a P3 (Op/Info) was sent for status lifecycle (min_status_interval, T_status_max, bootstrap).
+    if (last_tx_type_ == domain::PacketLogType::TAIL2 || last_tx_type_ == domain::PacketLogType::INFO) {
+      beacon_logic_.on_status_sent(now_ms);
+    }
     // Persist the seq16 that was actually sent (#417): Common prefix at payload offset 7-8, frame = header(2) + payload.
     // Store value and validity separately so seq16 0 (wraparound) is persisted.
     if (pending_len_ >= 11) {

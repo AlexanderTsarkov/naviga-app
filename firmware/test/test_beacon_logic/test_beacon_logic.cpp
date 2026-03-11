@@ -1382,6 +1382,35 @@ void test_txq_op_info_not_enqueued_before_cadence() {
   TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
 }
 
+void test_txq_422_status_throttle_min_interval_respected() {
+  // #422 Path B: After two status "sends" (on_status_sent), next formation within min_status_interval
+  // must not enqueue another status (anti-burst).
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(120000);
+  logic.set_min_status_interval_ms(30000);  // 30s
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.has_battery     = true;
+  telem.battery_percent = 90;
+
+  logic.update_tx_queue(1000, self, telem, false);   // enqueue Op (bootstrap)
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  logic.on_status_sent(1000);                         // first "send"
+
+  logic.update_tx_queue(31000, self, telem, false);  // 30s later: interval elapsed, enqueue again
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  logic.on_status_sent(31000);                        // second "send" (bootstrap done)
+
+  // 1 ms later: within min_status_interval, must NOT enqueue (replace) status.
+  logic.update_tx_queue(31001, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  // created_at_ms unchanged (we did not replace the slot this pass).
+  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotTail2).created_at_ms);
+}
+
 void test_txq_uptime_only_enqueues_operational_not_informative() {
   // has_uptime=true → 0x04 enqueued; has_max_silence=false → 0x05 NOT enqueued.
   BeaconLogic logic;
@@ -1429,7 +1458,7 @@ void test_txq_dequeue_empty_returns_false() {
 }
 
 void test_txq_dequeue_core_before_operational() {
-  // Core (P0) must be dequeued before Operational (P3).
+  // Core (P0) must be dequeued before Operational (P3). #422: no hitchhiking — Op and Core from separate passes.
   BeaconLogic logic;
   logic.set_min_interval_ms(1000);
   logic.set_max_silence_ms(30000);
@@ -1440,9 +1469,13 @@ void test_txq_dequeue_core_before_operational() {
   telem.has_battery     = true;
   telem.battery_percent = 90;
 
+  // First pass: enqueue Op only (allow_core=false).
+  logic.update_tx_queue(1000, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  // Second pass: enqueue Core+Tail1 (allow_core=true); no Op this pass (no hitchhiking).
   logic.update_tx_queue(1000, self, telem, true);
 
-  // Both Core and Operational should be present.
+  // Both Core and Operational should be present (Op from first pass, Core from second).
   TEST_ASSERT_TRUE(logic.slot(kSlotCore).present);
   TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
 
@@ -1459,7 +1492,7 @@ void test_txq_dequeue_core_before_operational() {
 }
 
 void test_txq_dequeue_tail1_before_operational() {
-  // Tail-1 (P2) must be dequeued before Operational (P3).
+  // Tail-1 (P2) must be dequeued before Operational (P3). #422: no hitchhiking — Op and Core from separate passes.
   BeaconLogic logic;
   logic.set_min_interval_ms(1000);
   logic.set_max_silence_ms(30000);
@@ -1470,7 +1503,8 @@ void test_txq_dequeue_tail1_before_operational() {
   telem.has_battery     = true;
   telem.battery_percent = 90;
 
-  logic.update_tx_queue(1000, self, telem, true);
+  logic.update_tx_queue(1000, self, telem, false);  // Op only
+  logic.update_tx_queue(1000, self, telem, true);   // Core+Tail1
 
   // Dequeue Core first (P0).
   uint8_t buf[65] = {};
@@ -1786,13 +1820,16 @@ void test_txq_p2_tail1_before_p3_operational_informative() {
   const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
   GeoBeaconFields self = make_self_fields(node_id, true);
 
-  // Enqueue Operational and Informative first (P3).
-  SelfTelemetry telem{};
-  telem.has_battery     = true;
-  telem.battery_percent = 90;
-  telem.has_max_silence = true;
-  telem.max_silence_10s = 9;
-  logic.update_tx_queue(500, self, telem, false);  // time_for_min=true
+  // #422 Path B: at most one P3 per pass. Enqueue Operational then Informative in two passes.
+  SelfTelemetry telem_op{};
+  telem_op.has_battery     = true;
+  telem_op.battery_percent = 90;
+  logic.update_tx_queue(500, self, telem_op, false);  // Op only
+  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  SelfTelemetry telem_info{};
+  telem_info.has_max_silence = true;
+  telem_info.max_silence_10s = 9;
+  logic.update_tx_queue(500, self, telem_info, false);  // Info only (second pass)
   TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
   TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
   TEST_ASSERT_EQUAL(static_cast<int>(TxPriority::P3_THROTTLED),
@@ -1823,7 +1860,7 @@ void test_txq_p2_tail1_before_p3_operational_informative() {
 }
 
 void test_txq_starvation_increments_replaced_count() {
-  // When we dequeue one slot, every other present slot gets +1 replaced_count (starvation).
+  // When we dequeue one slot, every other present slot gets +1 replaced_count (starvation). #422: no hitchhiking.
   BeaconLogic logic;
   logic.set_min_interval_ms(1000);
   logic.set_max_silence_ms(30000);
@@ -1834,7 +1871,8 @@ void test_txq_starvation_increments_replaced_count() {
   telem.has_battery = true;
   telem.battery_percent = 90;
 
-  logic.update_tx_queue(1000, self, telem, true);
+  logic.update_tx_queue(1000, self, telem, false);  // Op only (first pass)
+  logic.update_tx_queue(1000, self, telem, true);   // Core+Tail1 (second pass; no Op this pass)
   TEST_ASSERT_TRUE(logic.slot(kSlotCore).present);
   TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
   TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotTail2).replaced_count);
@@ -1848,22 +1886,24 @@ void test_txq_starvation_increments_replaced_count() {
 }
 
 void test_txq_priority_ordering_p0_beats_all() {
-  // Verify full ordering: P0 > P2 > P3 with all 5 slots present.
-  // P1 is reserved; Operational and Informative are P3.
+  // Verify full ordering: P0 > P2 > P3 with all 5 slots present. #422: no hitchhiking — P3 and Core from separate passes.
   BeaconLogic logic;
   logic.set_min_interval_ms(1000);
   logic.set_max_silence_ms(30000);
 
   const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
   GeoBeaconFields self = make_self_fields(node_id, true);
-  SelfTelemetry telem{};
-  telem.has_battery     = true;
-  telem.battery_percent = 90;
-  telem.has_max_silence = true;
-  telem.max_silence_10s = 9;
+  SelfTelemetry telem_op{};
+  telem_op.has_battery     = true;
+  telem_op.battery_percent = 90;
+  SelfTelemetry telem_info{};
+  telem_info.has_max_silence = true;
+  telem_info.max_silence_10s = 9;
 
-  // All 5 slots enqueued in one pass.
-  logic.update_tx_queue(1000, self, telem, true);
+  // Enqueue Op, then Info, then Core+Tail1 (three passes; at most one P3 per pass).
+  logic.update_tx_queue(1000, self, telem_op, false);
+  logic.update_tx_queue(1000, self, telem_info, false);
+  logic.update_tx_queue(1000, self, telem_op, true);
 
   TEST_ASSERT_TRUE(logic.slot(kSlotCore).present);   // P0
   TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);   // P2
@@ -1964,6 +2004,7 @@ int main(int argc, char** argv) {
   // TX queue: telemetry gate + cadence gate (#420)
   RUN_TEST(test_txq_empty_telemetry_no_operational_no_informative);
   RUN_TEST(test_txq_op_info_not_enqueued_before_cadence);
+  RUN_TEST(test_txq_422_status_throttle_min_interval_respected);
   RUN_TEST(test_txq_uptime_only_enqueues_operational_not_informative);
   RUN_TEST(test_txq_max_silence_only_enqueues_informative_not_operational);
   // TX queue: dequeue / priority / fairness

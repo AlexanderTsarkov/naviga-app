@@ -94,6 +94,8 @@ Applies **only to Node_Status**. Does not change Node_PosFull cadence or creatio
 - **Simpler:** 3 slots (PosFull, Alive, Node_Status); one seq16 per position update; one Status rule set; explicit earliest_at and T_status_max for Status.
 - **New semantics:** Earliest_at / deadline for Status; trigger taxonomy (urgent / threshold / hitchhiker); merge-into-pending snapshot; PosFull wire format.
 
+**#422 Path B (implemented):** v0.1 packet family retained; effective behavior aligned with canon via throttle/merge: status (Op/Info) uses `min_status_interval_ms` (30s) and `T_status_max` (300s); no hitchhiking (Op/Info not enqueued in same formation pass as Core/Alive); at most one status enqueued per pass; bootstrap up to 2 sends. See §1 for current code behavior; §2/§2a for target semantics that Path B approximates.
+
 ---
 
 ## 4) Open points and external dependencies

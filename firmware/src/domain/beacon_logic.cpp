@@ -16,6 +16,21 @@ void BeaconLogic::set_max_silence_ms(uint32_t max_silence_ms) {
   max_silence_ms_ = max_silence_ms;
 }
 
+void BeaconLogic::set_min_status_interval_ms(uint32_t ms) {
+  min_status_interval_ms_ = ms;
+}
+
+void BeaconLogic::set_T_status_max_ms(uint32_t ms) {
+  T_status_max_ms_ = ms;
+}
+
+void BeaconLogic::on_status_sent(uint32_t now_ms) {
+  last_status_tx_ms_ = now_ms;
+  if (status_bootstrap_count_ < 2) {
+    status_bootstrap_count_++;
+  }
+}
+
 void BeaconLogic::set_initial_seq16(uint16_t value) {
   seq_ = value;
 }
@@ -149,6 +164,9 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
   const bool time_for_min     = elapsed >= min_interval_ms_;
   const bool time_for_silence = max_silence_ms_ > 0 && elapsed >= max_silence_ms_;
 
+  // #422 Path B: Track if we enqueue Core or Alive this pass — no hitchhiking (do not enqueue Op/Info same pass).
+  bool core_or_alive_enqueued = false;
+
   // ── Core_Pos / Alive formation ────────────────────────────────────────────
   if (self_fields.pos_valid != 0) {
     // Core_Pos: enqueue when time_for_min (with allow_core gate) or time_for_silence.
@@ -166,6 +184,7 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
         enqueue_slot(kSlotCore, TxPriority::P0_MUST_PERIODIC, TxBestEffortClass::BE_LOW,
                      PacketLogType::CORE, core_frame, core_len, now_ms, 0);
         last_tx_ms_ = now_ms;
+        core_or_alive_enqueued = true;
 
         // Core_Tail: formed immediately after Core_Pos, using next seq16.
         // ref_core_seq16 = core_seq; tail's own seq16 = core_seq + 1.
@@ -197,47 +216,59 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
         enqueue_slot(kSlotAlive, TxPriority::P0_MUST_PERIODIC, TxBestEffortClass::BE_LOW,
                      PacketLogType::ALIVE, alive_frame, alive_len, now_ms, 0);
         last_tx_ms_ = now_ms;
+        core_or_alive_enqueued = true;
       }
     }
   }
 
-  // ── Operational (0x04) formation ─────────────────────────────────────────
-  // Guard matches Core/Alive: only enqueue when cadence interval or silence deadline is due.
-  if ((time_for_min || time_for_silence) && (telemetry.has_battery || telemetry.has_uptime)) {
-    const uint16_t op_seq = next_seq16();
-    protocol::Tail2Fields op{};
-    op.node_id         = self_fields.node_id;
-    op.seq16           = op_seq;
-    op.has_battery     = telemetry.has_battery;
-    op.battery_percent = telemetry.battery_percent;
-    op.has_uptime      = telemetry.has_uptime;
-    op.uptime_sec      = telemetry.uptime_sec;
-    uint8_t op_frame[protocol::kTail2FrameMax] = {};
-    const size_t op_len = protocol::encode_tail2_frame(op, op_frame, sizeof(op_frame));
-    if (op_len > 0) {
-      enqueue_slot(kSlotTail2, TxPriority::P3_THROTTLED, TxBestEffortClass::BE_LOW,
-                   PacketLogType::TAIL2, op_frame, op_len, now_ms, 0);
-    }
-  }
+  // ── Operational (0x04) / Informative (0x05) formation (#422 Path B) ─────────
+  // Canon: min_status_interval_ms (30s), T_status_max (300s), no hitchhiking, bootstrap (2 sends).
+  // Status is only enqueued when cadence is due (time_for_min || time_for_silence), then subject to status throttle.
+  const bool status_interval_ok = (last_status_tx_ms_ == 0) || (now_ms - last_status_tx_ms_ >= min_status_interval_ms_);
+  const bool status_T_max_force = (last_status_enqueue_ms_ != 0) && (now_ms - last_status_enqueue_ms_ >= T_status_max_ms_);
+  const bool status_bootstrap_ok = status_bootstrap_count_ < 2;
+  const bool status_throttle_ok = status_bootstrap_ok || status_interval_ok || status_T_max_force;
+  const bool status_eligible = !core_or_alive_enqueued && (time_for_min || time_for_silence) && status_throttle_ok;
 
-  // ── Informative (0x05) formation ─────────────────────────────────────────
-  // Guard matches Core/Alive: only enqueue when cadence interval or silence deadline is due.
-  if ((time_for_min || time_for_silence) && (telemetry.has_max_silence || telemetry.has_hw_profile || telemetry.has_fw_version)) {
-    const uint16_t info_seq = next_seq16();
-    protocol::InfoFields info{};
-    info.node_id         = self_fields.node_id;
-    info.seq16           = info_seq;
-    info.has_max_silence = telemetry.has_max_silence;
-    info.max_silence_10s = telemetry.max_silence_10s;
-    info.has_hw_profile  = telemetry.has_hw_profile;
-    info.hw_profile_id   = telemetry.hw_profile_id;
-    info.has_fw_version  = telemetry.has_fw_version;
-    info.fw_version_id   = telemetry.fw_version_id;
-    uint8_t info_frame[protocol::kInfoFrameMax] = {};
-    const size_t info_len = protocol::encode_info_frame(info, info_frame, sizeof(info_frame));
-    if (info_len > 0) {
-      enqueue_slot(kSlotInfo, TxPriority::P3_THROTTLED, TxBestEffortClass::BE_LOW,
-                   PacketLogType::INFO, info_frame, info_len, now_ms, 0);
+  const bool has_op  = telemetry.has_battery || telemetry.has_uptime;
+  const bool has_info = telemetry.has_max_silence || telemetry.has_hw_profile || telemetry.has_fw_version;
+
+  if (status_eligible && (has_op || has_info)) {
+    // Enqueue at most one: prefer Operational when it has data, else Informative.
+    if (has_op) {
+      const uint16_t op_seq = next_seq16();
+      protocol::Tail2Fields op{};
+      op.node_id         = self_fields.node_id;
+      op.seq16           = op_seq;
+      op.has_battery     = telemetry.has_battery;
+      op.battery_percent = telemetry.battery_percent;
+      op.has_uptime      = telemetry.has_uptime;
+      op.uptime_sec      = telemetry.uptime_sec;
+      uint8_t op_frame[protocol::kTail2FrameMax] = {};
+      const size_t op_len = protocol::encode_tail2_frame(op, op_frame, sizeof(op_frame));
+      if (op_len > 0) {
+        enqueue_slot(kSlotTail2, TxPriority::P3_THROTTLED, TxBestEffortClass::BE_LOW,
+                     PacketLogType::TAIL2, op_frame, op_len, now_ms, 0);
+        last_status_enqueue_ms_ = now_ms;
+      }
+    } else if (has_info) {
+      const uint16_t info_seq = next_seq16();
+      protocol::InfoFields info{};
+      info.node_id         = self_fields.node_id;
+      info.seq16           = info_seq;
+      info.has_max_silence = telemetry.has_max_silence;
+      info.max_silence_10s = telemetry.max_silence_10s;
+      info.has_hw_profile  = telemetry.has_hw_profile;
+      info.hw_profile_id   = telemetry.hw_profile_id;
+      info.has_fw_version  = telemetry.has_fw_version;
+      info.fw_version_id   = telemetry.fw_version_id;
+      uint8_t info_frame[protocol::kInfoFrameMax] = {};
+      const size_t info_len = protocol::encode_info_frame(info, info_frame, sizeof(info_frame));
+      if (info_len > 0) {
+        enqueue_slot(kSlotInfo, TxPriority::P3_THROTTLED, TxBestEffortClass::BE_LOW,
+                     PacketLogType::INFO, info_frame, info_len, now_ms, 0);
+        last_status_enqueue_ms_ = now_ms;
+      }
     }
   }
 }
