@@ -153,13 +153,16 @@ void AppServices::init() {
   gnss_provider_.init(full_id);
   constexpr uint32_t kGnssVerifyTimeoutMs = 500U;
   const bool first_verify = gnss_provider_.verify_on_boot(kGnssVerifyTimeoutMs);
+  bool gnss_repaired = false;
   if (first_verify) {
     log_line("GNSS boot: ok");
   } else {
     gnss_provider_.init(full_id);
-    const bool second_verify = gnss_provider_.verify_on_boot(kGnssVerifyTimeoutMs);
-    log_line(second_verify ? "GNSS boot: repaired" : "GNSS boot: failed");
+    gnss_repaired = gnss_provider_.verify_on_boot(kGnssVerifyTimeoutMs);
+    log_line(gnss_repaired ? "GNSS boot: repaired" : "GNSS boot: failed");
   }
+  const RadioBootConfigResult gnss_result = first_verify ? RadioBootConfigResult::Ok
+      : (gnss_repaired ? RadioBootConfigResult::Repaired : RadioBootConfigResult::RepairFailed);
   self_policy.init();
 #if defined(GNSS_PROVIDER_UBLOX) && GNSS_UBLOX_DIAG
   gnss_diag_next_ms = 0;
@@ -174,11 +177,12 @@ void AppServices::init() {
 
   bool radio_ready = false;
   radio = create_radio(profile, &radio_ready);
+  const RadioBootConfigResult radio_result = radio->boot_config_result();
   {
     const char* radio_boot_msg = radio->boot_config_message();
     char buf[80] = {0};
     const char* radio_name = (profile.caps.radio_type == RadioType::E22_UART) ? "E22" : "E220";
-    switch (radio->boot_config_result()) {
+    switch (radio_result) {
       case RadioBootConfigResult::Ok:
         std::snprintf(buf, sizeof(buf), "%s boot: config ok", radio_name);
         log_line(buf);
@@ -192,7 +196,32 @@ void AppServices::init() {
         log_line(buf);
         break;
     }
-    provisioning_->set_radio_boot_info(static_cast<int>(radio->boot_config_result()), radio_boot_msg);
+  }
+  // #393: Phase A combined boot_config_result (worst of GNSS + radio); log and expose for diag/status.
+  const RadioBootConfigResult combined_result =
+      (radio_result == RadioBootConfigResult::RepairFailed || gnss_result == RadioBootConfigResult::RepairFailed)
+          ? RadioBootConfigResult::RepairFailed
+          : (radio_result == RadioBootConfigResult::Repaired || gnss_result == RadioBootConfigResult::Repaired)
+                ? RadioBootConfigResult::Repaired
+                : RadioBootConfigResult::Ok;
+  {
+    const char* combined_str = (combined_result == RadioBootConfigResult::Ok)   ? "Ok"
+                             : (combined_result == RadioBootConfigResult::Repaired) ? "Repaired"
+                                                                                    : "RepairFailed";
+    char buf[64] = {0};
+    std::snprintf(buf, sizeof(buf), "Phase A boot_config_result: %s", combined_str);
+    log_line(buf);
+  }
+  {
+    char combined_msg[96] = {0};
+    if (combined_result != RadioBootConfigResult::Ok) {
+      const char* r_str = (radio_result == RadioBootConfigResult::Ok) ? "ok"
+                        : (radio_result == RadioBootConfigResult::Repaired) ? "repaired" : "repair_failed";
+      const char* g_str = (gnss_result == RadioBootConfigResult::Ok) ? "ok"
+                        : (gnss_result == RadioBootConfigResult::Repaired) ? "repaired" : "repair_failed";
+      std::snprintf(combined_msg, sizeof(combined_msg), "radio:%s gnss:%s", r_str, g_str);
+    }
+    provisioning_->set_radio_boot_info(static_cast<int>(combined_result), combined_msg);
   }
 
   // --- Phase B: Provision role + radio profile (boot_pipeline_v0) ---
