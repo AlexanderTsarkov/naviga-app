@@ -109,4 +109,5 @@ Applies **only to Node_Status**. Does not change Node_PosFull cadence or creatio
 ## 5) Related
 
 - [packet_sets_v0](../../nodetable/policy/packet_sets_v0.md), [tx_priority_and_arbitration_v0](../../nodetable/policy/tx_priority_and_arbitration_v0.md) — Packet sets and TX priority (v0.1 alignment).
+- **[packet_truth_table_v02](../../nodetable/policy/packet_truth_table_v02.md)** ([#435](https://github.com/AlexanderTsarkov/naviga-app/issues/435)) — v0.2 canonical packet family and truth table; **[packet_migration_v01_v02](../../nodetable/policy/packet_migration_v01_v02.md)** — compatibility policy.
 - [#351](https://github.com/AlexanderTsarkov/naviga-app/issues/351), [#407](https://github.com/AlexanderTsarkov/naviga-app/issues/407).

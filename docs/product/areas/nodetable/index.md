@@ -49,6 +49,8 @@ Canon semantics are in the linked contract and policy docs; this list is a stric
 | [position_quality_v0](policy/position_quality_v0.md) | Position quality: Tail-1 posFlags/sats; PositionQuality derived from Core + Tail-1. |
 | [nodetable_snapshot_format_v0](policy/nodetable_snapshot_format_v0.md) | NVS persistence snapshot format (v3/v4) and restore policy (#418); persisted vs runtime vs derived. |
 | [nodetable_master_field_table_v0](policy/nodetable_master_field_table_v0.md) | Canonical master field table (#419); identity, position, BLE, persisted, legacy excluded. |
+| [packet_truth_table_v02](policy/packet_truth_table_v02.md) | v0.2 canonical packet family (#435): Node_Pos_Full, Node_Status, Alive; field composition, TX/RX, airtime. |
+| [packet_migration_v01_v02](policy/packet_migration_v01_v02.md) | Compatibility policy v0.1→v0.2: TX v0.2 only; RX accepts v0.1+v0.2 during transition; cutover. |
 
 ---
 

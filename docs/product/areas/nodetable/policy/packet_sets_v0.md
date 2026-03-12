@@ -90,10 +90,22 @@ Firmware matches this policy: **Core_Pos** and **Alive** use P0; **Node_Core_Tai
 
 ---
 
-## 6) Related
+## 6) v0.2 canonical packet family (post-P0)
+
+The **canonical v0.2** packet set and truth table are defined in:
+
+- **[packet_truth_table_v02.md](packet_truth_table_v02.md)** ([#435](https://github.com/AlexanderTsarkov/naviga-app/issues/435)) — v0.2 packet family (Node_Pos_Full, Node_Status, Alive), field composition, TX/RX semantics, airtime.
+- **[packet_migration_v01_v02.md](packet_migration_v01_v02.md)** — Compatibility policy: TX v0.2 only; RX accepts v0.1 + v0.2 during transition; cutover expectation.
+
+This document (§1–§5) describes **v0.1** packet sets. For v0.2 canon and migration, use the links above.
+
+---
+
+## 7) Related
 
 - [tx_priority_and_arbitration_v0.md](tx_priority_and_arbitration_v0.md) — P0–P3, coalesce_key, expired_counter.
 - [packet_context_tx_rules_v0.md](../../radio/policy/packet_context_tx_rules_v0.md) ([#407](https://github.com/AlexanderTsarkov/naviga-app/issues/407)) — Packet context and TX rules (Node_Pos_Full, Node_Status).
+- [packet_truth_table_v02.md](packet_truth_table_v02.md), [packet_migration_v01_v02.md](packet_migration_v01_v02.md) — v0.2 canon and migration (#435).
 - [beacon_payload_encoding_v0.md](../contract/beacon_payload_encoding_v0.md) — Canon payload layouts.
 - [tail1_packet_encoding_v0.md](../contract/tail1_packet_encoding_v0.md), [tail2_packet_encoding_v0.md](../contract/tail2_packet_encoding_v0.md), [info_packet_encoding_v0.md](../contract/info_packet_encoding_v0.md) — Canon v0 contracts.
 - [#351](https://github.com/AlexanderTsarkov/naviga-app/issues/351), [#352](https://github.com/AlexanderTsarkov/naviga-app/issues/352).
