@@ -11,6 +11,7 @@ constexpr char kKeyCurrentRole[] = "role_cur";
 constexpr char kKeyCurrentRadio[] = "prof_cur";
 constexpr char kKeyPreviousRole[] = "role_prev";
 constexpr char kKeyPreviousRadio[] = "prof_prev";
+constexpr char kKeyRadioProfileVer[] = "rprof_ver";
 constexpr char kKeyProfileIntervalSec[] = "role_interval_s";
 constexpr char kKeyProfileSilence10s[] = "role_silence_10";
 constexpr char kKeyProfileDistM[] = "role_dist_m";
@@ -64,6 +65,7 @@ bool save_pointers(uint32_t current_role_id,
   prefs.putUInt(kKeyCurrentRadio, current_radio_profile_id);
   prefs.putUInt(kKeyPreviousRole, previous_role_id);
   prefs.putUInt(kKeyPreviousRadio, previous_radio_profile_id);
+  prefs.putUChar(kKeyRadioProfileVer, kRadioProfileSchemaVersion);
 
   prefs.end();
   return true;

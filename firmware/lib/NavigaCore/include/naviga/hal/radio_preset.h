@@ -28,7 +28,7 @@ struct RadioPreset {
 // Presets 1/2 are defined here so the apply path can be exercised in tests
 // and future firmware without adding new user-selection mechanisms now.
 enum class RadioPresetId : uint8_t {
-  Default   = 0,  // 2.4 kbps  / SF9-equivalent UART baseline
+  Default   = 0,  // 2.4 kbps / channel 1 / 21 dBm MIN (FACTORY default per canon)
   Fast      = 1,  // 4.8 kbps  / urban / short-range
   LongRange = 2,  // 2.4 kbps  / same as Default for UART; SPI will use SF10
 };
@@ -60,7 +60,7 @@ inline RadioPreset get_radio_preset(RadioPresetId id) {
       return RadioPreset{/*.air_rate=*/2, /*.channel=*/1, /*.tx_power_dbm=*/30};
     case RadioPresetId::Default:
     default:
-      return RadioPreset{/*.air_rate=*/2, /*.channel=*/1, /*.tx_power_dbm=*/30};
+      return RadioPreset{/*.air_rate=*/2, /*.channel=*/1, /*.tx_power_dbm=*/21};  // MIN per canon OOTB
   }
 }
 
