@@ -403,7 +403,7 @@ void test_nodetable_snapshot_restore_is_self_derived() {
   TEST_ASSERT_EQUAL_UINT16(0, e_remote.last_core_seq16);
 }
 
-// #418: excluded fields (last_seq, last_rx_rssi, last_applied_tail_ref*, last_core_seq16, has_core_seq16) not persisted; restore sets them 0/false.
+// #418: excluded fields (last_seq, last_rx_rssi, last_core_seq16, has_core_seq16) not persisted; restore sets them 0/false. (#438: last_applied_tail_ref* removed.)
 void test_nodetable_snapshot_excluded_fields_not_authoritative() {
   NodeTable table;
   table.set_expected_interval_s(18);
@@ -421,7 +421,6 @@ void test_nodetable_snapshot_excluded_fields_not_authoritative() {
     TEST_ASSERT_EQUAL_UINT32(0, entries[i].last_seen_ms);
     TEST_ASSERT_EQUAL(0, entries[i].last_seq);
     TEST_ASSERT_EQUAL(0, entries[i].last_rx_rssi);
-    TEST_ASSERT_FALSE(entries[i].has_applied_tail_ref_core_seq16);
     TEST_ASSERT_FALSE(entries[i].has_core_seq16);
     TEST_ASSERT_EQUAL_UINT16(0, entries[i].last_core_seq16);
   }
