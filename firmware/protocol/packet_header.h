@@ -35,16 +35,16 @@ constexpr size_t kMaxFrameSize = kHeaderSize + kMaxPayloadLen;
 
 /** msg_type registry v0 (ootb_radio_v0.md §3.2) + v0.2 (#435).
  *
- * v0.1 (compatibility-only during transition): 0x01–0x05.
- * v0.2 canonical TX: BeaconPosFull (0x06), BeaconStatus (0x07), BeaconAlive (0x02).
+ * v0.2 canonical (#438): RX accepts only 0x02 (BeaconAlive), 0x06 (BeaconPosFull), 0x07 (BeaconStatus).
+ * v0.1 types 0x01, 0x03, 0x04, 0x05 are no longer accepted on RX (log and drop).
  */
 enum class MsgType : uint8_t {
   Reserved     = 0x00,  ///< MUST NOT be used; drop on receive.
-  BeaconCore   = 0x01,  ///< Node_OOTB_Core_Pos (v0.1 compat); 15 B payload.
-  BeaconAlive  = 0x02,  ///< Node_OOTB_I_Am_Alive; 9–10 B payload; v0.2 retained.
-  BeaconTail1  = 0x03,  ///< Node_OOTB_Core_Tail (v0.1 compat); 11 B min payload.
-  BeaconTail2  = 0x04,  ///< Node_OOTB_Operational (v0.1 compat); 9 B min payload.
-  BeaconInfo   = 0x05,  ///< Node_OOTB_Informative (v0.1 compat); 9 B min payload.
+  BeaconCore   = 0x01,  ///< Node_OOTB_Core_Pos (v0.1); no longer accepted on RX (#438).
+  BeaconAlive  = 0x02,  ///< Node_OOTB_I_Am_Alive; 9–10 B payload; v0.2.
+  BeaconTail1  = 0x03,  ///< Node_OOTB_Core_Tail (v0.1); no longer accepted on RX (#438).
+  BeaconTail2  = 0x04,  ///< Node_OOTB_Operational (v0.1); no longer accepted on RX (#438).
+  BeaconInfo   = 0x05,  ///< Node_OOTB_Informative (v0.1); no longer accepted on RX (#438).
   BeaconPosFull = 0x06,  ///< v0.2 Node_Pos_Full; 17 B payload (#435).
   BeaconStatus  = 0x07,  ///< v0.2 Node_Status; 19 B payload (#435).
 };
@@ -84,11 +84,11 @@ inline bool encode_header(const PacketHeader& hdr, uint8_t* out, size_t out_cap)
 /**
  * Decode the first 2 bytes of \a in into \a hdr.
  *
- * Validates msg_type: returns false if msg_type is Reserved (0x00) or
- * outside the known registry (> BeaconInfo). reserved bits are stored
- * as-is (non-zero reserved is accepted per forward-compat rule).
+ * v0.2-only RX (#438): accepts only 0x02 (BeaconAlive), 0x06 (BeaconPosFull), 0x07 (BeaconStatus).
+ * Returns false for Reserved (0x00), v0.1 types (0x01, 0x03, 0x04, 0x05), or unknown (> 0x07).
+ * reserved bits are stored as-is (non-zero reserved accepted per forward-compat rule).
  *
- * @return true if msg_type is known and non-reserved; false otherwise.
+ * @return true if msg_type is accepted for RX; false otherwise.
  */
 inline bool decode_header(const uint8_t* in, size_t in_size, PacketHeader* hdr) {
   if (!in || !hdr || in_size < kHeaderSize) {
@@ -102,6 +102,13 @@ inline bool decode_header(const uint8_t* in, size_t in_size, PacketHeader* hdr) 
 
   if (mt == static_cast<uint8_t>(MsgType::Reserved) ||
       mt > static_cast<uint8_t>(MsgType::BeaconStatus)) {
+    return false;
+  }
+  // v0.2-only: reject v0.1 packet types (0x01 Core, 0x03 Tail1, 0x04 Tail2, 0x05 Info).
+  if (mt == static_cast<uint8_t>(MsgType::BeaconCore) ||
+      mt == static_cast<uint8_t>(MsgType::BeaconTail1) ||
+      mt == static_cast<uint8_t>(MsgType::BeaconTail2) ||
+      mt == static_cast<uint8_t>(MsgType::BeaconInfo)) {
     return false;
   }
   hdr->msg_type    = static_cast<MsgType>(mt);

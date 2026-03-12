@@ -352,31 +352,6 @@ bool BeaconLogic::on_rx(uint32_t now_ms,
   const uint8_t* payload     = frame + protocol::kHeaderSize;
   const size_t   payload_len = len - protocol::kHeaderSize;
 
-  if (hdr.msg_type == protocol::MsgType::BeaconCore) {
-    protocol::GeoBeaconFields fields{};
-    const protocol::DecodeError err =
-        protocol::decode_geo_beacon(protocol::ConstByteSpan{payload, payload_len}, &fields);
-    if (err != protocol::DecodeError::Ok) {
-      return false;
-    }
-    if (out_node_id)  { *out_node_id  = fields.node_id; }
-    if (out_seq)      { *out_seq      = fields.seq; }
-    if (out_pos_valid){ *out_pos_valid = (fields.pos_valid != 0); }
-    if (out_type)     { *out_type     = PacketLogType::CORE; }
-    if (out_core_seq) { *out_core_seq = 0; }
-
-    const int32_t lat_e7 = static_cast<int32_t>(std::llround(fields.lat_deg * 1e7));
-    const int32_t lon_e7 = static_cast<int32_t>(std::llround(fields.lon_deg * 1e7));
-    return table.upsert_remote(fields.node_id,
-                               true,
-                               lat_e7,
-                               lon_e7,
-                               0,  // pos_age_s not in BeaconCore v0
-                               rssi_dbm,
-                               fields.seq,
-                               now_ms);
-  }
-
   if (hdr.msg_type == protocol::MsgType::BeaconAlive) {
     protocol::AliveFields alive{};
     const protocol::AliveDecodeError err =
@@ -399,76 +374,6 @@ bool BeaconLogic::on_rx(uint32_t now_ms,
                                rssi_dbm,
                                alive.seq,
                                now_ms);
-  }
-
-  if (hdr.msg_type == protocol::MsgType::BeaconTail1) {
-    protocol::Tail1Fields tail1{};
-    const protocol::Tail1DecodeError err =
-        protocol::decode_tail1_payload(payload, payload_len, &tail1);
-    if (err != protocol::Tail1DecodeError::Ok) {
-      return false;
-    }
-    if (out_node_id)  { *out_node_id  = tail1.node_id; }
-    if (out_seq)      { *out_seq      = tail1.seq16; }
-    if (out_pos_valid){ *out_pos_valid = false; }
-    if (out_type)     { *out_type     = PacketLogType::TAIL1; }
-    if (out_core_seq) { *out_core_seq = tail1.ref_core_seq16; }
-
-    // Apply Tail-1: ref_core_seq16 match enforced inside apply_tail1.
-    // seq16 is the packet's own global counter; ref_core_seq16 is the Core linkage key.
-    // Return value indicates match (true) or silent drop (false).
-    // Either way we return true to the caller — the frame was valid.
-    table.apply_tail1(tail1.node_id,
-                      tail1.seq16,
-                      tail1.ref_core_seq16,
-                      tail1.has_pos_flags, tail1.pos_flags,
-                      tail1.has_sats, tail1.sats,
-                      rssi_dbm,
-                      now_ms);
-    return true;
-  }
-
-  if (hdr.msg_type == protocol::MsgType::BeaconTail2) {
-    protocol::Tail2Fields tail2{};
-    const protocol::Tail2DecodeError err =
-        protocol::decode_tail2_payload(payload, payload_len, &tail2);
-    if (err != protocol::Tail2DecodeError::Ok) {
-      return false;
-    }
-    if (out_node_id)  { *out_node_id  = tail2.node_id; }
-    if (out_seq)      { *out_seq      = tail2.seq16; }
-    if (out_pos_valid){ *out_pos_valid = false; }
-    if (out_type)     { *out_type     = PacketLogType::TAIL2; }
-    if (out_core_seq) { *out_core_seq = 0; }
-
-    return table.apply_tail2(tail2.node_id,
-                             tail2.seq16,
-                             tail2.has_battery,  tail2.battery_percent,
-                             tail2.has_uptime,   tail2.uptime_sec,
-                             rssi_dbm,
-                             now_ms);
-  }
-
-  if (hdr.msg_type == protocol::MsgType::BeaconInfo) {
-    protocol::InfoFields info{};
-    const protocol::InfoDecodeError err =
-        protocol::decode_info_payload(payload, payload_len, &info);
-    if (err != protocol::InfoDecodeError::Ok) {
-      return false;
-    }
-    if (out_node_id)  { *out_node_id  = info.node_id; }
-    if (out_seq)      { *out_seq      = info.seq16; }
-    if (out_pos_valid){ *out_pos_valid = false; }
-    if (out_type)     { *out_type     = PacketLogType::INFO; }
-    if (out_core_seq) { *out_core_seq = 0; }
-
-    return table.apply_info(info.node_id,
-                            info.seq16,
-                            info.has_max_silence, info.max_silence_10s,
-                            info.has_hw_profile,  info.hw_profile_id,
-                            info.has_fw_version,  info.fw_version_id,
-                            rssi_dbm,
-                            now_ms);
   }
 
   // v0.2 Node_Pos_Full (0x06) — single-packet position + Pos_Quality (#435).

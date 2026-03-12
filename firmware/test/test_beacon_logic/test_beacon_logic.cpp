@@ -253,43 +253,25 @@ void test_tx_payload_correctness() {
   TEST_ASSERT_EQUAL_UINT16(2, decoded.seq16);
 }
 
-// ── RX: Core dispatch ───────────────────────────────────────────────────────
+// ── RX: v0.2-only; v0.1 packets dropped (#438) ───────────────────────────────
 
-void test_rx_core_success_updates_node_table() {
+void test_rx_v01_packets_dropped() {
   BeaconLogic logic;
   NodeTable table;
-  table.set_expected_interval_s(10);
-
-  GeoBeaconFields fields{};
-  fields.node_id   = 0x0000030405060708ULL;
-  fields.pos_valid = 1;
-  fields.lat_deg   = 55.7558;
-  fields.lon_deg   = 37.6173;
-  fields.seq       = 42;
-
-  uint8_t frame[kGeoBeaconFrameSize] = {};
-  const size_t written = naviga::protocol::encode_geo_beacon(
-      fields, naviga::protocol::ByteSpan{frame, sizeof(frame)});
-  TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, written);
-
-  uint64_t rx_node_id = 0;
-  uint16_t rx_seq     = 0;
-  bool rx_pos_valid   = false;
-  PacketLogType rx_type = PacketLogType::ALIVE;
-  TEST_ASSERT_TRUE(logic.on_rx(1000, frame, written, -55, table,
-                               &rx_node_id, &rx_seq, &rx_pos_valid, &rx_type));
-  TEST_ASSERT_EQUAL_UINT64(fields.node_id, rx_node_id);
-  TEST_ASSERT_EQUAL_UINT16(42, rx_seq);
-  TEST_ASSERT_TRUE(rx_pos_valid);
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(rx_type));
-  TEST_ASSERT_EQUAL_UINT32(1, table.size());
-
-  uint8_t page[NodeTable::kRecordBytes * 2] = {};
-  const size_t bytes = table.get_page(1000, 0, 10, page, sizeof(page));
-  TEST_ASSERT_EQUAL_UINT32(NodeTable::kRecordBytes, bytes);
-  TEST_ASSERT_EQUAL_UINT64(fields.node_id, read_u64_le(page));
-  TEST_ASSERT_EQUAL_INT8(-55, static_cast<int8_t>(page[23]));
-  TEST_ASSERT_EQUAL_UINT8(127, page[24]);  // #419: snr_last (127 = NA); last_seq not in BLE
+  // Minimal valid-looking frames for 0x01, 0x03, 0x04, 0x05: header + payload.
+  uint8_t core_frame[2 + 15] = {0x0F, 0x02, 0x00};
+  for (size_t i = 3; i < sizeof(core_frame); ++i) core_frame[i] = 0;
+  TEST_ASSERT_FALSE(logic.on_rx(1000, core_frame, sizeof(core_frame), -50, table));
+  uint8_t tail1_frame[2 + 11] = {0x0B, 0x06};
+  for (size_t i = 2; i < sizeof(tail1_frame); ++i) tail1_frame[i] = 0;
+  TEST_ASSERT_FALSE(logic.on_rx(1000, tail1_frame, sizeof(tail1_frame), -50, table));
+  uint8_t tail2_frame[2 + 9] = {0x09, 0x08};
+  for (size_t i = 2; i < sizeof(tail2_frame); ++i) tail2_frame[i] = 0;
+  TEST_ASSERT_FALSE(logic.on_rx(1000, tail2_frame, sizeof(tail2_frame), -50, table));
+  uint8_t info_frame[2 + 9] = {0x09, 0x0A};
+  for (size_t i = 2; i < sizeof(info_frame); ++i) info_frame[i] = 0;
+  TEST_ASSERT_FALSE(logic.on_rx(1000, info_frame, sizeof(info_frame), -50, table));
+  TEST_ASSERT_EQUAL_UINT32(0, table.size());
 }
 
 // ── RX: v0.2 Node_Pos_Full (0x06) and Node_Status (0x07) (#435) ───────────────
@@ -390,7 +372,7 @@ void test_rx_alive_success_updates_node_table() {
   TEST_ASSERT_EQUAL_UINT32(1, table.size());
 }
 
-// Alive and Core from same node: Alive does not overwrite Core position.
+// Alive and Pos_Full from same node: Alive does not overwrite position.
 void test_rx_alive_does_not_overwrite_core_position() {
   BeaconLogic logic;
   NodeTable table;
@@ -398,18 +380,20 @@ void test_rx_alive_does_not_overwrite_core_position() {
 
   const uint64_t node_id = 0x0000112233445566ULL;
 
-  // First: receive a Core packet.
-  GeoBeaconFields core{};
-  core.node_id   = node_id;
-  core.pos_valid = 1;
-  core.lat_deg   = 55.7558;
-  core.lon_deg   = 37.6173;
-  core.seq       = 1;
-  uint8_t core_frame[kGeoBeaconFrameSize] = {};
-  TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize,
-      naviga::protocol::encode_geo_beacon(core,
-          naviga::protocol::ByteSpan{core_frame, sizeof(core_frame)}));
-  TEST_ASSERT_TRUE(logic.on_rx(1000, core_frame, kGeoBeaconFrameSize, -50, table));
+  // First: receive Node_Pos_Full (v0.2) with round coordinates so encode/decode is exact.
+  naviga::protocol::PosFullFields pos{};
+  pos.node_id = node_id;
+  pos.seq16   = 1;
+  pos.lat_deg = 55.0;
+  pos.lon_deg = 37.0;
+  pos.fix_type = 1;
+  pos.pos_sats = 0;
+  pos.pos_accuracy_bucket = 0;
+  pos.pos_flags_small = 0;
+  uint8_t pos_frame[naviga::protocol::kPosFullFrameSize] = {};
+  const size_t pos_len = naviga::protocol::encode_pos_full_frame(pos, pos_frame, sizeof(pos_frame));
+  TEST_ASSERT_EQUAL(naviga::protocol::kPosFullFrameSize, pos_len);
+  TEST_ASSERT_TRUE(logic.on_rx(1000, pos_frame, pos_len, -50, table));
 
   // Then: receive an Alive packet (seq=2, no position).
   AliveFields alive_f{};
@@ -420,8 +404,14 @@ void test_rx_alive_does_not_overwrite_core_position() {
       encode_alive_frame(alive_f, alive_frame, sizeof(alive_frame)));
   TEST_ASSERT_TRUE(logic.on_rx(2000, alive_frame, kAliveFrameMin, -60, table));
 
-  // Node table should still have the node (updated by Alive).
+  // Node table should still have the node; position must not be overwritten by Alive.
   TEST_ASSERT_EQUAL_UINT32(1, table.size());
+  NodeEntry entry{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &entry));
+  TEST_ASSERT_TRUE(entry.pos_valid);
+  // Allow small rounding from pos_full encode/decode (55.0/37.0 → lat_e7/lon_e7).
+  TEST_ASSERT_INT_WITHIN(100, 550000000, entry.lat_e7);
+  TEST_ASSERT_INT_WITHIN(100, 370000000, entry.lon_e7);
 }
 
 // ── RX: drop rules ──────────────────────────────────────────────────────────
@@ -457,16 +447,22 @@ void test_rx_payload_len_mismatch_dropped() {
   TEST_ASSERT_EQUAL_UINT32(0, table.size());
 }
 
-// ── decode_header: accepts 0x05 ──────────────────────────────────────────────
+// ── decode_header: v0.2-only; v0.1 msg_types rejected (#438) ─────────────────
 
-void test_decode_header_accepts_0x05() {
-  // msg_type=0x05, payload_len=9 → H=(0x05<<9)|9=0x0A09 → [0x09, 0x0A]
-  uint8_t frame[2] = {0x09, 0x0A};
+void test_decode_header_rejects_v01_msgtypes() {
   naviga::protocol::PacketHeader hdr{};
-  TEST_ASSERT_TRUE(naviga::protocol::decode_header(frame, sizeof(frame), &hdr));
-  TEST_ASSERT_EQUAL(static_cast<int>(naviga::protocol::MsgType::BeaconInfo),
-                    static_cast<int>(hdr.msg_type));
-  TEST_ASSERT_EQUAL_UINT8(9, hdr.payload_len);
+  // 0x01 Core
+  uint8_t f01[2] = {0x0F, 0x02};
+  TEST_ASSERT_FALSE(naviga::protocol::decode_header(f01, 2, &hdr));
+  // 0x03 Tail1
+  uint8_t f03[2] = {0x0B, 0x06};
+  TEST_ASSERT_FALSE(naviga::protocol::decode_header(f03, 2, &hdr));
+  // 0x04 Tail2
+  uint8_t f04[2] = {0x09, 0x08};
+  TEST_ASSERT_FALSE(naviga::protocol::decode_header(f04, 2, &hdr));
+  // 0x05 Info
+  uint8_t f05[2] = {0x09, 0x0A};
+  TEST_ASSERT_FALSE(naviga::protocol::decode_header(f05, 2, &hdr));
 }
 
 void test_decode_header_accepts_0x06() {
@@ -728,503 +724,7 @@ void test_info_decode_bad_version_dropped() {
       static_cast<int>(err));
 }
 
-// ── Tail-1 RX: apply-on-match / drop-on-mismatch ────────────────────────────
-
-// Helper: build a BeaconCore frame and inject it via on_rx to seed last_core_seq16.
-static void seed_core(BeaconLogic& /*logic*/, NodeTable& table,
-                      uint64_t node_id, uint16_t seq, uint32_t now_ms) {
-  GeoBeaconFields core{};
-  core.node_id   = node_id;
-  core.pos_valid = 1;
-  core.lat_deg   = 55.0;
-  core.lon_deg   = 37.0;
-  core.seq       = seq;
-
-  uint8_t frame[kGeoBeaconFrameSize] = {};
-  using naviga::protocol::ByteSpan;
-  const size_t written = naviga::protocol::encode_geo_beacon(
-      core, ByteSpan{frame, sizeof(frame)});
-  (void)written;
-
-  BeaconLogic seeder;
-  seeder.on_rx(now_ms, frame, kGeoBeaconFrameSize, -50, table);
-}
-
-void test_tail1_rx_apply_on_match() {
-  BeaconLogic logic;
-  NodeTable table;
-  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
-  const uint16_t core_seq = 7;
-
-  seed_core(logic, table, node_id, core_seq, 1000);
-  TEST_ASSERT_EQUAL_UINT32(1, table.size());
-
-  // Build Tail-1 frame with matching ref_core_seq16=7, own seq16=8, posFlags=0x01, sats=8.
-  Tail1Fields t1{};
-  t1.node_id          = node_id;
-  t1.seq16            = 8;  // own global counter (newer than core_seq=7)
-  t1.ref_core_seq16   = core_seq;
-  t1.has_pos_flags    = true;
-  t1.pos_flags     = 0x01;
-  t1.has_sats      = true;
-  t1.sats          = 8;
-  uint8_t frame[kTail1FrameMax] = {};
-  const size_t written = encode_tail1_frame(t1, frame, sizeof(frame));
-  TEST_ASSERT_EQUAL_UINT32(kTail1FrameMax, written);
-
-  PacketLogType ptype = PacketLogType::CORE;
-  uint16_t out_core_seq = 0;
-  uint16_t out_seq = 0;
-  TEST_ASSERT_TRUE(logic.on_rx(2000, frame, written, -55, table,
-                               nullptr, &out_seq, nullptr, &ptype, &out_core_seq));
-  TEST_ASSERT_EQUAL_INT(static_cast<int>(PacketLogType::TAIL1), static_cast<int>(ptype));  // RX compat: still TAIL1 for 0x03
-  TEST_ASSERT_EQUAL_UINT16(8, out_seq);
-  TEST_ASSERT_EQUAL_UINT16(core_seq, out_core_seq);
-
-  // Verify posFlags and sats were applied.
-  NodeEntry entry{};
-  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &entry));
-  TEST_ASSERT_TRUE(entry.has_pos_flags);
-  TEST_ASSERT_EQUAL_HEX8(0x01, entry.pos_flags);
-  TEST_ASSERT_TRUE(entry.has_sats);
-  TEST_ASSERT_EQUAL_UINT8(8, entry.sats);
-}
-
-void test_tail1_rx_drop_on_mismatch() {
-  BeaconLogic logic;
-  NodeTable table;
-  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
-  const uint16_t core_seq = 7;
-
-  seed_core(logic, table, node_id, core_seq, 1000);
-
-  // Build Tail-1 with stale ref_core_seq16=5 (mismatch), own seq16=8.
-  Tail1Fields t1{};
-  t1.node_id          = node_id;
-  t1.seq16            = 8;
-  t1.ref_core_seq16   = 5;  // != 7
-  t1.has_pos_flags = true;
-  t1.pos_flags     = 0x01;
-  t1.has_sats      = true;
-  t1.sats          = 12;
-  uint8_t frame[kTail1FrameMax] = {};
-  encode_tail1_frame(t1, frame, sizeof(frame));
-
-  // on_rx returns true (valid frame) but apply_tail1 drops internally.
-  TEST_ASSERT_TRUE(logic.on_rx(2000, frame, kTail1FrameMax, -55, table));
-
-  // posFlags/sats MUST NOT have been applied.
-  NodeEntry entry{};
-  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &entry));
-  TEST_ASSERT_FALSE(entry.has_pos_flags);
-  TEST_ASSERT_FALSE(entry.has_sats);
-}
-
-void test_tail1_rx_drop_no_prior_core() {
-  BeaconLogic logic;
-  NodeTable table;
-  // No Core seeded — node not in table.
-  Tail1Fields t1{};
-  t1.node_id          = 0x0000AABBCCDDEEFFULL;
-  t1.seq16            = 1;
-  t1.ref_core_seq16   = 1;
-  uint8_t frame[kTail1FrameMin] = {};
-  encode_tail1_frame(t1, frame, sizeof(frame));
-
-  // on_rx returns true (valid frame), but apply_tail1 drops (no entry).
-  TEST_ASSERT_TRUE(logic.on_rx(1000, frame, kTail1FrameMin, -55, table));
-  TEST_ASSERT_EQUAL_UINT32(0, table.size());
-}
-
-void test_tail1_rx_bad_version_dropped() {
-  BeaconLogic logic;
-  NodeTable table;
-  // Manually craft a Tail-1 frame with payloadVersion=0x01.
-  // Header: msg_type=0x03, payload_len=11 → [0x0B, 0x06]
-  uint8_t frame[kTail1FrameMin] = {0x0B, 0x06,
-                                    0x01,  // bad payloadVersion
-                                    0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA,
-                                    0x01, 0x00,  // seq16
-                                    0x01, 0x00}; // ref_core_seq16
-  TEST_ASSERT_FALSE(logic.on_rx(1000, frame, sizeof(frame), -55, table));
-}
-
-// ── Tail-1 RX: duplicate suppression ────────────────────────────────────────
-
-void test_tail1_rx_duplicate_seq16_ignored() {
-  BeaconLogic logic;
-  NodeTable table;
-  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
-  const uint16_t core_seq = 7;
-
-  seed_core(logic, table, node_id, core_seq, 1000);
-
-  // First Tail-1: seq16=8, ref=7, sats=8.
-  Tail1Fields t1{};
-  t1.node_id        = node_id;
-  t1.seq16          = 8;
-  t1.ref_core_seq16 = core_seq;
-  t1.has_sats       = true;
-  t1.sats           = 8;
-  uint8_t frame[kTail1FrameMax] = {};
-  encode_tail1_frame(t1, frame, sizeof(frame));
-  TEST_ASSERT_TRUE(logic.on_rx(2000, frame, kTail1FrameMax, -55, table));
-
-  // Second Tail-1: same seq16=8 (duplicate), different sats=99.
-  t1.sats = 99;
-  encode_tail1_frame(t1, frame, sizeof(frame));
-  TEST_ASSERT_TRUE(logic.on_rx(2100, frame, kTail1FrameMax, -55, table));
-
-  // sats MUST still be 8 (first apply wins; duplicate ignored).
-  NodeEntry entry{};
-  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &entry));
-  TEST_ASSERT_EQUAL_UINT8(8, entry.sats);
-}
-
-// ── Tail-1 RX: Variant 2 — one tail per Core sample ─────────────────────────
-
-void test_tail1_rx_variant2_second_tail_same_ref_ignored() {
-  // Arrange: Core with seq=100.
-  BeaconLogic logic;
-  NodeTable table;
-  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
-  const uint16_t core_seq = 100;
-
-  seed_core(logic, table, node_id, core_seq, 1000);
-
-  // Apply first Tail-1: seq16=101, ref_core_seq16=100, sats=8 → should apply.
-  Tail1Fields t1a{};
-  t1a.node_id        = node_id;
-  t1a.seq16          = 101;
-  t1a.ref_core_seq16 = core_seq;
-  t1a.has_sats       = true;
-  t1a.sats           = 8;
-  uint8_t frame[kTail1FrameMax] = {};
-  encode_tail1_frame(t1a, frame, sizeof(frame));
-  TEST_ASSERT_TRUE(logic.on_rx(2000, frame, kTail1FrameMax, -55, table));
-
-  NodeEntry after_first{};
-  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &after_first));
-  TEST_ASSERT_TRUE(after_first.has_sats);
-  TEST_ASSERT_EQUAL_UINT8(8, after_first.sats);
-
-  // Apply second Tail-1: seq16=102 (different!), ref_core_seq16=100 (same!) → must be ignored.
-  Tail1Fields t1b{};
-  t1b.node_id        = node_id;
-  t1b.seq16          = 102;
-  t1b.ref_core_seq16 = core_seq;  // same ref as first
-  t1b.has_sats       = true;
-  t1b.sats           = 99;  // different value — must not overwrite
-  encode_tail1_frame(t1b, frame, sizeof(frame));
-  TEST_ASSERT_TRUE(logic.on_rx(2100, frame, kTail1FrameMax, -55, table));
-
-  // sats MUST still be 8 (Variant 2: second tail for same Core sample ignored).
-  NodeEntry after_second{};
-  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &after_second));
-  TEST_ASSERT_EQUAL_UINT8(8, after_second.sats);
-}
-
-void test_tail1_rx_variant2_new_core_resets_tail_gate() {
-  // After a new Core_Pos is received, a new Tail-1 for the new Core sample must apply.
-  BeaconLogic logic;
-  NodeTable table;
-  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
-
-  // First Core: seq=100.
-  seed_core(logic, table, node_id, 100, 1000);
-
-  // First Tail-1: seq16=101, ref=100, sats=8 → applied.
-  Tail1Fields t1a{};
-  t1a.node_id        = node_id;
-  t1a.seq16          = 101;
-  t1a.ref_core_seq16 = 100;
-  t1a.has_sats       = true;
-  t1a.sats           = 8;
-  uint8_t frame[kTail1FrameMax] = {};
-  encode_tail1_frame(t1a, frame, sizeof(frame));
-  logic.on_rx(2000, frame, kTail1FrameMax, -55, table);
-
-  // Second Core: seq=102 → updates last_core_seq16 to 102.
-  seed_core(logic, table, node_id, 102, 3000);
-
-  // Tail-1 for new Core: seq16=103, ref=102, sats=15 → must apply (new Core sample).
-  Tail1Fields t1b{};
-  t1b.node_id        = node_id;
-  t1b.seq16          = 103;
-  t1b.ref_core_seq16 = 102;
-  t1b.has_sats       = true;
-  t1b.sats           = 15;
-  encode_tail1_frame(t1b, frame, sizeof(frame));
-  TEST_ASSERT_TRUE(logic.on_rx(4000, frame, kTail1FrameMax, -55, table));
-
-  NodeEntry entry{};
-  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &entry));
-  TEST_ASSERT_EQUAL_UINT8(15, entry.sats);
-}
-
-// ── Tail-2 (Operational) RX ──────────────────────────────────────────────────
-
-void test_tail2_rx_applies_battery() {
-  BeaconLogic logic;
-  NodeTable table;
-  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
-
-  Tail2Fields t2{};
-  t2.node_id      = node_id;
-  t2.seq16        = 5;
-  t2.has_battery  = true;
-  t2.battery_percent = 80;
-
-  uint8_t frame[kTail2FrameMax] = {};
-  const size_t written = encode_tail2_frame(t2, frame, sizeof(frame));
-
-  PacketLogType ptype = PacketLogType::CORE;
-  TEST_ASSERT_TRUE(logic.on_rx(1000, frame, written, -60, table,
-                               nullptr, nullptr, nullptr, &ptype));
-  TEST_ASSERT_EQUAL_INT(static_cast<int>(PacketLogType::TAIL2), static_cast<int>(ptype));  // RX compat: 0x04 → TAIL2
-
-  NodeEntry entry{};
-  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &entry));
-  TEST_ASSERT_TRUE(entry.has_battery);
-  TEST_ASSERT_EQUAL_UINT8(80, entry.battery_percent);
-}
-
-void test_tail2_rx_no_prior_core_creates_entry() {
-  // Tail-2 can arrive before Core; it should create an entry.
-  BeaconLogic logic;
-  NodeTable table;
-  const uint64_t node_id = 0x0000112233445566ULL;
-
-  Tail2Fields t2{};
-  t2.node_id      = node_id;
-  t2.seq16        = 3;
-  t2.has_battery  = true;
-  t2.battery_percent = 80;
-
-  uint8_t frame[kTail2FrameMax] = {};
-  const size_t written = encode_tail2_frame(t2, frame, sizeof(frame));
-  TEST_ASSERT_TRUE(logic.on_rx(1000, frame, written, -70, table));
-  TEST_ASSERT_EQUAL_UINT32(1, table.size());
-
-  NodeEntry entry{};
-  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &entry));
-  TEST_ASSERT_TRUE(entry.has_battery);
-  TEST_ASSERT_EQUAL_UINT8(80, entry.battery_percent);
-  // Position MUST NOT have been set.
-  TEST_ASSERT_FALSE(entry.pos_valid);
-  TEST_ASSERT_EQUAL_INT32(0, entry.lat_e7);
-  TEST_ASSERT_EQUAL_INT32(0, entry.lon_e7);
-}
-
-void test_tail2_rx_bad_version_dropped() {
-  BeaconLogic logic;
-  NodeTable table;
-  // Header: msg_type=0x04, payload_len=9 → [0x09, 0x08]; bad payloadVersion=0x01
-  uint8_t frame[kTail2FrameMin] = {0x09, 0x08,
-                                    0x01,  // bad payloadVersion
-                                    0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA,
-                                    0x01, 0x00};
-  TEST_ASSERT_FALSE(logic.on_rx(1000, frame, sizeof(frame), -60, table));
-  TEST_ASSERT_EQUAL_UINT32(0, table.size());
-}
-
-// ── Info (Informative) RX ────────────────────────────────────────────────────
-
-void test_info_rx_applies_max_silence() {
-  BeaconLogic logic;
-  NodeTable table;
-  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
-
-  InfoFields info{};
-  info.node_id         = node_id;
-  info.seq16           = 6;
-  info.has_max_silence = true;
-  info.max_silence_10s = 9;  // 90 s
-
-  uint8_t frame[kInfoFrameMax] = {};
-  const size_t written = encode_info_frame(info, frame, sizeof(frame));
-
-  PacketLogType ptype = PacketLogType::CORE;
-  uint16_t out_seq = 0;
-  TEST_ASSERT_TRUE(logic.on_rx(1000, frame, written, -60, table,
-                               nullptr, &out_seq, nullptr, &ptype));
-  TEST_ASSERT_EQUAL_INT(static_cast<int>(PacketLogType::INFO), static_cast<int>(ptype));
-  TEST_ASSERT_EQUAL_UINT16(6, out_seq);
-
-  NodeEntry entry{};
-  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &entry));
-  TEST_ASSERT_TRUE(entry.has_max_silence);
-  TEST_ASSERT_EQUAL_UINT8(9, entry.max_silence_10s);
-}
-
-void test_info_rx_full_fields() {
-  BeaconLogic logic;
-  NodeTable table;
-  const uint64_t node_id = 0x0000112233445566ULL;
-
-  InfoFields info{};
-  info.node_id        = node_id;
-  info.seq16          = 10;
-  info.has_max_silence = true;
-  info.max_silence_10s = 6;
-  info.has_hw_profile  = true;
-  info.hw_profile_id   = 0x0201;
-  info.has_fw_version  = true;
-  info.fw_version_id   = 0x0302;
-
-  uint8_t frame[kInfoFrameMax] = {};
-  const size_t written = encode_info_frame(info, frame, sizeof(frame));
-  TEST_ASSERT_TRUE(logic.on_rx(1000, frame, written, -55, table));
-
-  NodeEntry entry{};
-  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &entry));
-  TEST_ASSERT_TRUE(entry.has_max_silence);
-  TEST_ASSERT_EQUAL_UINT8(6, entry.max_silence_10s);
-  TEST_ASSERT_TRUE(entry.has_hw_profile);
-  TEST_ASSERT_EQUAL_UINT16(0x0201, entry.hw_profile_id);
-  TEST_ASSERT_TRUE(entry.has_fw_version);
-  TEST_ASSERT_EQUAL_UINT16(0x0302, entry.fw_version_id);
-  // Position MUST NOT have been set.
-  TEST_ASSERT_FALSE(entry.pos_valid);
-}
-
-void test_info_rx_no_prior_core_creates_entry() {
-  BeaconLogic logic;
-  NodeTable table;
-  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
-
-  InfoFields info{};
-  info.node_id         = node_id;
-  info.seq16           = 1;
-  info.has_max_silence = true;
-  info.max_silence_10s = 3;
-
-  uint8_t frame[kInfoFrameMax] = {};
-  const size_t written = encode_info_frame(info, frame, sizeof(frame));
-  TEST_ASSERT_TRUE(logic.on_rx(1000, frame, written, -70, table));
-  TEST_ASSERT_EQUAL_UINT32(1, table.size());
-}
-
-void test_info_rx_bad_version_dropped() {
-  BeaconLogic logic;
-  NodeTable table;
-  // Header: msg_type=0x05, payload_len=9 → [0x09, 0x0A]; bad payloadVersion=0x01
-  uint8_t frame[kInfoFrameMin] = {0x09, 0x0A,
-                                   0x01,  // bad payloadVersion
-                                   0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA,
-                                   0x01, 0x00};
-  TEST_ASSERT_FALSE(logic.on_rx(1000, frame, sizeof(frame), -60, table));
-  TEST_ASSERT_EQUAL_UINT32(0, table.size());
-}
-
-// ── RX dedupe: (nodeId48, seq16) ─────────────────────────────────────────────
-
-void test_rx_dedupe_operational_same_seq16_ignored() {
-  BeaconLogic logic;
-  NodeTable table;
-  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
-
-  // First Tail-2: seq16=5, battery=80.
-  Tail2Fields t2{};
-  t2.node_id         = node_id;
-  t2.seq16           = 5;
-  t2.has_battery     = true;
-  t2.battery_percent = 80;
-  uint8_t frame[kTail2FrameMax] = {};
-  encode_tail2_frame(t2, frame, sizeof(frame));
-  TEST_ASSERT_TRUE(logic.on_rx(1000, frame, kTail2FrameMin + 1, -60, table));
-
-  // Second Tail-2: same seq16=5, battery=99 (duplicate).
-  t2.battery_percent = 99;
-  encode_tail2_frame(t2, frame, sizeof(frame));
-  TEST_ASSERT_TRUE(logic.on_rx(1100, frame, kTail2FrameMin + 1, -60, table));
-
-  NodeEntry entry{};
-  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &entry));
-  // battery MUST still be 80 (first apply wins; duplicate ignored).
-  TEST_ASSERT_EQUAL_UINT8(80, entry.battery_percent);
-}
-
-void test_rx_dedupe_info_same_seq16_ignored() {
-  BeaconLogic logic;
-  NodeTable table;
-  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
-
-  // First Info: seq16=3, maxSilence=6.
-  InfoFields info{};
-  info.node_id         = node_id;
-  info.seq16           = 3;
-  info.has_max_silence = true;
-  info.max_silence_10s = 6;
-  uint8_t frame[kInfoFrameMax] = {};
-  encode_info_frame(info, frame, sizeof(frame));
-  TEST_ASSERT_TRUE(logic.on_rx(1000, frame, kInfoFrameMin + 1, -60, table));
-
-  // Second Info: same seq16=3, maxSilence=99 (duplicate).
-  info.max_silence_10s = 99;
-  encode_info_frame(info, frame, sizeof(frame));
-  TEST_ASSERT_TRUE(logic.on_rx(1100, frame, kInfoFrameMin + 1, -60, table));
-
-  NodeEntry entry{};
-  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &entry));
-  // maxSilence MUST still be 6 (first apply wins; duplicate ignored).
-  TEST_ASSERT_EQUAL_UINT8(6, entry.max_silence_10s);
-}
-
-// ── Position invariant: Tail never overwrites position ───────────────────────
-
-void test_tail_never_overwrites_position() {
-  BeaconLogic logic;
-  NodeTable table;
-  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
-  const uint16_t core_seq = 3;
-
-  // Seed Core with known position.
-  seed_core(logic, table, node_id, core_seq, 1000);
-  NodeEntry before{};
-  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &before));
-  TEST_ASSERT_TRUE(before.pos_valid);
-  const int32_t saved_lat = before.lat_e7;
-  const int32_t saved_lon = before.lon_e7;
-
-  // Apply matching Tail-1.
-  Tail1Fields t1{};
-  t1.node_id          = node_id;
-  t1.seq16            = 4;  // newer than core_seq=3
-  t1.ref_core_seq16   = core_seq;
-  t1.has_pos_flags    = true;
-  t1.pos_flags     = 0x01;
-  uint8_t t1_frame[kTail1FrameMax] = {};
-  encode_tail1_frame(t1, t1_frame, sizeof(t1_frame));
-  logic.on_rx(2000, t1_frame, kTail1FrameMax, -55, table);
-
-  // Apply Tail-2 (Operational).
-  Tail2Fields t2{};
-  t2.node_id     = node_id;
-  t2.seq16       = 5;
-  t2.has_battery = true;
-  t2.battery_percent = 90;
-  uint8_t t2_frame[kTail2FrameMax] = {};
-  const size_t t2_written = encode_tail2_frame(t2, t2_frame, sizeof(t2_frame));
-  logic.on_rx(3000, t2_frame, t2_written, -60, table);
-
-  // Apply Info (Informative).
-  InfoFields info{};
-  info.node_id         = node_id;
-  info.seq16           = 6;
-  info.has_max_silence = true;
-  info.max_silence_10s = 9;
-  uint8_t info_frame[kInfoFrameMax] = {};
-  const size_t info_written = encode_info_frame(info, info_frame, sizeof(info_frame));
-  logic.on_rx(4000, info_frame, info_written, -60, table);
-
-  // Position MUST be unchanged.
-  NodeEntry after{};
-  TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &after));
-  TEST_ASSERT_TRUE(after.pos_valid);
-  TEST_ASSERT_EQUAL_INT32(saved_lat, after.lat_e7);
-  TEST_ASSERT_EQUAL_INT32(saved_lon, after.lon_e7);
-}
+// (v0.1 RX tests removed #438; codec tests for tail1/tail2/info remain above.)
 
 // ── TX queue: helpers ────────────────────────────────────────────────────────
 
@@ -1980,7 +1480,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_tx_no_fix_at_max_silence_sends_alive);
   RUN_TEST(test_tx_min_interval_no_update_no_send);
   RUN_TEST(test_tx_payload_correctness);
-  RUN_TEST(test_rx_core_success_updates_node_table);
+  RUN_TEST(test_rx_v01_packets_dropped);
   RUN_TEST(test_rx_pos_full_applies_position_and_quality);
   RUN_TEST(test_rx_status_applies_full_snapshot);
   RUN_TEST(test_rx_alive_success_updates_node_table);
@@ -1988,8 +1488,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_rx_invalid_frame_too_short);
   RUN_TEST(test_rx_unknown_msgtype_dropped);
   RUN_TEST(test_rx_payload_len_mismatch_dropped);
-  // decode_header 0x05
-  RUN_TEST(test_decode_header_accepts_0x05);
+  RUN_TEST(test_decode_header_rejects_v01_msgtypes);
   RUN_TEST(test_decode_header_accepts_0x06);
   // Tail-1 codec
   RUN_TEST(test_tail1_codec_base_round_trip);
@@ -2005,28 +1504,6 @@ int main(int argc, char** argv) {
   RUN_TEST(test_info_codec_base_round_trip);
   RUN_TEST(test_info_codec_full_round_trip);
   RUN_TEST(test_info_decode_bad_version_dropped);
-  // Tail-1 RX dispatch
-  RUN_TEST(test_tail1_rx_apply_on_match);
-  RUN_TEST(test_tail1_rx_drop_on_mismatch);
-  RUN_TEST(test_tail1_rx_drop_no_prior_core);
-  RUN_TEST(test_tail1_rx_bad_version_dropped);
-  RUN_TEST(test_tail1_rx_duplicate_seq16_ignored);
-  RUN_TEST(test_tail1_rx_variant2_second_tail_same_ref_ignored);
-  RUN_TEST(test_tail1_rx_variant2_new_core_resets_tail_gate);
-  // Tail-2 RX dispatch
-  RUN_TEST(test_tail2_rx_applies_battery);
-  RUN_TEST(test_tail2_rx_no_prior_core_creates_entry);
-  RUN_TEST(test_tail2_rx_bad_version_dropped);
-  // Info RX dispatch
-  RUN_TEST(test_info_rx_applies_max_silence);
-  RUN_TEST(test_info_rx_full_fields);
-  RUN_TEST(test_info_rx_no_prior_core_creates_entry);
-  RUN_TEST(test_info_rx_bad_version_dropped);
-  // Dedupe
-  RUN_TEST(test_rx_dedupe_operational_same_seq16_ignored);
-  RUN_TEST(test_rx_dedupe_info_same_seq16_ignored);
-  // Position invariant
-  RUN_TEST(test_tail_never_overwrites_position);
   // TX queue: formation
   RUN_TEST(test_txq_core_enqueues_tail_with_correct_ref);
   RUN_TEST(test_txq_tail1_not_enqueued_without_core);

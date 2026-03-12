@@ -58,21 +58,21 @@ void test_header_golden_encode() {
 }
 
 void test_header_golden_decode() {
-  const uint8_t wire[2] = {0x0F, 0x02};
+  // v0.2-accepted type: BeaconAlive (0x02), payload_len=9 → H=0x0409 → [0x09, 0x04] (#438).
+  const uint8_t wire[2] = {0x09, 0x04};
   PacketHeader hdr;
   TEST_ASSERT_TRUE(decode_header(wire, sizeof(wire), &hdr));
-  TEST_ASSERT_EQUAL(static_cast<int>(MsgType::BeaconCore), static_cast<int>(hdr.msg_type));
+  TEST_ASSERT_EQUAL(static_cast<int>(MsgType::BeaconAlive), static_cast<int>(hdr.msg_type));
   TEST_ASSERT_EQUAL_UINT8(0, hdr.reserved);
-  TEST_ASSERT_EQUAL_UINT8(15, hdr.payload_len);
+  TEST_ASSERT_EQUAL_UINT8(9, hdr.payload_len);
 }
 
-// Encode/decode round-trip for all registered msg_types.
+// Encode/decode round-trip for v0.2-accepted msg_types only (#438).
 void test_header_roundtrip_all_types() {
   const MsgType types[] = {
-      MsgType::BeaconCore,
       MsgType::BeaconAlive,
-      MsgType::BeaconTail1,
-      MsgType::BeaconTail2,
+      MsgType::BeaconPosFull,
+      MsgType::BeaconStatus,
   };
   for (size_t i = 0; i < sizeof(types) / sizeof(types[0]); ++i) {
     PacketHeader hdr;
@@ -91,6 +91,19 @@ void test_header_roundtrip_all_types() {
   }
 }
 
+// v0.1 msg_types (0x01, 0x03, 0x04, 0x05) must be rejected on decode (#438).
+void test_header_decode_v01_msgtypes_rejected() {
+  PacketHeader hdr;
+  uint8_t f01[2] = {0x0F, 0x02};  // 0x01 Core
+  TEST_ASSERT_FALSE(decode_header(f01, 2, &hdr));
+  uint8_t f03[2] = {0x0B, 0x06};  // 0x03 Tail1
+  TEST_ASSERT_FALSE(decode_header(f03, 2, &hdr));
+  uint8_t f04[2] = {0x09, 0x08};  // 0x04 Tail2
+  TEST_ASSERT_FALSE(decode_header(f04, 2, &hdr));
+  uint8_t f05[2] = {0x09, 0x0A};  // 0x05 Info
+  TEST_ASSERT_FALSE(decode_header(f05, 2, &hdr));
+}
+
 // Reserved msg_type (0x00) must be rejected on decode.
 void test_header_decode_reserved_msgtype_rejected() {
   const uint8_t wire[2] = {0x00, 0x00};  // msg_type=0x00
@@ -98,7 +111,7 @@ void test_header_decode_reserved_msgtype_rejected() {
   TEST_ASSERT_FALSE(decode_header(wire, sizeof(wire), &hdr));
 }
 
-// Unknown msg_type (> BeaconTail2) must be rejected on decode.
+// Unknown msg_type (> BeaconStatus) must be rejected on decode.
 void test_header_decode_unknown_msgtype_rejected() {
   // msg_type=0x7F (127), payload_len=9:
   // H = (0x7F << 9) | 9 = 0xFF09  →  byte0=0x09, byte1=0xFF
@@ -107,15 +120,14 @@ void test_header_decode_unknown_msgtype_rejected() {
   TEST_ASSERT_FALSE(decode_header(wire, sizeof(wire), &hdr));
 }
 
-// Non-zero reserved bits must be accepted (forward-compat).
+// Non-zero reserved bits must be accepted (forward-compat). Use v0.2-accepted type 0x02.
 void test_header_decode_nonzero_reserved_accepted() {
-  // Encode manually with reserved=0x07 (all 3 bits set):
-  // byte0 = ((0x07 & 0x3) << 6) | 9 = (3<<6)|9 = 0xC9
-  // byte1 = (0x01 << 1) | (0x07 >> 2) = 2 | 1 = 0x03
-  const uint8_t wire[2] = {0xC9, 0x03};
+  // msg_type=0x02 (BeaconAlive), reserved=0x07, payload_len=9:
+  // byte0 = ((0x07 & 0x3) << 6) | 9 = 0xC9, byte1 = (0x02 << 1) | (0x07 >> 2) = 0x05
+  const uint8_t wire[2] = {0xC9, 0x05};
   PacketHeader hdr;
   TEST_ASSERT_TRUE(decode_header(wire, sizeof(wire), &hdr));
-  TEST_ASSERT_EQUAL(static_cast<int>(MsgType::BeaconCore), static_cast<int>(hdr.msg_type));
+  TEST_ASSERT_EQUAL(static_cast<int>(MsgType::BeaconAlive), static_cast<int>(hdr.msg_type));
   TEST_ASSERT_EQUAL_UINT8(9, hdr.payload_len);
 }
 
@@ -198,7 +210,8 @@ void test_framed_core_golden_decode() {
   };
 
   GeoBeaconFields out{};
-  const DecodeError err = decode_geo_beacon_frame(ConstByteSpan{frame, sizeof(frame)}, &out);
+  // #438: decode_header rejects 0x01; test payload decode only (frame header no longer accepted on RX).
+  const DecodeError err = decode_geo_beacon(ConstByteSpan{frame + kHeaderSize, sizeof(frame) - kHeaderSize}, &out);
   TEST_ASSERT_EQUAL(DecodeError::Ok, err);
   TEST_ASSERT_EQUAL_UINT64(0x0000AABBCCDDEEFFULL, out.node_id);
   TEST_ASSERT_EQUAL_UINT16(1, out.seq);
@@ -220,17 +233,16 @@ void test_framed_core_decode_wrong_msgtype_rejected() {
   TEST_ASSERT_EQUAL(DecodeError::BadMsgType, err);
 }
 
-// decode_geo_beacon_frame rejects payload_len mismatch.
+// decode_geo_beacon_frame rejects payload_len mismatch (or BadMsgType when 0x01 rejected #438).
 void test_framed_core_decode_payload_len_mismatch_rejected() {
-  // Build a valid 17-byte frame but with payload_len=14 in header (wrong).
-  // H = (0x01<<9)|14 = 0x020E → byte0=0x0E, byte1=0x02
+  // Frame with 0x01: decode_header now rejects 0x01 (#438), so we get BadMsgType before PayloadLenMismatch.
   uint8_t frame[17] = {};
   frame[0] = 0x0E;
   frame[1] = 0x02;
   frame[2] = kGeoBeaconPayloadVersion;
   GeoBeaconFields out{};
   const DecodeError err = decode_geo_beacon_frame(ConstByteSpan{frame, sizeof(frame)}, &out);
-  TEST_ASSERT_EQUAL(DecodeError::PayloadLenMismatch, err);
+  TEST_ASSERT_EQUAL(DecodeError::BadMsgType, err);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -292,7 +304,7 @@ void test_round_trip() {
   TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, written);
 
   GeoBeaconFields out{};
-  const DecodeError err = decode_geo_beacon_frame(ConstByteSpan{buf, written}, &out);
+  const DecodeError err = decode_geo_beacon(ConstByteSpan{buf + kHeaderSize, written - kHeaderSize}, &out);
   TEST_ASSERT_EQUAL(DecodeError::Ok, err);
   TEST_ASSERT_EQUAL_UINT64(in.node_id, out.node_id);
   TEST_ASSERT_EQUAL_UINT16(in.seq, out.seq);
@@ -312,19 +324,19 @@ void test_round_trip_extremes() {
 
   in.lat_deg = 90.0; in.lon_deg = 180.0;
   TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, encode_geo_beacon(in, ByteSpan{buf, sizeof(buf)}));
-  TEST_ASSERT_EQUAL(DecodeError::Ok, decode_geo_beacon_frame(ConstByteSpan{buf, sizeof(buf)}, &out));
+  TEST_ASSERT_EQUAL(DecodeError::Ok, decode_geo_beacon(ConstByteSpan{buf + kHeaderSize, kGeoBeaconSize}, &out));
   TEST_ASSERT_TRUE(deg_near(out.lat_deg, 90.0, kDegTol));
   TEST_ASSERT_TRUE(deg_near(out.lon_deg, 180.0, kDegTol));
 
   in.lat_deg = -90.0; in.lon_deg = -180.0;
   TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, encode_geo_beacon(in, ByteSpan{buf, sizeof(buf)}));
-  TEST_ASSERT_EQUAL(DecodeError::Ok, decode_geo_beacon_frame(ConstByteSpan{buf, sizeof(buf)}, &out));
+  TEST_ASSERT_EQUAL(DecodeError::Ok, decode_geo_beacon(ConstByteSpan{buf + kHeaderSize, kGeoBeaconSize}, &out));
   TEST_ASSERT_TRUE(deg_near(out.lat_deg, -90.0, kDegTol));
   TEST_ASSERT_TRUE(deg_near(out.lon_deg, -180.0, kDegTol));
 
   in.lat_deg = 0.0; in.lon_deg = 0.0;
   TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, encode_geo_beacon(in, ByteSpan{buf, sizeof(buf)}));
-  TEST_ASSERT_EQUAL(DecodeError::Ok, decode_geo_beacon_frame(ConstByteSpan{buf, sizeof(buf)}, &out));
+  TEST_ASSERT_EQUAL(DecodeError::Ok, decode_geo_beacon(ConstByteSpan{buf + kHeaderSize, kGeoBeaconSize}, &out));
   TEST_ASSERT_TRUE(deg_near(out.lat_deg, 0.0, kDegTol));
   TEST_ASSERT_TRUE(deg_near(out.lon_deg, 0.0, kDegTol));
 }
@@ -335,7 +347,7 @@ void test_clamp_out_of_range_lat() {
   uint8_t buf[kGeoBeaconFrameSize] = {};
   TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, encode_geo_beacon(in, ByteSpan{buf, sizeof(buf)}));
   GeoBeaconFields out{};
-  TEST_ASSERT_EQUAL(DecodeError::Ok, decode_geo_beacon_frame(ConstByteSpan{buf, sizeof(buf)}, &out));
+  TEST_ASSERT_EQUAL(DecodeError::Ok, decode_geo_beacon(ConstByteSpan{buf + kHeaderSize, kGeoBeaconSize}, &out));
   TEST_ASSERT_TRUE(deg_near(out.lat_deg, 90.0, kDegTol));
 }
 
@@ -345,7 +357,7 @@ void test_clamp_out_of_range_lon() {
   uint8_t buf[kGeoBeaconFrameSize] = {};
   TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, encode_geo_beacon(in, ByteSpan{buf, sizeof(buf)}));
   GeoBeaconFields out{};
-  TEST_ASSERT_EQUAL(DecodeError::Ok, decode_geo_beacon_frame(ConstByteSpan{buf, sizeof(buf)}, &out));
+  TEST_ASSERT_EQUAL(DecodeError::Ok, decode_geo_beacon(ConstByteSpan{buf + kHeaderSize, kGeoBeaconSize}, &out));
   TEST_ASSERT_TRUE(deg_near(out.lon_deg, -180.0, kDegTol));
 }
 
@@ -378,7 +390,7 @@ void test_bad_payload_version() {
   buf[kHeaderSize] = 0xFF;  // corrupt payloadVersion
   GeoBeaconFields out{};
   TEST_ASSERT_EQUAL(DecodeError::BadPayloadVersion,
-                    decode_geo_beacon_frame(ConstByteSpan{buf, sizeof(buf)}, &out));
+                    decode_geo_beacon(ConstByteSpan{buf + kHeaderSize, kGeoBeaconSize}, &out));
 }
 
 void test_nodeid48_upper_bits_stripped() {
@@ -388,7 +400,7 @@ void test_nodeid48_upper_bits_stripped() {
   uint8_t buf[kGeoBeaconFrameSize] = {};
   TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, encode_geo_beacon(in, ByteSpan{buf, sizeof(buf)}));
   GeoBeaconFields out{};
-  TEST_ASSERT_EQUAL(DecodeError::Ok, decode_geo_beacon_frame(ConstByteSpan{buf, sizeof(buf)}, &out));
+  TEST_ASSERT_EQUAL(DecodeError::Ok, decode_geo_beacon(ConstByteSpan{buf + kHeaderSize, kGeoBeaconSize}, &out));
   TEST_ASSERT_EQUAL_UINT64(0x0000001122334455ULL, out.node_id);
 }
 
@@ -541,6 +553,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_header_roundtrip_all_types);
   RUN_TEST(test_header_decode_reserved_msgtype_rejected);
   RUN_TEST(test_header_decode_unknown_msgtype_rejected);
+  RUN_TEST(test_header_decode_v01_msgtypes_rejected);
   RUN_TEST(test_header_decode_nonzero_reserved_accepted);
   RUN_TEST(test_header_validate);
   RUN_TEST(test_header_encode_payload_len_overflow_rejected);
