@@ -33,22 +33,20 @@ constexpr size_t kMaxPayloadLen = 63;
 /** Maximum on-air frame size (header + max payload). */
 constexpr size_t kMaxFrameSize = kHeaderSize + kMaxPayloadLen;
 
-/** msg_type registry v0 (ootb_radio_v0.md §3.2).
+/** msg_type registry v0 (ootb_radio_v0.md §3.2) + v0.2 (#435).
  *
- * Canonical aliases (ootb_radio_v0.md §3.0a):
- *   BeaconCore  = Node_OOTB_Core_Pos
- *   BeaconAlive = Node_OOTB_I_Am_Alive
- *   BeaconTail1 = Node_OOTB_Core_Tail
- *   BeaconTail2 = Node_OOTB_Operational
- *   BeaconInfo  = Node_OOTB_Informative
+ * v0.1 (compatibility-only during transition): 0x01–0x05.
+ * v0.2 canonical TX: BeaconPosFull (0x06), BeaconStatus (0x07), BeaconAlive (0x02).
  */
 enum class MsgType : uint8_t {
-  Reserved    = 0x00,  ///< MUST NOT be used; drop on receive.
-  BeaconCore  = 0x01,  ///< Node_OOTB_Core_Pos; 15 B fixed payload.
-  BeaconAlive = 0x02,  ///< Node_OOTB_I_Am_Alive; 9–10 B payload.
-  BeaconTail1 = 0x03,  ///< Node_OOTB_Core_Tail; 11 B min payload.
-  BeaconTail2 = 0x04,  ///< Node_OOTB_Operational; 9 B min payload.
-  BeaconInfo  = 0x05,  ///< Node_OOTB_Informative; 9 B min payload.
+  Reserved     = 0x00,  ///< MUST NOT be used; drop on receive.
+  BeaconCore   = 0x01,  ///< Node_OOTB_Core_Pos (v0.1 compat); 15 B payload.
+  BeaconAlive  = 0x02,  ///< Node_OOTB_I_Am_Alive; 9–10 B payload; v0.2 retained.
+  BeaconTail1  = 0x03,  ///< Node_OOTB_Core_Tail (v0.1 compat); 11 B min payload.
+  BeaconTail2  = 0x04,  ///< Node_OOTB_Operational (v0.1 compat); 9 B min payload.
+  BeaconInfo   = 0x05,  ///< Node_OOTB_Informative (v0.1 compat); 9 B min payload.
+  BeaconPosFull = 0x06,  ///< v0.2 Node_Pos_Full; 17 B payload (#435).
+  BeaconStatus  = 0x07,  ///< v0.2 Node_Status; 19 B payload (#435).
 };
 
 /** Decoded header fields (in-memory representation). */
@@ -103,7 +101,7 @@ inline bool decode_header(const uint8_t* in, size_t in_size, PacketHeader* hdr) 
   const uint8_t pl  = static_cast<uint8_t>(H & 0x3Fu);
 
   if (mt == static_cast<uint8_t>(MsgType::Reserved) ||
-      mt > static_cast<uint8_t>(MsgType::BeaconInfo)) {
+      mt > static_cast<uint8_t>(MsgType::BeaconStatus)) {
     return false;
   }
   hdr->msg_type    = static_cast<MsgType>(mt);

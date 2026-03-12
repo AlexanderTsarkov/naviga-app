@@ -18,7 +18,7 @@ Exactly **three** packet types for the beacon/OOTB path. No hybrid “old and ne
 | **Node_Status** | Full snapshot of operational + informative status. | Node_Operational (0x04) + Node_Informative (0x05). |
 | **Alive** | No-fix liveness; identity + seq16. | **Retained** — unchanged from current v0; explicitly part of v0.2 family. |
 
-- **Wire:** New `msg_type` (or payloadVersion-based dispatch) for Node_Pos_Full and Node_Status; Alive keeps existing or is explicitly in v0.2 registry. Exact registry is a contract follow-up; this doc fixes the **set** and **roles**.
+- **Wire:** New `msg_type` for Node_Pos_Full and Node_Status; Alive keeps existing. **Implemented:** msg_type 0x06 = Node_Pos_Full, 0x07 = Node_Status (firmware `packet_header.h`); implementation note: `_working/435_implementation_note.md`.
 
 ---
 

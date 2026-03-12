@@ -12,6 +12,10 @@
 #include "../../protocol/tail1_codec.h"
 #include "../../protocol/tail2_codec.h"
 #include "../../protocol/info_codec.h"
+#include "../../protocol/pos_full_codec.h"
+#include "../../protocol/pos_full_codec.cpp"
+#include "../../protocol/status_codec.h"
+#include "../../protocol/status_codec.cpp"
 
 using naviga::domain::BeaconLogic;
 using naviga::domain::NodeTable;
@@ -20,11 +24,9 @@ using naviga::domain::PacketLogType;
 using naviga::domain::SelfTelemetry;
 using naviga::domain::TxPriority;
 using naviga::domain::TxBestEffortClass;
-using naviga::domain::kSlotCore;
+using naviga::domain::kSlotPosFull;
 using naviga::domain::kSlotAlive;
-using naviga::domain::kSlotTail1;
-using naviga::domain::kSlotTail2;
-using naviga::domain::kSlotInfo;
+using naviga::domain::kSlotStatus;
 using naviga::protocol::AliveFields;
 using naviga::protocol::GeoBeaconFields;
 using naviga::protocol::Tail1Fields;
@@ -38,6 +40,8 @@ using naviga::protocol::kTail2FrameMin;
 using naviga::protocol::kTail2FrameMax;
 using naviga::protocol::kInfoFrameMin;
 using naviga::protocol::kInfoFrameMax;
+using naviga::protocol::kPosFullFrameSize;
+using naviga::protocol::kStatusFrameSize;
 using naviga::protocol::encode_alive_frame;
 using naviga::protocol::encode_tail1_frame;
 using naviga::protocol::encode_tail2_frame;
@@ -80,7 +84,7 @@ void test_tx_cadence() {
   TEST_ASSERT_EQUAL_UINT32(0, out_len);
 
   TEST_ASSERT_TRUE(logic.build_tx(1000, fields, buffer, sizeof(buffer), &out_len));
-  TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, out_len);
+  TEST_ASSERT_EQUAL_UINT32(kPosFullFrameSize, out_len);
 }
 
 // #417: Default start — first packet carries seq16 = 1 (canon: fresh start).
@@ -95,7 +99,7 @@ void test_seq16_default_first_packet_is_one() {
   uint8_t buffer[kTestBufSize] = {};
   size_t out_len = 0;
   TEST_ASSERT_TRUE(logic.build_tx(1000, fields, buffer, sizeof(buffer), &out_len));
-  TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, out_len);
+  TEST_ASSERT_EQUAL_UINT32(kPosFullFrameSize, out_len);
   // Seq16 at payload offset 7-8; frame = header(2) + payload.
   TEST_ASSERT_EQUAL_UINT16(1, read_u16_le(buffer + 2 + 7));
 }
@@ -113,7 +117,7 @@ void test_seq16_set_initial_then_first_packet_is_initial_plus_one() {
   uint8_t buffer[kTestBufSize] = {};
   size_t out_len = 0;
   TEST_ASSERT_TRUE(logic.build_tx(1000, fields, buffer, sizeof(buffer), &out_len));
-  TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, out_len);
+  TEST_ASSERT_EQUAL_UINT32(kPosFullFrameSize, out_len);
   TEST_ASSERT_EQUAL_UINT16(43, read_u16_le(buffer + 2 + 7));
 }
 
@@ -164,13 +168,13 @@ void test_tx_max_silence_triggers_core() {
 
   uint8_t buffer[kTestBufSize] = {};
   size_t out_len = 0;
-  PacketLogType ptype = PacketLogType::CORE;
+  PacketLogType ptype = PacketLogType::POS_FULL;
   TEST_ASSERT_FALSE(logic.build_tx(5000, fields, buffer, sizeof(buffer), &out_len, &ptype));
   TEST_ASSERT_EQUAL_UINT32(0, out_len);
 
   TEST_ASSERT_TRUE(logic.build_tx(10000, fields, buffer, sizeof(buffer), &out_len, &ptype));
-  TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, out_len);
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));
+  TEST_ASSERT_EQUAL_UINT32(kPosFullFrameSize, out_len);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::POS_FULL), static_cast<int>(ptype));
 }
 
 // No fix + maxSilence → Alive frame (11 B, msg_type=0x02).
@@ -185,9 +189,9 @@ void test_tx_no_fix_at_max_silence_sends_alive() {
 
   uint8_t buffer[kTestBufSize] = {};
   size_t out_len = 0;
-  PacketLogType ptype = PacketLogType::CORE;
+  PacketLogType ptype = PacketLogType::POS_FULL;
 
-  // At min_interval: no fix → no Core, no Alive (only at maxSilence).
+  // At min_interval: no fix → no PosFull, no Alive (only at maxSilence).
   TEST_ASSERT_FALSE(logic.build_tx(1000, fields, buffer, sizeof(buffer), &out_len, &ptype));
   TEST_ASSERT_EQUAL_UINT32(0, out_len);
 
@@ -230,25 +234,23 @@ void test_tx_payload_correctness() {
   fields.lat_deg   = 55.7558;
   fields.lon_deg   = 37.6173;
 
-  uint8_t buffer[kGeoBeaconFrameSize] = {};
+  uint8_t buffer[kPosFullFrameSize] = {};
   size_t out_len = 0;
   TEST_ASSERT_TRUE(logic.build_tx(10, fields, buffer, sizeof(buffer), &out_len));
-  TEST_ASSERT_EQUAL_UINT32(kGeoBeaconFrameSize, out_len);
+  TEST_ASSERT_EQUAL_UINT32(kPosFullFrameSize, out_len);
 
-  GeoBeaconFields decoded{};
-  const auto err = naviga::protocol::decode_geo_beacon_frame(
-      naviga::protocol::ConstByteSpan{buffer, out_len}, &decoded);
-  TEST_ASSERT_EQUAL(naviga::protocol::DecodeError::Ok, err);
+  naviga::protocol::PosFullFields decoded{};
+  const auto err = naviga::protocol::decode_pos_full_payload(
+      buffer + 2, out_len - 2, &decoded);
+  TEST_ASSERT_EQUAL(naviga::protocol::PosFullDecodeError::Ok, err);
   TEST_ASSERT_EQUAL_UINT64(fields.node_id, decoded.node_id);
-  TEST_ASSERT_EQUAL_UINT8(1, decoded.pos_valid);
   TEST_ASSERT_TRUE(decoded.lat_deg > 55.7557 && decoded.lat_deg < 55.7559);
   TEST_ASSERT_TRUE(decoded.lon_deg > 37.6172 && decoded.lon_deg < 37.6174);
-  TEST_ASSERT_EQUAL_UINT16(1, decoded.seq);
+  TEST_ASSERT_EQUAL_UINT16(1, decoded.seq16);
 
   TEST_ASSERT_TRUE(logic.build_tx(20, fields, buffer, sizeof(buffer), &out_len));
-  naviga::protocol::decode_geo_beacon_frame(
-      naviga::protocol::ConstByteSpan{buffer, out_len}, &decoded);
-  TEST_ASSERT_EQUAL_UINT16(2, decoded.seq);
+  naviga::protocol::decode_pos_full_payload(buffer + 2, out_len - 2, &decoded);
+  TEST_ASSERT_EQUAL_UINT16(2, decoded.seq16);
 }
 
 // ── RX: Core dispatch ───────────────────────────────────────────────────────
@@ -288,6 +290,75 @@ void test_rx_core_success_updates_node_table() {
   TEST_ASSERT_EQUAL_UINT64(fields.node_id, read_u64_le(page));
   TEST_ASSERT_EQUAL_INT8(-55, static_cast<int8_t>(page[23]));
   TEST_ASSERT_EQUAL_UINT8(127, page[24]);  // #419: snr_last (127 = NA); last_seq not in BLE
+}
+
+// ── RX: v0.2 Node_Pos_Full (0x06) and Node_Status (0x07) (#435) ───────────────
+
+void test_rx_pos_full_applies_position_and_quality() {
+  BeaconLogic logic;
+  NodeTable table;
+  naviga::protocol::PosFullFields pos{};
+  pos.node_id = 0x0000112233445566ULL;
+  pos.seq16 = 3;
+  pos.lat_deg = 55.0;
+  pos.lon_deg = 37.0;
+  pos.fix_type = 2;
+  pos.pos_sats = 10;
+  pos.pos_accuracy_bucket = 4;
+  pos.pos_flags_small = 1;
+  uint8_t frame[naviga::protocol::kPosFullFrameSize] = {};
+  const size_t written = naviga::protocol::encode_pos_full_frame(pos, frame, sizeof(frame));
+  TEST_ASSERT_EQUAL(naviga::protocol::kPosFullFrameSize, written);
+
+  PacketLogType rx_type = PacketLogType::ALIVE;
+  TEST_ASSERT_TRUE(logic.on_rx(2000, frame, written, -60, table,
+                               nullptr, nullptr, nullptr, &rx_type));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::POS_FULL), static_cast<int>(rx_type));
+
+  NodeEntry entry{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(pos.node_id, &entry));
+  TEST_ASSERT_TRUE(entry.pos_valid);
+  TEST_ASSERT_EQUAL_UINT16(3, entry.last_seq);
+  TEST_ASSERT_EQUAL_UINT16(3, entry.last_core_seq16);
+  TEST_ASSERT_TRUE(entry.has_pos_flags);
+  TEST_ASSERT_TRUE(entry.has_sats);
+  // Pos_Quality → NodeTable packing: pos_flags = pos_flags_small[0:3] | fix_type[4:6] | pos_accuracy_bucket bit0[7];
+  // sats = pos_sats[0:5] | (pos_accuracy_bucket bits 1–2)[6:7]. (fix_type=2, pos_sats=10, pos_accuracy_bucket=4, pos_flags_small=1)
+  TEST_ASSERT_EQUAL_UINT8(33, entry.pos_flags);   // 1 | (2<<4) | 0
+  TEST_ASSERT_EQUAL_UINT8(138, entry.sats);      // 10 | ((4 & 0x06u) << 5)
+}
+
+void test_rx_status_applies_full_snapshot() {
+  BeaconLogic logic;
+  NodeTable table;
+  naviga::protocol::StatusFields st{};
+  st.node_id = 0x0000AABBCCDDEE11ULL;
+  st.seq16 = 5;
+  st.battery_percent = 75;
+  st.uptime10m = 10;
+  st.max_silence_10s = 6;
+  st.hw_profile_id = 0x0201;
+  st.fw_version_id = 0x0403;
+  uint8_t frame[naviga::protocol::kStatusFrameSize] = {};
+  const size_t written = naviga::protocol::encode_status_frame(st, frame, sizeof(frame));
+  TEST_ASSERT_EQUAL(naviga::protocol::kStatusFrameSize, written);
+
+  PacketLogType rx_type = PacketLogType::ALIVE;
+  TEST_ASSERT_TRUE(logic.on_rx(3000, frame, written, -50, table,
+                               nullptr, nullptr, nullptr, &rx_type));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::STATUS), static_cast<int>(rx_type));
+
+  NodeEntry entry{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(st.node_id, &entry));
+  TEST_ASSERT_EQUAL_UINT16(5, entry.last_seq);
+  TEST_ASSERT_TRUE(entry.has_battery);
+  TEST_ASSERT_EQUAL_UINT8(75, entry.battery_percent);
+  TEST_ASSERT_TRUE(entry.has_uptime);
+  TEST_ASSERT_EQUAL_UINT32(6000u, entry.uptime_sec);  // 10 * 600
+  TEST_ASSERT_TRUE(entry.has_max_silence);
+  TEST_ASSERT_EQUAL_UINT8(6, entry.max_silence_10s);
+  TEST_ASSERT_EQUAL_UINT16(0x0201, entry.hw_profile_id);
+  TEST_ASSERT_EQUAL_UINT16(0x0403, entry.fw_version_id);
 }
 
 // ── RX: Alive dispatch ──────────────────────────────────────────────────────
@@ -398,11 +469,13 @@ void test_decode_header_accepts_0x05() {
   TEST_ASSERT_EQUAL_UINT8(9, hdr.payload_len);
 }
 
-void test_decode_header_drops_0x06() {
-  // msg_type=0x06 (unknown): H=(0x06<<9)|9=0x0C09 → [0x09, 0x0C]
+void test_decode_header_accepts_0x06() {
+  // msg_type=0x06 (BeaconPosFull, v0.2): H=(0x06<<9)|9=0x0C09 → [0x09, 0x0C]
   uint8_t frame[2] = {0x09, 0x0C};
   naviga::protocol::PacketHeader hdr{};
-  TEST_ASSERT_FALSE(naviga::protocol::decode_header(frame, sizeof(frame), &hdr));
+  TEST_ASSERT_TRUE(naviga::protocol::decode_header(frame, sizeof(frame), &hdr));
+  TEST_ASSERT_EQUAL(static_cast<int>(naviga::protocol::MsgType::BeaconPosFull),
+                    static_cast<int>(hdr.msg_type));
 }
 
 // ── Tail-1 codec: golden vectors ────────────────────────────────────────────
@@ -704,9 +777,9 @@ void test_tail1_rx_apply_on_match() {
   uint16_t out_seq = 0;
   TEST_ASSERT_TRUE(logic.on_rx(2000, frame, written, -55, table,
                                nullptr, &out_seq, nullptr, &ptype, &out_core_seq));
-  TEST_ASSERT_EQUAL_INT(static_cast<int>(PacketLogType::TAIL1), static_cast<int>(ptype));
-  TEST_ASSERT_EQUAL_UINT16(8, out_seq);           // tail's own seq16
-  TEST_ASSERT_EQUAL_UINT16(core_seq, out_core_seq); // ref_core_seq16
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(PacketLogType::TAIL1), static_cast<int>(ptype));  // RX compat: still TAIL1 for 0x03
+  TEST_ASSERT_EQUAL_UINT16(8, out_seq);
+  TEST_ASSERT_EQUAL_UINT16(core_seq, out_core_seq);
 
   // Verify posFlags and sats were applied.
   NodeEntry entry{};
@@ -908,7 +981,7 @@ void test_tail2_rx_applies_battery() {
   PacketLogType ptype = PacketLogType::CORE;
   TEST_ASSERT_TRUE(logic.on_rx(1000, frame, written, -60, table,
                                nullptr, nullptr, nullptr, &ptype));
-  TEST_ASSERT_EQUAL_INT(static_cast<int>(PacketLogType::TAIL2), static_cast<int>(ptype));
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(PacketLogType::TAIL2), static_cast<int>(ptype));  // RX compat: 0x04 → TAIL2
 
   NodeEntry entry{};
   TEST_ASSERT_TRUE(table.find_entry_for_test(node_id, &entry));
@@ -1166,16 +1239,18 @@ static GeoBeaconFields make_self_fields(uint64_t node_id, bool pos_valid,
 }
 
 // Decode the seq16 from a Core frame (payload offset 7–8, frame offset 9–10).
-static uint16_t core_frame_seq16(const uint8_t* frame) {
+// Seq16 in PosFull/Core payload at bytes 7–8 (frame offset 9–10).
+static uint16_t pos_full_frame_seq16(const uint8_t* frame) {
   return static_cast<uint16_t>(frame[9] | (static_cast<uint16_t>(frame[10]) << 8));
 }
 
-// Decode the seq16 from a Tail-1 frame (payload offset 7–8, frame offset 9–10).
+static uint16_t core_frame_seq16(const uint8_t* frame) {
+  return pos_full_frame_seq16(frame);
+}
+
 static uint16_t tail1_frame_seq16(const uint8_t* frame) {
   return static_cast<uint16_t>(frame[9] | (static_cast<uint16_t>(frame[10]) << 8));
 }
-
-// Decode the ref_core_seq16 from a Tail-1 frame (payload offset 9–10, frame offset 11–12).
 static uint16_t tail1_frame_ref_core_seq16(const uint8_t* frame) {
   return static_cast<uint16_t>(frame[11] | (static_cast<uint16_t>(frame[12]) << 8));
 }
@@ -1183,7 +1258,7 @@ static uint16_t tail1_frame_ref_core_seq16(const uint8_t* frame) {
 // ── TX queue: formation tests ────────────────────────────────────────────────
 
 void test_txq_core_enqueues_tail_with_correct_ref() {
-  // When Core_Pos is enqueued, Core_Tail must be enqueued with ref_core_seq16 == core.seq16.
+  // v0.2: When position valid, only Node_Pos_Full is enqueued (one seq16 per position).
   BeaconLogic logic;
   logic.set_min_interval_ms(1000);
   logic.set_max_silence_ms(30000);
@@ -1194,38 +1269,16 @@ void test_txq_core_enqueues_tail_with_correct_ref() {
 
   logic.update_tx_queue(1000, self, telem, true);
 
-  // Core slot must be present.
-  TEST_ASSERT_TRUE(logic.slot(kSlotCore).present);
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE),
-                    static_cast<int>(logic.slot(kSlotCore).pkt_type));
+  TEST_ASSERT_TRUE(logic.slot(kSlotPosFull).present);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::POS_FULL),
+                    static_cast<int>(logic.slot(kSlotPosFull).pkt_type));
 
-  // Tail-1 slot must be present.
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL1),
-                    static_cast<int>(logic.slot(kSlotTail1).pkt_type));
-
-  // Decode Core seq16 from the Core frame.
-  const uint16_t core_seq = core_frame_seq16(logic.slot(kSlotCore).frame);
-
-  // Decode Tail-1 seq16 and ref_core_seq16 from the Tail-1 frame.
-  const uint16_t tail_seq     = tail1_frame_seq16(logic.slot(kSlotTail1).frame);
-  const uint16_t tail_ref_seq = tail1_frame_ref_core_seq16(logic.slot(kSlotTail1).frame);
-
-  // ref_core_seq16 must equal Core's seq16.
-  TEST_ASSERT_EQUAL_UINT16(core_seq, tail_ref_seq);
-
-  // Tail's own seq16 must differ from Core's seq16 (both consume global counter).
-  TEST_ASSERT_NOT_EQUAL(core_seq, tail_seq);
-
-  // Tail's seq16 must be core_seq + 1 (next global counter value).
-  TEST_ASSERT_EQUAL_UINT16(static_cast<uint16_t>(core_seq + 1u), tail_seq);
-
-  // ref_core_seq16 in slot metadata must match.
-  TEST_ASSERT_EQUAL_UINT16(core_seq, logic.slot(kSlotTail1).ref_core_seq16);
+  const uint16_t pos_seq = pos_full_frame_seq16(logic.slot(kSlotPosFull).frame);
+  TEST_ASSERT_EQUAL_UINT16(1u, pos_seq);
 }
 
 void test_txq_tail1_not_enqueued_without_core() {
-  // Tail-1 MUST NOT be enqueued when Core is not enqueued (allow_core=false and no max_silence).
+  // v0.2: PosFull not enqueued when allow_core=false and no max_silence.
   BeaconLogic logic;
   logic.set_min_interval_ms(1000);
   logic.set_max_silence_ms(30000);
@@ -1234,15 +1287,13 @@ void test_txq_tail1_not_enqueued_without_core() {
   GeoBeaconFields self = make_self_fields(node_id, true);
   SelfTelemetry telem{};
 
-  // allow_core=false and time_for_min=true but time_for_silence=false → no Core, no Tail-1.
   logic.update_tx_queue(1000, self, telem, false);
 
-  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
-  TEST_ASSERT_FALSE(logic.slot(kSlotTail1).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotPosFull).present);
 }
 
 void test_txq_core_replacement_replaces_tail_too() {
-  // If Core is re-formed before being sent, both Core and Tail slots are replaced.
+  // v0.2: PosFull re-formed before send → slot replaced_count increments.
   BeaconLogic logic;
   logic.set_min_interval_ms(1000);
   logic.set_max_silence_ms(30000);
@@ -1251,28 +1302,16 @@ void test_txq_core_replacement_replaces_tail_too() {
   GeoBeaconFields self = make_self_fields(node_id, true);
   SelfTelemetry telem{};
 
-  // First formation.
   logic.update_tx_queue(1000, self, telem, true);
-  const uint16_t first_core_seq = core_frame_seq16(logic.slot(kSlotCore).frame);
-  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotCore).replaced_count);
-  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotTail1).replaced_count);
+  const uint16_t first_seq = pos_full_frame_seq16(logic.slot(kSlotPosFull).frame);
+  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotPosFull).replaced_count);
 
-  // Second formation (position updated, allow_core=true again).
   self.lat_deg += 0.001;
   logic.update_tx_queue(2000, self, telem, true);
-  const uint16_t second_core_seq = core_frame_seq16(logic.slot(kSlotCore).frame);
+  const uint16_t second_seq = pos_full_frame_seq16(logic.slot(kSlotPosFull).frame);
 
-  // Core slot replaced_count must be 1.
-  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotCore).replaced_count);
-  // Tail slot replaced_count must be 1.
-  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotTail1).replaced_count);
-
-  // New Core seq must be newer than first.
-  TEST_ASSERT_NOT_EQUAL(first_core_seq, second_core_seq);
-
-  // New Tail ref_core_seq16 must point to new Core seq.
-  const uint16_t new_tail_ref = tail1_frame_ref_core_seq16(logic.slot(kSlotTail1).frame);
-  TEST_ASSERT_EQUAL_UINT16(second_core_seq, new_tail_ref);
+  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotPosFull).replaced_count);
+  TEST_ASSERT_NOT_EQUAL(first_seq, second_seq);
 }
 
 void test_txq_alive_enqueued_when_no_fix_at_max_silence() {
@@ -1287,7 +1326,7 @@ void test_txq_alive_enqueued_when_no_fix_at_max_silence() {
   // Before max_silence: no Alive.
   logic.update_tx_queue(1000, self, telem, false);
   TEST_ASSERT_FALSE(logic.slot(kSlotAlive).present);
-  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotPosFull).present);
 
   // At max_silence: Alive enqueued.
   logic.update_tx_queue(2000, self, telem, false);
@@ -1295,7 +1334,7 @@ void test_txq_alive_enqueued_when_no_fix_at_max_silence() {
   TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::ALIVE),
                     static_cast<int>(logic.slot(kSlotAlive).pkt_type));
   // Core must NOT be enqueued (no fix).
-  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotPosFull).present);
 }
 
 void test_txq_operational_enqueued_independently() {
@@ -1312,11 +1351,11 @@ void test_txq_operational_enqueued_independently() {
   logic.update_tx_queue(1000, self, telem, false);  // allow_core=false; time_for_min=true
 
   // Core not enqueued (allow_core=false).
-  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotPosFull).present);
   // Operational enqueued when cadence is due.
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL2),
-                    static_cast<int>(logic.slot(kSlotTail2).pkt_type));
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::STATUS),
+                    static_cast<int>(logic.slot(kSlotStatus).pkt_type));
 }
 
 void test_txq_informative_enqueued_independently() {
@@ -1332,10 +1371,10 @@ void test_txq_informative_enqueued_independently() {
 
   logic.update_tx_queue(1000, self, telem, false);  // time_for_min=true
 
-  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
-  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::INFO),
-                    static_cast<int>(logic.slot(kSlotInfo).pkt_type));
+  TEST_ASSERT_FALSE(logic.slot(kSlotPosFull).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::STATUS),
+                    static_cast<int>(logic.slot(kSlotStatus).pkt_type));
 }
 
 // ── TX queue: telemetry gate (empty telemetry → no 0x04/0x05) ────────────────
@@ -1353,8 +1392,8 @@ void test_txq_empty_telemetry_no_operational_no_informative() {
 
   logic.update_tx_queue(1000, self, telem, true);
 
-  TEST_ASSERT_FALSE(logic.slot(kSlotTail2).present);
-  TEST_ASSERT_FALSE(logic.slot(kSlotInfo).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotStatus).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotStatus).present);
   // Core and Tail1 may be present (unrelated to telemetry gate).
 }
 
@@ -1377,9 +1416,9 @@ void test_txq_op_info_not_enqueued_before_cadence() {
   // First formation at t=500: elapsed=500 < min_interval and < max_silence.
   logic.update_tx_queue(500, self, telem, false);
 
-  TEST_ASSERT_FALSE(logic.slot(kSlotTail2).present);
-  TEST_ASSERT_FALSE(logic.slot(kSlotInfo).present);
-  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotStatus).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotStatus).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotPosFull).present);
 }
 
 void test_txq_422_status_throttle_min_interval_respected() {
@@ -1397,18 +1436,18 @@ void test_txq_422_status_throttle_min_interval_respected() {
   telem.battery_percent = 90;
 
   logic.update_tx_queue(1000, self, telem, false);   // enqueue Op (bootstrap)
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
   logic.on_status_sent(1000);                         // first "send"
 
   logic.update_tx_queue(31000, self, telem, false);  // 30s later: interval elapsed, enqueue again
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
   logic.on_status_sent(31000);                        // second "send" (bootstrap done)
 
   // 1 ms later: within min_status_interval, must NOT enqueue (replace) status.
   logic.update_tx_queue(31001, self, telem, false);
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
   // created_at_ms unchanged (we did not replace the slot this pass).
-  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotTail2).created_at_ms);
+  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotStatus).created_at_ms);
 }
 
 void test_txq_uptime_only_enqueues_operational_not_informative() {
@@ -1425,12 +1464,12 @@ void test_txq_uptime_only_enqueues_operational_not_informative() {
 
   logic.update_tx_queue(1000, self, telem, false);  // time_for_min=true
 
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
-  TEST_ASSERT_FALSE(logic.slot(kSlotInfo).present);
+  // v0.2: one Status slot; uptime-only enqueues Status.
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
 }
 
 void test_txq_max_silence_only_enqueues_informative_not_operational() {
-  // has_max_silence=true → 0x05 enqueued; has_battery=false, has_uptime=false → 0x04 NOT enqueued.
+  // has_max_silence=true → Status enqueued (v0.2 single Status slot).
   BeaconLogic logic;
   logic.set_min_interval_ms(1000);   // cadence due at t=1000
   logic.set_max_silence_ms(120000);
@@ -1443,8 +1482,7 @@ void test_txq_max_silence_only_enqueues_informative_not_operational() {
 
   logic.update_tx_queue(1000, self, telem, false);  // time_for_min=true
 
-  TEST_ASSERT_FALSE(logic.slot(kSlotTail2).present);
-  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
 }
 
 // ── TX queue: dequeue / priority / fairness tests ────────────────────────────
@@ -1471,24 +1509,24 @@ void test_txq_dequeue_core_before_operational() {
 
   // First pass: enqueue Op only (allow_core=false).
   logic.update_tx_queue(1000, self, telem, false);
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
   // Second pass: enqueue Core+Tail1 (allow_core=true); no Op this pass (no hitchhiking).
   logic.update_tx_queue(1000, self, telem, true);
 
   // Both Core and Operational should be present (Op from first pass, Core from second).
-  TEST_ASSERT_TRUE(logic.slot(kSlotCore).present);
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotPosFull).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
 
   uint8_t buf[65] = {};
   size_t out_len = 0;
-  PacketLogType ptype = PacketLogType::TAIL2;
+  PacketLogType ptype = PacketLogType::STATUS;
   TEST_ASSERT_TRUE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype));
-  // Core dequeued first (highest priority).
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));
-  // Core slot cleared.
-  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
-  // Operational still pending.
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  // PosFull dequeued first (highest priority).
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::POS_FULL), static_cast<int>(ptype));
+  // PosFull slot cleared.
+  TEST_ASSERT_FALSE(logic.slot(kSlotPosFull).present);
+  // Status still pending.
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
 }
 
 void test_txq_dequeue_tail1_before_operational() {
@@ -1504,22 +1542,22 @@ void test_txq_dequeue_tail1_before_operational() {
   telem.battery_percent = 90;
 
   logic.update_tx_queue(1000, self, telem, false);  // Op only
-  logic.update_tx_queue(1000, self, telem, true);   // Core+Tail1
+  logic.update_tx_queue(1000, self, telem, true);   // PosFull only (v0.2)
 
-  // Dequeue Core first (P0).
+  // Dequeue PosFull first (P0).
   uint8_t buf[65] = {};
   size_t out_len = 0;
-  PacketLogType ptype = PacketLogType::CORE;
+  PacketLogType ptype = PacketLogType::POS_FULL;
   logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::POS_FULL), static_cast<int>(ptype));
 
-  // Now Tail-1 (P2) and Operational (P3) remain. Tail-1 should be next.
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  // PosFull cleared; Status (P3) remains.
+  TEST_ASSERT_FALSE(logic.slot(kSlotPosFull).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
 
   logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL1), static_cast<int>(ptype));
-  TEST_ASSERT_FALSE(logic.slot(kSlotTail1).present);
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::STATUS), static_cast<int>(ptype));
+  TEST_ASSERT_FALSE(logic.slot(kSlotPosFull).present);
 }
 
 void test_txq_fairness_higher_replaced_count_wins() {
@@ -1536,23 +1574,23 @@ void test_txq_fairness_higher_replaced_count_wins() {
   telem_op.has_battery     = true;
   telem_op.battery_percent = 80;
   logic.update_tx_queue(1000, self, telem_op, false);  // time_for_min=true
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
-  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotTail2).replaced_count);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
+  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotStatus).replaced_count);
   TEST_ASSERT_EQUAL(static_cast<int>(TxPriority::P3_THROTTLED),
-                    static_cast<int>(logic.slot(kSlotTail2).priority));
+                    static_cast<int>(logic.slot(kSlotStatus).priority));
 
-  // Enqueue Informative once (replaced_count=0).
+  // Enqueue Informative (replaces same Status slot; replaced_count=1).
   SelfTelemetry telem_info{};
   telem_info.has_max_silence = true;
   telem_info.max_silence_10s = 9;
   logic.update_tx_queue(2000, self, telem_info, false);  // time_for_min=true
-  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
-  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotInfo).replaced_count);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
+  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotStatus).replaced_count);
 
-  // Replace Operational again (replaced_count becomes 1).
+  // Replace again with Operational (replaced_count becomes 2).
   telem_op.battery_percent = 75;
   logic.update_tx_queue(3000, self, telem_op, false);  // time_for_min=true
-  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotTail2).replaced_count);
+  TEST_ASSERT_EQUAL_UINT32(2, logic.slot(kSlotStatus).replaced_count);
 
   // Both P3 slots present. Operational has replaced_count=1, Info has replaced_count=0.
   // Operational should be dequeued first (higher replaced_count = more starved).
@@ -1560,11 +1598,10 @@ void test_txq_fairness_higher_replaced_count_wins() {
   size_t out_len = 0;
   PacketLogType ptype = PacketLogType::INFO;
   TEST_ASSERT_TRUE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype));
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL2), static_cast<int>(ptype));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::STATUS), static_cast<int>(ptype));
 
-  // Info dequeued next.
-  TEST_ASSERT_TRUE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype));
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::INFO), static_cast<int>(ptype));
+  // v0.2: one Status slot only; no second dequeue.
+  TEST_ASSERT_FALSE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype));
 }
 
 void test_txq_fairness_older_created_at_wins_on_tie() {
@@ -1593,7 +1630,7 @@ void test_txq_fairness_older_created_at_wins_on_tie() {
   size_t out_len = 0;
   PacketLogType ptype = PacketLogType::INFO;
   TEST_ASSERT_TRUE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype));
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL2), static_cast<int>(ptype));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::STATUS), static_cast<int>(ptype));
 }
 
 void test_txq_slot_replacement_increments_count() {
@@ -1609,19 +1646,19 @@ void test_txq_slot_replacement_increments_count() {
   telem.battery_percent = 90;
 
   logic.update_tx_queue(1000, self, telem, false);  // time_for_min=true
-  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotTail2).replaced_count);
-  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotTail2).created_at_ms);
+  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotStatus).replaced_count);
+  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotStatus).created_at_ms);
 
   telem.battery_percent = 80;
   logic.update_tx_queue(2000, self, telem, false);  // time_for_min=true
-  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotTail2).replaced_count);
+  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotStatus).replaced_count);
   // created_at_ms preserved from first enqueue.
-  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotTail2).created_at_ms);
+  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotStatus).created_at_ms);
 
   telem.battery_percent = 70;
   logic.update_tx_queue(3000, self, telem, false);  // time_for_min=true
-  TEST_ASSERT_EQUAL_UINT32(2, logic.slot(kSlotTail2).replaced_count);
-  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotTail2).created_at_ms);
+  TEST_ASSERT_EQUAL_UINT32(2, logic.slot(kSlotStatus).replaced_count);
+  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotStatus).created_at_ms);
 }
 
 void test_txq_dequeue_clears_slot() {
@@ -1636,13 +1673,13 @@ void test_txq_dequeue_clears_slot() {
   telem.battery_percent = 90;
 
   logic.update_tx_queue(1000, self, telem, false);  // time_for_min=true
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
 
   uint8_t buf[65] = {};
   size_t out_len = 0;
   logic.dequeue_tx(buf, sizeof(buf), &out_len);
   // Slot must be cleared after dequeue.
-  TEST_ASSERT_FALSE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotStatus).present);
   TEST_ASSERT_FALSE(logic.has_pending_tx());
 }
 
@@ -1657,8 +1694,8 @@ void test_txq_no_core_when_allow_core_false() {
   SelfTelemetry telem{};
 
   logic.update_tx_queue(1000, self, telem, false);  // allow_core=false
-  TEST_ASSERT_FALSE(logic.slot(kSlotCore).present);
-  TEST_ASSERT_FALSE(logic.slot(kSlotTail1).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotPosFull).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotPosFull).present);
 }
 
 void test_txq_core_enqueues_at_max_silence_even_without_allow_core() {
@@ -1672,8 +1709,8 @@ void test_txq_core_enqueues_at_max_silence_even_without_allow_core() {
   SelfTelemetry telem{};
 
   logic.update_tx_queue(2000, self, telem, false);  // allow_core=false but max_silence hit
-  TEST_ASSERT_TRUE(logic.slot(kSlotCore).present);
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotPosFull).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotPosFull).present);
 }
 
 // ── TX queue: Alive replacement + dequeue ────────────────────────────────────
@@ -1744,16 +1781,16 @@ void test_txq_informative_replacement_increments_count() {
   telem.max_silence_10s = 9;
 
   logic.update_tx_queue(1000, self, telem, false);  // time_for_min=true
-  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
-  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotInfo).replaced_count);
-  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotInfo).created_at_ms);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
+  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotStatus).replaced_count);
+  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotStatus).created_at_ms);
 
   // Replace with new value.
   telem.max_silence_10s = 18;
   logic.update_tx_queue(2000, self, telem, false);  // time_for_min=true
-  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
-  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotInfo).replaced_count);
-  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotInfo).created_at_ms);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
+  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotStatus).replaced_count);
+  TEST_ASSERT_EQUAL_UINT32(1000, logic.slot(kSlotStatus).created_at_ms);
 }
 
 void test_txq_informative_dequeued_correctly() {
@@ -1776,10 +1813,10 @@ void test_txq_informative_dequeued_correctly() {
   PacketLogType ptype = PacketLogType::CORE;
   uint16_t core_seq = 0xFFFF;
   TEST_ASSERT_TRUE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype, &core_seq));
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::INFO), static_cast<int>(ptype));
-  TEST_ASSERT_EQUAL_UINT16(0, core_seq);  // Info has no ref_core_seq16
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::STATUS), static_cast<int>(ptype));
+  TEST_ASSERT_EQUAL_UINT16(0, core_seq);
   TEST_ASSERT_TRUE(out_len >= naviga::protocol::kInfoFrameMin);
-  TEST_ASSERT_FALSE(logic.slot(kSlotInfo).present);
+  TEST_ASSERT_FALSE(logic.slot(kSlotStatus).present);
   TEST_ASSERT_FALSE(logic.has_pending_tx());
 }
 
@@ -1825,38 +1862,38 @@ void test_txq_p2_tail1_before_p3_operational_informative() {
   telem_op.has_battery     = true;
   telem_op.battery_percent = 90;
   logic.update_tx_queue(500, self, telem_op, false);  // Op only
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
   SelfTelemetry telem_info{};
   telem_info.has_max_silence = true;
   telem_info.max_silence_10s = 9;
   logic.update_tx_queue(500, self, telem_info, false);  // Info only (second pass)
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
-  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
   TEST_ASSERT_EQUAL(static_cast<int>(TxPriority::P3_THROTTLED),
-                    static_cast<int>(logic.slot(kSlotTail2).priority));
+                    static_cast<int>(logic.slot(kSlotStatus).priority));
   TEST_ASSERT_EQUAL(static_cast<int>(TxPriority::P3_THROTTLED),
-                    static_cast<int>(logic.slot(kSlotInfo).priority));
-  TEST_ASSERT_FALSE(logic.slot(kSlotTail1).present);
+                    static_cast<int>(logic.slot(kSlotStatus).priority));
+  TEST_ASSERT_FALSE(logic.slot(kSlotPosFull).present);
 
   // Now enqueue Core (and thus Core_Tail) at t=1000.
   logic.set_min_interval_ms(1000);
   logic.set_max_silence_ms(30000);
   SelfTelemetry telem2{};
   logic.update_tx_queue(1000, self, telem2, true);
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);
-  TEST_ASSERT_EQUAL(static_cast<int>(TxPriority::P2_BEST_EFFORT),
-                    static_cast<int>(logic.slot(kSlotTail1).priority));
+  TEST_ASSERT_TRUE(logic.slot(kSlotPosFull).present);
+  TEST_ASSERT_EQUAL(static_cast<int>(TxPriority::P0_MUST_PERIODIC),
+                    static_cast<int>(logic.slot(kSlotPosFull).priority));
 
   // Dequeue Core (P0) first.
   uint8_t buf[65] = {};
   size_t out_len = 0;
   PacketLogType ptype = PacketLogType::INFO;
   logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::POS_FULL), static_cast<int>(ptype));
 
-  // Next: Core_Tail (P2) even though Operational/Info (P3) have older created_at_ms.
+  // Next: Status (P3). v0.2 has no Tail1.
   logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL1), static_cast<int>(ptype));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::STATUS), static_cast<int>(ptype));
 }
 
 void test_txq_starvation_increments_replaced_count() {
@@ -1873,16 +1910,16 @@ void test_txq_starvation_increments_replaced_count() {
 
   logic.update_tx_queue(1000, self, telem, false);  // Op only (first pass)
   logic.update_tx_queue(1000, self, telem, true);   // Core+Tail1 (second pass; no Op this pass)
-  TEST_ASSERT_TRUE(logic.slot(kSlotCore).present);
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
-  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotTail2).replaced_count);
+  TEST_ASSERT_TRUE(logic.slot(kSlotPosFull).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
+  TEST_ASSERT_EQUAL_UINT32(0, logic.slot(kSlotStatus).replaced_count);
 
   uint8_t buf[65] = {};
   size_t out_len = 0;
   logic.dequeue_tx(buf, sizeof(buf), &out_len);
   // Core was dequeued; Tail2 was present but not sent → starvation +1.
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);
-  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotTail2).replaced_count);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
+  TEST_ASSERT_EQUAL_UINT32(1, logic.slot(kSlotStatus).replaced_count);
 }
 
 void test_txq_priority_ordering_p0_beats_all() {
@@ -1905,35 +1942,29 @@ void test_txq_priority_ordering_p0_beats_all() {
   logic.update_tx_queue(1000, self, telem_info, false);
   logic.update_tx_queue(1000, self, telem_op, true);
 
-  TEST_ASSERT_TRUE(logic.slot(kSlotCore).present);   // P0
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail1).present);   // P2
-  TEST_ASSERT_TRUE(logic.slot(kSlotTail2).present);  // P3
-  TEST_ASSERT_TRUE(logic.slot(kSlotInfo).present);   // P3
+  TEST_ASSERT_TRUE(logic.slot(kSlotPosFull).present);   // P0
+  TEST_ASSERT_TRUE(logic.slot(kSlotPosFull).present);   // P2
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);  // P3
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);   // P3
   TEST_ASSERT_EQUAL(static_cast<int>(TxPriority::P3_THROTTLED),
-                    static_cast<int>(logic.slot(kSlotTail2).priority));
+                    static_cast<int>(logic.slot(kSlotStatus).priority));
   TEST_ASSERT_EQUAL(static_cast<int>(TxPriority::P3_THROTTLED),
-                    static_cast<int>(logic.slot(kSlotInfo).priority));
+                    static_cast<int>(logic.slot(kSlotStatus).priority));
 
   uint8_t buf[65] = {};
   size_t out_len = 0;
   PacketLogType ptype = PacketLogType::INFO;
 
-  // 1st dequeue: Core (P0_MUST_PERIODIC).
+  // 1st dequeue: PosFull (P0).
   logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::CORE), static_cast<int>(ptype));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::POS_FULL), static_cast<int>(ptype));
 
-  // 2nd dequeue: Core_Tail (P2_BEST_EFFORT).
+  // 2nd dequeue: Status (P3). v0.2 has only 2 slots (PosFull, Status) in this scenario.
   logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
-  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::TAIL1), static_cast<int>(ptype));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::STATUS), static_cast<int>(ptype));
 
-  // 3rd and 4th dequeue: P3 (Operational and Informative, order by fairness).
-  logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
-  const bool third_is_p3 = (ptype == PacketLogType::TAIL2 || ptype == PacketLogType::INFO);
-  TEST_ASSERT_TRUE(third_is_p3);
-
-  logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype);
-  const bool fourth_is_p3 = (ptype == PacketLogType::TAIL2 || ptype == PacketLogType::INFO);
-  TEST_ASSERT_TRUE(fourth_is_p3);
+  // No more slots.
+  TEST_ASSERT_FALSE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype));
 
   TEST_ASSERT_FALSE(logic.has_pending_tx());
 }
@@ -1950,6 +1981,8 @@ int main(int argc, char** argv) {
   RUN_TEST(test_tx_min_interval_no_update_no_send);
   RUN_TEST(test_tx_payload_correctness);
   RUN_TEST(test_rx_core_success_updates_node_table);
+  RUN_TEST(test_rx_pos_full_applies_position_and_quality);
+  RUN_TEST(test_rx_status_applies_full_snapshot);
   RUN_TEST(test_rx_alive_success_updates_node_table);
   RUN_TEST(test_rx_alive_does_not_overwrite_core_position);
   RUN_TEST(test_rx_invalid_frame_too_short);
@@ -1957,7 +1990,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_rx_payload_len_mismatch_dropped);
   // decode_header 0x05
   RUN_TEST(test_decode_header_accepts_0x05);
-  RUN_TEST(test_decode_header_drops_0x06);
+  RUN_TEST(test_decode_header_accepts_0x06);
   // Tail-1 codec
   RUN_TEST(test_tail1_codec_base_round_trip);
   RUN_TEST(test_tail1_codec_extended_round_trip);

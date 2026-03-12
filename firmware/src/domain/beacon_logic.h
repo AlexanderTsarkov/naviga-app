@@ -21,6 +21,8 @@ enum class PacketLogType {
   TAIL2,
   ALIVE,
   INFO,
+  POS_FULL,  ///< v0.2 Node_Pos_Full (#435).
+  STATUS,    ///< v0.2 Node_Status (#435).
 };
 
 /**
@@ -78,15 +80,13 @@ struct TxSlot {
   size_t   frame_len = 0;
 };
 
-/** Number of TX slot types. */
-constexpr size_t kTxSlotCount = 5;
+/** Number of TX slot types (v0.2: three slots only; #435). */
+constexpr size_t kTxSlotCount = 3;
 
-/** Index into the TX slot array for each packet type. */
-constexpr size_t kSlotCore  = 0;  ///< Node_OOTB_Core_Pos (0x01)
-constexpr size_t kSlotAlive = 1;  ///< Node_OOTB_I_Am_Alive (0x02)
-constexpr size_t kSlotTail1 = 2;  ///< Node_OOTB_Core_Tail (0x03)
-constexpr size_t kSlotTail2 = 3;  ///< Node_OOTB_Operational (0x04)
-constexpr size_t kSlotInfo  = 4;  ///< Node_OOTB_Informative (0x05)
+/** Index into the TX slot array for each packet type (v0.2 canonical). */
+constexpr size_t kSlotPosFull = 0;  ///< Node_Pos_Full (0x06)
+constexpr size_t kSlotAlive   = 1;  ///< Node_OOTB_I_Am_Alive (0x02)
+constexpr size_t kSlotStatus  = 2;  ///< Node_Status (0x07)
 
 /**
  * Self-state fields used for Operational and Informative packet formation.

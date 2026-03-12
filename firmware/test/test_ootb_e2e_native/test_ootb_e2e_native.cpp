@@ -76,10 +76,10 @@ void test_e2e_beacon_to_ble_bridge() {
   fields.lat_deg = 55.7558;   // Moscow — canonical example from beacon_payload_encoding_v0 §5.1
   fields.lon_deg = 37.6173;
 
-  uint8_t payload[naviga::protocol::kGeoBeaconFrameSize] = {};
+  uint8_t payload[naviga::protocol::kPosFullFrameSize] = {};
   size_t payload_len = 0;
   TEST_ASSERT_TRUE(tx_logic.build_tx(1000, fields, payload, sizeof(payload), &payload_len));
-  TEST_ASSERT_EQUAL_UINT32(naviga::protocol::kGeoBeaconFrameSize, payload_len);
+  TEST_ASSERT_EQUAL_UINT32(naviga::protocol::kPosFullFrameSize, payload_len);
 
   TEST_ASSERT_TRUE(rx_logic.on_rx(1010, payload, payload_len, -72, table_b));
 
