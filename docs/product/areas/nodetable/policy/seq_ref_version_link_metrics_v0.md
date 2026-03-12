@@ -39,6 +39,8 @@ This document defines the **S03** semantics for per-node sequence and dedupe, Ta
 
 ## 4) Update rules (summary)
 
+**v0.1 (current):**
+
 | What | When it updates |
 |------|------------------|
 | last_seq16 (last_seq) | Any RX from that node (dedupe key) |
@@ -48,11 +50,14 @@ This document defines the **S03** semantics for per-node sequence and dedupe, Ta
 | snrLast | Any RX (when available); E22 → NA sentinel |
 | last_payload_version_seen | Any RX (optional; debug only) |
 
+**v0.2 (canonical, [#435](https://github.com/AlexanderTsarkov/naviga-app/issues/435)):** last_core_seq16 updates **only on Node_Pos_Full RX** (or, during transition, on Core_Pos). **last_applied_tail_ref_core_seq16** is **deprecated** for v0.2 — no Tail packet; removal from product surface in a later compatibility-cleanup PR. See [packet_truth_table_v02](packet_truth_table_v02.md) §4, [packet_migration_v01_v02](packet_migration_v01_v02.md).
+
 ---
 
 ## 5) Related
 
 - [presence_and_age_semantics_v0.md](presence_and_age_semantics_v0.md) — last_seen_ms, is_stale, presence.
 - [packet_sets_v0.md](packet_sets_v0.md), [tx_priority_and_arbitration_v0.md](tx_priority_and_arbitration_v0.md) — Packets and TX.
+- [packet_truth_table_v02.md](packet_truth_table_v02.md), [packet_migration_v01_v02.md](packet_migration_v01_v02.md) — v0.2 seq/ref rules and Tail deprecation (#435).
 - [link_metrics_v0.md](link_metrics_v0.md) (canon) — rssiLast/snrLast policy.
-- Master table: **seq16** (last_seq), **ref_core_seq16**, **last_applied_tail_ref_core_seq16**, **last_rx_rssi**, **snrLast**, **last_payload_version_seen**.
+- Master table: **seq16** (last_seq), **ref_core_seq16**, **last_applied_tail_ref_core_seq16** (v0.1 / compat only; deprecated in v0.2), **last_rx_rssi**, **snrLast**, **last_payload_version_seen**.
