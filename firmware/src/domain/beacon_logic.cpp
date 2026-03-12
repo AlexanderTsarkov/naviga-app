@@ -224,7 +224,7 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
     st.battery_est_rem_time = 0xFF;
     st.tx_power_ch_throttle = 0;
     st.uptime10m = (telemetry.uptime_sec != 0xFFFFFFFFu) ? static_cast<uint8_t>(telemetry.uptime_sec / 600u) : 0u;
-    st.role_id = 0;
+    st.role_id = telemetry.role_id;
     st.max_silence_10s = telemetry.max_silence_10s;
     st.hw_profile_id = telemetry.hw_profile_id;
     st.fw_version_id = telemetry.fw_version_id;

@@ -226,33 +226,41 @@ void AppServices::init() {
 
   // --- Phase B: Provision role + radio profile (boot_pipeline_v0) ---
   // Logical pointers only; radio hardware was configured in Phase A. current_radio_profile_id 0 = FACTORY (virtual, not in NVS).
-  // Missing or invalid pointers → normalize to 0/0 and persist (provisioning_baseline_v0 §4.2).
+  // Missing or invalid pointers → normalize to default and persist (provisioning_baseline_v0 §4.2). #443: resolve role and radio independently.
   constexpr uint32_t kDefaultRoleId = 0;
   constexpr uint32_t kDefaultRadioProfileId = kRadioProfileIdFactoryDefault;  // 0 = FACTORY
   PersistedPointers ptrs{};
   const bool loaded = load_pointers(&ptrs);
-  bool use_persisted = loaded && ptrs.has_current_role && ptrs.has_current_radio;
+
+  // Resolve effective role id from NVS alone (#443: user profile semantics separate from radio).
   uint32_t effective_role_id = kDefaultRoleId;
-  uint32_t effective_radio_id = kDefaultRadioProfileId;
-  if (use_persisted) {
+  bool role_from_persisted = false;
+  if (loaded && ptrs.has_current_role && ptrs.current_role_id <= 2) {
     effective_role_id = ptrs.current_role_id;
-    effective_radio_id = ptrs.current_radio_profile_id;
-    if (effective_role_id > 2) { effective_role_id = kDefaultRoleId; use_persisted = false; }
-    if (effective_radio_id != 0) { effective_radio_id = kDefaultRadioProfileId; use_persisted = false; }
+    role_from_persisted = true;
   }
-  const bool role_changed = loaded && ptrs.has_current_role && (effective_role_id != ptrs.current_role_id);
+  const bool role_normalized = loaded && ptrs.has_current_role && (effective_role_id != ptrs.current_role_id);
+
+  // Resolve effective radio profile id (V1-A: only 0 = FACTORY).
+  uint32_t effective_radio_id = kDefaultRadioProfileId;
+  bool radio_from_persisted = false;
+  if (loaded && ptrs.has_current_radio && ptrs.current_radio_profile_id == 0) {
+    effective_radio_id = ptrs.current_radio_profile_id;
+    radio_from_persisted = true;
+  }
   const bool radio_changed = loaded && ptrs.has_current_radio && (effective_radio_id != ptrs.current_radio_profile_id);
-  const uint32_t new_previous_role = role_changed ? ptrs.current_role_id : ptrs.previous_role_id;
+  const uint32_t new_previous_role = role_normalized ? ptrs.current_role_id : ptrs.previous_role_id;
   const uint32_t new_previous_radio = radio_changed ? ptrs.current_radio_profile_id : ptrs.previous_radio_profile_id;
 
-  // Cadence from current profile record in flash (registry); fallback to default when missing/invalid (#289).
+  // Active user profile values: from stored record or OOTB for effective role. When role was normalized, refresh record to that role's default (#443).
   RoleProfileRecord profile_record{};
   bool profile_valid = false;
   (void)load_current_role_profile_record(&profile_record, &profile_valid);
-  if (!profile_valid) {
+  if (!profile_valid || role_normalized) {
     get_ootb_role_profile(effective_role_id, &profile_record);
     (void)save_current_role_profile_record(profile_record);
   }
+  const bool use_persisted = role_from_persisted && radio_from_persisted;
   const uint16_t effective_interval_s = profile_record.min_interval_sec;
   effective_max_silence_10s_ = profile_record.max_silence_10s;
   const uint8_t effective_max_silence_10s = effective_max_silence_10s_;
@@ -287,6 +295,11 @@ void AppServices::init() {
   self_policy.set_max_silence_ms(max_silence_ms);
   self_policy.set_min_time_ms(min_interval_ms);
   self_policy.set_min_distance_m(effective_min_distance_m);
+
+  // Active user profile → self telemetry (#443): role_id and max_silence from resolved profile.
+  self_telemetry_.role_id = (effective_role_id <= 2) ? static_cast<uint8_t>(effective_role_id) : 0;
+  self_telemetry_.has_max_silence = true;
+  self_telemetry_.max_silence_10s = effective_max_silence_10s_;
 
   // --- Phase C: Start comms — wire runtime; tick() runs Alive/Beacon cadence ---
   format_short_id_hex(short_id_, short_id_hex_, sizeof(short_id_hex_));
@@ -347,10 +360,8 @@ void AppServices::init() {
   provisioning_->set_gnss_override(&gnss_override_);
   runtime_.set_instrumentation_logger(app_instrumentation_log, this);
 
-  // Populate static self-telemetry fields known at boot (for 0x04/0x05 formation).
+  // Populate static self-telemetry fields known at boot (for 0x04/0x05/0x07 formation). role_id and max_silence set above from active profile.
   // Dynamic field uptimeSec is updated each tick().
-  self_telemetry_.has_max_silence = true;
-  self_telemetry_.max_silence_10s = effective_max_silence_10s_;
   // batteryPercent: USB devkit stub — no real ADC on current hardware.
   // TODO: replace with real battery service (follow-up issue #324).
   self_telemetry_.has_battery     = true;

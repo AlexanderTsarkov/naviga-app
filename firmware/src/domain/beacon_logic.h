@@ -96,7 +96,8 @@ struct SelfTelemetry {
   bool    has_uptime        = false;
   uint32_t uptime_sec       = 0xFFFFFFFFu;
 
-  // Informative (0x05) fields
+  // Informative (0x05) / Status (0x07) — from active user profile (#443)
+  uint8_t  role_id          = 0;   ///< Active role id (0=Person, 1=Dog, 2=Infra); source = resolved current user profile.
   bool     has_max_silence  = false;
   uint8_t  max_silence_10s  = 0;
   bool     has_hw_profile   = false;
