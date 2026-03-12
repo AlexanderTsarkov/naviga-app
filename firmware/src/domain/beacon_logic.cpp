@@ -54,6 +54,7 @@ void BeaconLogic::enqueue_slot(size_t slot_idx,
   TxSlot& slot = slots_[slot_idx];
   if (slot.present) {
     slot.replaced_count++;
+    if (traffic_counters_) { traffic_counters_->tx_slot_replaced++; }
     // created_at_ms preserved intentionally (fairness: age from first enqueue)
   } else {
     slot.created_at_ms  = now_ms;
@@ -183,6 +184,7 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
       if (pos_len > 0) {
         enqueue_slot(kSlotPosFull, TxPriority::P0_MUST_PERIODIC, TxBestEffortClass::BE_LOW,
                      PacketLogType::POS_FULL, pos_frame, pos_len, now_ms, 0);
+        if (traffic_counters_) { traffic_counters_->tx_enqueue_pos_full++; }
         last_tx_ms_ = now_ms;
         pos_or_alive_enqueued = true;
       }
@@ -199,6 +201,7 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
       if (alive_len > 0) {
         enqueue_slot(kSlotAlive, TxPriority::P0_MUST_PERIODIC, TxBestEffortClass::BE_LOW,
                      PacketLogType::ALIVE, alive_frame, alive_len, now_ms, 0);
+        if (traffic_counters_) { traffic_counters_->tx_enqueue_alive++; }
         last_tx_ms_ = now_ms;
         pos_or_alive_enqueued = true;
       }
@@ -233,6 +236,7 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
     if (status_len > 0) {
       enqueue_slot(kSlotStatus, TxPriority::P3_THROTTLED, TxBestEffortClass::BE_LOW,
                    PacketLogType::STATUS, status_frame, status_len, now_ms, 0);
+      if (traffic_counters_) { traffic_counters_->tx_enqueue_status++; }
       last_status_enqueue_ms_ = now_ms;
     }
   }
@@ -306,6 +310,7 @@ bool BeaconLogic::dequeue_tx(uint8_t* out,
   for (size_t i = 0; i < kTxSlotCount; ++i) {
     if (i != best_u && slots_[i].present) {
       slots_[i].replaced_count++;
+      if (traffic_counters_) { traffic_counters_->tx_starved++; }
     }
   }
 

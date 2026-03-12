@@ -63,6 +63,7 @@ This is the fastest path from "it's broken" to "we know why".
 **Start with observability:**
 
 - enable logging v0 / key markers
+- **Traffic validation (#425):** Use `M1Runtime::traffic_counters()` for TX/RX by type (enqueue/sent/drop, slot replaced/starved, RX accept/reject). Reset with `reset_traffic_counters()` before a run; read after tick. See `firmware/src/domain/traffic_counters.h` and `_working/425_contract_and_gaps.md` §6.
 - confirm E220 module config matches expectations (RSSI append etc.)
 - verify power / wiring / UART pins
 - confirm radio params are consistent across devices (channel, address, rate)
