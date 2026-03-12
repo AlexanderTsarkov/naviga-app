@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "domain/node_table.h"
+#include "domain/traffic_counters.h"
 #include "../../protocol/geo_beacon_codec.h"
 #include "../../protocol/alive_codec.h"
 #include "../../protocol/packet_header.h"
@@ -186,6 +187,9 @@ class BeaconLogic {
   /** Returns true if any TX slot is present (queue non-empty). */
   bool has_pending_tx() const;
 
+  /** Optional #425 observability: when set, formation/dequeue update counters. */
+  void set_traffic_counters(TrafficCounters* c) { traffic_counters_ = c; }
+
   /** Direct read-only access to a slot for testing. */
   const TxSlot& slot(size_t slot_index) const { return slots_[slot_index]; }
 
@@ -221,6 +225,8 @@ class BeaconLogic {
 
   // Slot-based TX queue.
   TxSlot slots_[kTxSlotCount] = {};
+
+  TrafficCounters* traffic_counters_ = nullptr;
 
   // Allocate the next global seq16 and advance the counter.
   uint16_t next_seq16();

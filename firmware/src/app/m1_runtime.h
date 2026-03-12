@@ -8,6 +8,7 @@
 #include "domain/logger.h"
 #include "domain/node_table.h"
 #include "domain/nodetable_snapshot.h"
+#include "domain/traffic_counters.h"
 #include "naviga/hal/interfaces.h"
 #include "platform/ble_esp32_transport.h"
 #include "../../protocol/ble_status_bridge.h"
@@ -48,6 +49,10 @@ class M1Runtime {
   void tick(uint32_t now_ms);
 
   const RadioSmokeStats& stats() const;
+  /** #425: traffic validation counters (enqueue/sent/drop by type, RX accept/reject). */
+  const domain::TrafficCounters& traffic_counters() const { return traffic_counters_; }
+  void reset_traffic_counters();
+
   size_t node_count() const;
   uint16_t geo_seq() const;
   bool ble_connected() const;
@@ -99,6 +104,8 @@ class M1Runtime {
   uint32_t last_ble_update_ms_ = 0;
 
   RadioSmokeStats stats_{};
+  domain::TrafficCounters traffic_counters_{};
+
   // TX frame buffer: sized for the largest possible on-air frame.
   uint8_t pending_payload_[protocol::kMaxFrameSize] = {};
   size_t pending_len_ = 0;

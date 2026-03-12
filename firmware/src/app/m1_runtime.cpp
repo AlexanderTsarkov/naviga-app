@@ -18,11 +18,13 @@ constexpr size_t kMaxRxPerTick = 4;
 
 const char* packet_log_type_str(domain::PacketLogType t) {
   switch (t) {
-    case domain::PacketLogType::CORE:  return "CORE";
-    case domain::PacketLogType::TAIL1: return "TAIL1";
-    case domain::PacketLogType::TAIL2: return "TAIL2";
-    case domain::PacketLogType::ALIVE: return "ALIVE";
-    case domain::PacketLogType::INFO:  return "INFO";
+    case domain::PacketLogType::CORE:     return "CORE";
+    case domain::PacketLogType::TAIL1:   return "TAIL1";
+    case domain::PacketLogType::TAIL2:   return "TAIL2";
+    case domain::PacketLogType::ALIVE:   return "ALIVE";
+    case domain::PacketLogType::INFO:    return "INFO";
+    case domain::PacketLogType::POS_FULL: return "POS_FULL";
+    case domain::PacketLogType::STATUS:   return "STATUS";
   }
   return "?";
 }
@@ -31,6 +33,24 @@ bool is_tail_type(domain::PacketLogType t) {
   return t == domain::PacketLogType::TAIL1 ||
          t == domain::PacketLogType::TAIL2 ||
          t == domain::PacketLogType::INFO;
+}
+
+static void increment_tx_sent_by_type(domain::TrafficCounters& c, domain::PacketLogType t) {
+  switch (t) {
+    case domain::PacketLogType::POS_FULL: c.tx_sent_pos_full++; break;
+    case domain::PacketLogType::ALIVE:   c.tx_sent_alive++;   break;
+    case domain::PacketLogType::STATUS:  c.tx_sent_status++;  break;
+    default: break;
+  }
+}
+
+static void increment_rx_ok_by_type(domain::TrafficCounters& c, domain::PacketLogType t) {
+  switch (t) {
+    case domain::PacketLogType::POS_FULL: c.rx_ok_pos_full++; break;
+    case domain::PacketLogType::ALIVE:   c.rx_ok_alive++;   break;
+    case domain::PacketLogType::STATUS:  c.rx_ok_status++;  break;
+    default: break;
+  }
 }
 
 } // namespace
@@ -66,6 +86,7 @@ void M1Runtime::init(uint64_t self_id,
   // #422 Path B: Status (Op/Info) lifecycle per packet_context_tx_rules_v0 §2a.
   beacon_logic_.set_min_status_interval_ms(30000);   // 30s anti-burst
   beacon_logic_.set_T_status_max_ms(300000);         // 300s = 10 min bounded refresh
+  beacon_logic_.set_traffic_counters(&traffic_counters_);
 
   self_fields_ = {};
   self_fields_.node_id = self_id;
@@ -140,6 +161,10 @@ void M1Runtime::tick(uint32_t now_ms) {
 
 const RadioSmokeStats& M1Runtime::stats() const {
   return stats_;
+}
+
+void M1Runtime::reset_traffic_counters() {
+  traffic_counters_ = domain::TrafficCounters{};
 }
 
 size_t M1Runtime::node_count() const {
@@ -240,6 +265,7 @@ void M1Runtime::handle_tx(uint32_t now_ms) {
     const ChannelSenseResult result = channel_sense_->sense(kSenseTimeoutMs);
     if (result.state == ChannelSenseState::BUSY || result.state == ChannelSenseState::ERROR) {
       send_policy_.on_channel_busy(now_ms);
+      traffic_counters_.tx_drop_channel_busy++;
       if (instrumentation_log_fn_ && instrumentation_ctx_) {
         char line[96];
         if (is_tail_type(last_tx_type_)) {
@@ -266,8 +292,9 @@ void M1Runtime::handle_tx(uint32_t now_ms) {
   if (ok) {
     stats_.tx_count++;
     stats_.last_tx_ms = now_ms;
-    // #422: Notify BeaconLogic when a P3 (Op/Info) was sent for status lifecycle (min_status_interval, T_status_max, bootstrap).
-    if (last_tx_type_ == domain::PacketLogType::TAIL2 || last_tx_type_ == domain::PacketLogType::INFO) {
+    increment_tx_sent_by_type(traffic_counters_, last_tx_type_);
+    // #422: Notify BeaconLogic when Node_Status was sent (status lifecycle: min_status_interval, T_status_max, bootstrap).
+    if (last_tx_type_ == domain::PacketLogType::STATUS) {
       beacon_logic_.on_status_sent(now_ms);
     }
     // Persist the seq16 that was actually sent (#417): Common prefix at payload offset 7-8, frame = header(2) + payload.
@@ -293,6 +320,7 @@ void M1Runtime::handle_tx(uint32_t now_ms) {
     log_event(now_ms, domain::LogEventId::RADIO_TX_OK, domain::LogLevel::kInfo, &kGeoBeaconMsgType, 1);
     pending_len_ = 0;
   } else {
+    traffic_counters_.tx_drop_send_fail++;
     if (instrumentation_log_fn_ && instrumentation_ctx_) {
       char line[96];
       if (is_tail_type(last_tx_type_)) {
@@ -334,6 +362,11 @@ void M1Runtime::handle_rx(uint32_t now_ms) {
     const bool updated = beacon_logic_.on_rx(now_ms, frame, out_len, stats_.last_rssi_dbm,
                                              node_table_, &rx_node_id, &rx_seq, &rx_pos_valid,
                                              &rx_type, &rx_core_seq);
+    if (updated) {
+      increment_rx_ok_by_type(traffic_counters_, rx_type);
+    } else {
+      traffic_counters_.rx_reject++;
+    }
     if (instrumentation_log_fn_ && instrumentation_ctx_) {
       const uint16_t from_short = domain::NodeTable::compute_short_id(rx_node_id);
       char line[100];

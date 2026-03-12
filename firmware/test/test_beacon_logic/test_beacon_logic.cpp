@@ -22,6 +22,7 @@ using naviga::domain::NodeTable;
 using naviga::domain::NodeEntry;
 using naviga::domain::PacketLogType;
 using naviga::domain::SelfTelemetry;
+using naviga::domain::TrafficCounters;
 using naviga::domain::TxPriority;
 using naviga::domain::TxBestEffortClass;
 using naviga::domain::kSlotPosFull;
@@ -1501,6 +1502,52 @@ void test_txq_priority_ordering_p0_beats_all() {
   TEST_ASSERT_FALSE(logic.has_pending_tx());
 }
 
+// #425: TrafficCounters observability — formation/dequeue update counters when set.
+void test_traffic_counters_enqueue_and_slot_replaced() {
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(30000);
+  TrafficCounters c{};
+  logic.set_traffic_counters(&c);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+
+  logic.update_tx_queue(1000, self, telem, true);
+  TEST_ASSERT_EQUAL_UINT32(1, c.tx_enqueue_pos_full);
+  TEST_ASSERT_EQUAL_UINT32(0, c.tx_slot_replaced);
+
+  logic.update_tx_queue(2000, self, telem, true);
+  TEST_ASSERT_EQUAL_UINT32(2, c.tx_enqueue_pos_full);
+  TEST_ASSERT_EQUAL_UINT32(1, c.tx_slot_replaced);
+}
+
+void test_traffic_counters_starved() {
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(30000);
+  TrafficCounters c{};
+  logic.set_traffic_counters(&c);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.has_battery = true;
+  telem.battery_percent = 90;
+
+  logic.update_tx_queue(1000, self, telem, false);
+  logic.update_tx_queue(1000, self, telem, true);
+  TEST_ASSERT_TRUE(logic.slot(kSlotPosFull).present);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
+  TEST_ASSERT_EQUAL_UINT32(0, c.tx_starved);
+
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  logic.dequeue_tx(buf, sizeof(buf), &out_len);
+  TEST_ASSERT_EQUAL_UINT32(1, c.tx_starved);
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_tx_cadence);
@@ -1571,5 +1618,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_txq_p2_tail1_before_p3_operational_informative);
   RUN_TEST(test_txq_starvation_increments_replaced_count);
   RUN_TEST(test_txq_priority_ordering_p0_beats_all);
+  RUN_TEST(test_traffic_counters_enqueue_and_slot_replaced);
+  RUN_TEST(test_traffic_counters_starved);
   return UNITY_END();
 }
