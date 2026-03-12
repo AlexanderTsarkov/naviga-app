@@ -985,6 +985,38 @@ void test_txq_max_silence_only_enqueues_informative_not_operational() {
   TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
 }
 
+// #443: Status frame must encode role_id from SelfTelemetry (active user profile).
+void test_txq_status_encodes_role_id_from_telemetry() {
+  BeaconLogic logic;
+  logic.set_min_interval_ms(1000);
+  logic.set_max_silence_ms(120000);
+
+  const uint64_t node_id = 0x0000AABBCCDDEEFFULL;
+  GeoBeaconFields self = make_self_fields(node_id, true);
+  SelfTelemetry telem{};
+  telem.role_id = 1;   // Dog
+  telem.has_max_silence = true;
+  telem.max_silence_10s = 9;
+
+  logic.update_tx_queue(1000, self, telem, false);
+  TEST_ASSERT_TRUE(logic.slot(kSlotStatus).present);
+
+  uint8_t buf[65] = {};
+  size_t out_len = 0;
+  PacketLogType ptype = PacketLogType::CORE;
+  TEST_ASSERT_TRUE(logic.dequeue_tx(buf, sizeof(buf), &out_len, &ptype));
+  TEST_ASSERT_EQUAL(static_cast<int>(PacketLogType::STATUS), static_cast<int>(ptype));
+
+  const size_t kHeaderSize = 2;
+  if (out_len > kHeaderSize) {
+    naviga::protocol::StatusFields decoded{};
+    const auto err = naviga::protocol::decode_status_payload(
+        buf + kHeaderSize, out_len - kHeaderSize, &decoded);
+    TEST_ASSERT_EQUAL(static_cast<int>(naviga::protocol::StatusDecodeError::Ok), static_cast<int>(err));
+    TEST_ASSERT_EQUAL_UINT8(1, decoded.role_id);
+  }
+}
+
 // ── TX queue: dequeue / priority / fairness tests ────────────────────────────
 
 void test_txq_dequeue_empty_returns_false() {
@@ -1517,6 +1549,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_txq_422_status_throttle_min_interval_respected);
   RUN_TEST(test_txq_uptime_only_enqueues_operational_not_informative);
   RUN_TEST(test_txq_max_silence_only_enqueues_informative_not_operational);
+  RUN_TEST(test_txq_status_encodes_role_id_from_telemetry);
   // TX queue: dequeue / priority / fairness
   RUN_TEST(test_txq_dequeue_empty_returns_false);
   RUN_TEST(test_txq_dequeue_core_before_operational);

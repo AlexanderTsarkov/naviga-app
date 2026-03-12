@@ -135,6 +135,12 @@ bool factory_reset_pointers() {
   prefs.remove(kKeyPreviousRole);
   prefs.remove(kKeyPreviousRadio);
 
+  // Persist default pointers (0,0,0,0) so next boot sees consistent state (provisioning_baseline_v0).
+  prefs.putUInt(kKeyCurrentRole, 0);
+  prefs.putUInt(kKeyCurrentRadio, 0);
+  prefs.putUInt(kKeyPreviousRole, 0);
+  prefs.putUInt(kKeyPreviousRadio, 0);
+
   RoleProfileRecord def;
   get_ootb_role_profile(0, &def);
   prefs.putUInt(kKeyProfileIntervalSec, def.min_interval_sec);
