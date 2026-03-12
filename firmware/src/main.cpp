@@ -14,9 +14,8 @@ constexpr const char* kFirmwareVersion = "ootb-74-m1-runtime";
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial) {
-    // Wait for Serial on USB-enabled boards.
-  }
+  // OOTB (#423): do not block on Serial; device must boot and run without USB/phone.
+  // Serial is used for log output and provisioning shell when connected.
 
   const auto& profile = naviga::get_hw_profile();
   Serial.println();
