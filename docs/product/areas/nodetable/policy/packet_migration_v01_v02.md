@@ -4,7 +4,7 @@
 **Issue:** [#435](https://github.com/AlexanderTsarkov/naviga-app/issues/435).  
 **Companion:** [packet_truth_table_v02](packet_truth_table_v02.md) — canonical v0.2 packet family and semantics.
 
-This memo states the **explicit compatibility policy** for the transition from v0.1 to v0.2 packet family. Implementation must follow this policy; removal of v0.1 acceptance is a later cleanup PR.
+This memo states the **explicit compatibility policy** for the transition from v0.1 to v0.2 packet family. **Cutover complete (#438):** RX is v0.2-only; v0.1 packets are dropped.
 
 ---
 
@@ -15,27 +15,22 @@ This memo states the **explicit compatibility policy** for the transition from v
 
 ---
 
-## 2) What we accept (RX) during transition
+## 2) What we accept (RX) — post-cutover (#438)
 
-- **Transition phase:** RX **accepts** both:
-  - **v0.2:** Node_Pos_Full, Node_Status, Alive.
-  - **v0.1:** Core_Pos, Core_Tail, Node_Operational, Node_Informative.
-- All accepted packets apply to the **same** NodeTable normalized fields. Compatibility logic (recognizing v0.1 `msg_type`s and v0.2 `msg_type`s or payloadVersion) lives in the RX decode/dispatch layer, **clearly scoped** (e.g. one compatibility module or flag) and documented as temporary.
+- **RX accepts v0.2 only:** Node_Pos_Full (0x06), Node_Status (0x07), Alive (0x02).
+- **v0.1 packets (0x01, 0x03, 0x04, 0x05) are rejected** at decode_header; frames are dropped. No compatibility path remains.
 
 ---
 
-## 3) v0.1 is compatibility-only
+## 3) v0.1 is obsolete on RX
 
-- v0.1 packet types are **not** canon during and after transition. They are accepted only for **backward compatibility** so that new firmware can still read old nodes (and vice versa during rollout).
-- Canonical packet family is v0.2 only; see [packet_truth_table_v02](packet_truth_table_v02.md).
+- v0.1 packet types are **not** accepted. Canonical packet family is v0.2 only; see [packet_truth_table_v02](packet_truth_table_v02.md).
 
 ---
 
-## 4) Cutover expectation
+## 4) Cutover complete
 
-- **Duration / criterion:** Transition lasts until **fleet or config cutover** or **N releases** (to be decided at cutover time).
-- **Post-cutover:** RX may **accept v0.2 only**; v0.1 packets optionally **log and drop**. A version flag or config can turn off “v0.1 accept” when cutover is decided.
-- **Cleanup PR (later):** Remove v0.1 accept path and last_applied_tail_ref_core_seq16 from product surface; update seq/ref policy docs to v0.2-only.
+- **#438:** v0.1 accept path removed; decode_header and BeaconLogic on_rx accept only 0x02, 0x06, 0x07. last_applied_tail_ref_core_seq16 removed from NodeTable.
 
 ---
 
@@ -43,8 +38,7 @@ This memo states the **explicit compatibility policy** for the transition from v
 
 | Phase | TX (what we send) | RX (what we accept) |
 |-------|-------------------|----------------------|
-| **Transition** | v0.2 only (Node_Pos_Full, Node_Status, Alive) | v0.2 **and** v0.1 (Core_Pos, Core_Tail, Operational, Informative) |
-| **Post-cutover** | v0.2 only | v0.2 only; v0.1 optionally log & drop |
+| **Post-cutover** | v0.2 only (Node_Pos_Full, Node_Status, Alive) | v0.2 only; v0.1 dropped |
 
 ---
 

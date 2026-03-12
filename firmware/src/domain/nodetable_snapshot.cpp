@@ -119,8 +119,6 @@ void unpack_record(const uint8_t* in, NodeEntry* e, size_t record_bytes) {
   e->last_seq = 0;
   e->last_core_seq16 = 0;
   e->has_core_seq16 = false;
-  e->last_applied_tail_ref_core_seq16 = 0;
-  e->has_applied_tail_ref_core_seq16 = false;
   e->in_use = true;
 }
 

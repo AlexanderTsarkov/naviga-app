@@ -95,7 +95,7 @@ Firmware matches this policy: **Core_Pos** and **Alive** use P0; **Node_Core_Tai
 The **canonical v0.2** packet set and truth table are defined in:
 
 - **[packet_truth_table_v02.md](packet_truth_table_v02.md)** ([#435](https://github.com/AlexanderTsarkov/naviga-app/issues/435)) — v0.2 packet family (Node_Pos_Full, Node_Status, Alive), field composition, TX/RX semantics, airtime.
-- **[packet_migration_v01_v02.md](packet_migration_v01_v02.md)** — Compatibility policy: TX v0.2 only; RX accepts v0.1 + v0.2 during transition; cutover expectation.
+- **[packet_migration_v01_v02.md](packet_migration_v01_v02.md)** — Compatibility policy: TX and RX v0.2 only; cutover complete (#438).
 
 This document (§1–§5) describes **v0.1** packet sets. For v0.2 canon and migration, use the links above.
 

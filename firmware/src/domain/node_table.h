@@ -40,11 +40,9 @@ struct NodeEntry {
   bool in_use = false;
 
   // ─── Runtime-local decoder state only (NOT canonical product truth; NOT in BLE; NOT persisted) ─
-  // Tail–Core correlation for apply_tail1; see product_truth_s03_v1 §7, seq_ref_version_link_metrics_v0.
+  // last_core_seq16 set by apply_pos_full (v0.2); used for seq tracking only (#438: no Tail).
   uint16_t last_core_seq16 = 0;
   bool     has_core_seq16  = false;
-  uint16_t last_applied_tail_ref_core_seq16 = 0;
-  bool     has_applied_tail_ref_core_seq16  = false;
 
   // ─── Battery / survivability ──────────────────────────────────────────────
   bool     has_battery       = false;
@@ -83,87 +81,6 @@ class NodeTable {
                      int8_t last_rx_rssi,
                      uint16_t last_seq,
                      uint32_t now_ms);
-
-  /**
-   * Apply Tail-1 (Node_OOTB_Core_Tail) fields to an existing NodeTable entry.
-   *
-   * Enforces the ref_core_seq16 match rule per tail1_packet_encoding_v0 §4.1:
-   * - Returns false (silent drop) if no Core has been received for node_id.
-   * - Returns false (silent drop) if ref_core_seq16 != last_core_seq16 for this node.
-   * - Returns true and applies posFlags/sats only on match.
-   * - MUST NOT update position fields.
-   *
-   * Per rx_semantics_v0: dedupe key is (nodeId48, seq16). If a second Tail-1
-   * arrives with the same seq16 for this node, it is treated as a duplicate
-   * and ignored (seq16 check happens before ref_core_seq16 check).
-   *
-   * @param node_id         NodeID48 from the Tail-1 payload.
-   * @param seq16           Tail-1's own global per-node counter (for dedupe).
-   * @param ref_core_seq16  ref_core_seq16 from the Tail-1 payload (Core linkage key).
-   * @param has_pos_flags   Whether posFlags is present.
-   * @param pos_flags       posFlags value (ignored if !has_pos_flags).
-   * @param has_sats        Whether sats is present.
-   * @param sats            sats value (ignored if !has_sats).
-   * @param rssi_dbm        Link metric from the received frame.
-   * @param now_ms          Current time for lastRxAt update.
-   * @return true if applied; false if dropped (duplicate, mismatch, or no prior Core).
-   */
-  bool apply_tail1(uint64_t node_id,
-                   uint16_t seq16,
-                   uint16_t ref_core_seq16,
-                   bool has_pos_flags, uint8_t pos_flags,
-                   bool has_sats, uint8_t sats,
-                   int8_t rssi_dbm,
-                   uint32_t now_ms);
-
-  /**
-   * Apply Tail-2 (Node_OOTB_Operational) fields to a NodeTable entry (create if not found).
-   *
-   * Deduplication by (nodeId48, seq16) per rx_semantics_v0.
-   * MUST NOT update position fields.
-   *
-   * @param node_id          NodeID48 from the Tail-2 payload.
-   * @param seq16            Global per-node counter from Common prefix (for dedupe).
-   * @param has_battery      Whether batteryPercent is present.
-   * @param battery_percent  batteryPercent value (ignored if !has_battery).
-   * @param has_uptime       Whether uptimeSec is present.
-   * @param uptime_sec       uptimeSec value (ignored if !has_uptime).
-   * @param rssi_dbm         Link metric from the received frame.
-   * @param now_ms           Current time for lastRxAt update.
-   * @return true on success; false only on table-full eviction failure.
-   */
-  bool apply_tail2(uint64_t node_id,
-                   uint16_t seq16,
-                   bool has_battery, uint8_t battery_percent,
-                   bool has_uptime, uint32_t uptime_sec,
-                   int8_t rssi_dbm,
-                   uint32_t now_ms);
-
-  /**
-   * Apply Info (Node_OOTB_Informative, 0x05) fields to a NodeTable entry (create if not found).
-   *
-   * Deduplication by (nodeId48, seq16) per rx_semantics_v0.
-   * MUST NOT update position fields.
-   *
-   * @param node_id          NodeID48 from the Info payload.
-   * @param seq16            Global per-node counter from Common prefix (for dedupe).
-   * @param has_max_silence  Whether maxSilence10s is present.
-   * @param max_silence_10s  maxSilence10s value (ignored if !has_max_silence).
-   * @param has_hw_profile   Whether hwProfileId is present.
-   * @param hw_profile_id    hwProfileId value (ignored if !has_hw_profile).
-   * @param has_fw_version   Whether fwVersionId is present.
-   * @param fw_version_id    fwVersionId value (ignored if !has_fw_version).
-   * @param rssi_dbm         Link metric from the received frame.
-   * @param now_ms           Current time for lastRxAt update.
-   * @return true on success; false only on table-full eviction failure.
-   */
-  bool apply_info(uint64_t node_id,
-                  uint16_t seq16,
-                  bool has_max_silence, uint8_t max_silence_10s,
-                  bool has_hw_profile, uint16_t hw_profile_id,
-                  bool has_fw_version, uint16_t fw_version_id,
-                  int8_t rssi_dbm,
-                  uint32_t now_ms);
 
   /**
    * Apply Node_Pos_Full v0.2 (#435): position + Pos_Quality in one step.
