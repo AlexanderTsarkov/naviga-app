@@ -3,6 +3,9 @@
 #include <cmath>
 #include <cstring>
 
+#include "../../protocol/pos_full_codec.h"
+#include "../../protocol/status_codec.h"
+
 namespace naviga {
 namespace domain {
 
@@ -95,41 +98,45 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
     return false;
   }
 
-  const uint16_t core_seq = next_seq16();
+  const uint16_t seq = next_seq16();
 
   if (self_fields.pos_valid != 0) {
-    // Position valid → send BeaconCore (msg_type=0x01).
-    protocol::GeoBeaconFields fields = self_fields;
-    fields.seq = core_seq;
-    const size_t written = protocol::encode_geo_beacon(
-        fields, protocol::ByteSpan{out, out_cap});
+    // Position valid → send Node_Pos_Full v0.2 (msg_type=0x06).
+    protocol::PosFullFields pos{};
+    pos.node_id = self_fields.node_id;
+    pos.seq16 = seq;
+    pos.lat_deg = self_fields.lat_deg;
+    pos.lon_deg = self_fields.lon_deg;
+    pos.fix_type = 1;
+    pos.pos_sats = 0;
+    pos.pos_accuracy_bucket = 0;
+    pos.pos_flags_small = 0;
+    const size_t written = protocol::encode_pos_full_frame(pos, out, out_cap);
     if (written == 0) {
-      seq_ = static_cast<uint16_t>(seq_ - 1u);  // roll back unused seq
+      seq_ = static_cast<uint16_t>(seq_ - 1u);
       *out_len = 0;
       return false;
     }
     *out_len = written;
     last_tx_ms_ = now_ms;
-    if (out_type)     { *out_type = PacketLogType::CORE; }
+    if (out_type)     { *out_type = PacketLogType::POS_FULL; }
     if (out_core_seq) { *out_core_seq = 0; }
     return true;
   }
 
-  // No fix → send Alive only at maxSilence (field_cadence_v0).
   if (!time_for_silence) {
-    seq_ = static_cast<uint16_t>(seq_ - 1u);  // roll back unused seq
+    seq_ = static_cast<uint16_t>(seq_ - 1u);
     *out_len = 0;
     return false;
   }
 
-  // Send Alive (msg_type=0x02).
   protocol::AliveFields alive{};
-  alive.node_id    = self_fields.node_id;
-  alive.seq        = core_seq;
+  alive.node_id = self_fields.node_id;
+  alive.seq = seq;
   alive.has_status = false;
   const size_t written = protocol::encode_alive_frame(alive, out, out_cap);
   if (written == 0) {
-    seq_ = static_cast<uint16_t>(seq_ - 1u);  // roll back unused seq
+    seq_ = static_cast<uint16_t>(seq_ - 1u);
     *out_len = 0;
     return false;
   }
@@ -140,21 +147,12 @@ bool BeaconLogic::build_tx(uint32_t now_ms,
   return true;
 }
 
-// ── Slot-based TX queue API (#420: canon packet_context_tx_rules_v0 §1) ───────
+// ── Slot-based TX queue API (#435 v0.2) ───────────────────────────────────────
 //
-// Formation rules mirror docs/product/areas/radio/policy/packet_context_tx_rules_v0.md
-// §1 "Current v0.1 behavior". Single clock: last_tx_ms_ updated only when Core or Alive
-// enqueued. Trigger/earliest/deadline/coalesce per table:
-//
-//   Core_Pos:  pos_valid AND ((time_for_min AND allow_core) OR time_for_silence)
-//   Alive:     !pos_valid AND time_for_silence
-//   Core_Tail: only when Core_Pos enqueued same pass; ref_core_seq16 in payload
-//   Op (0x04): (time_for_min || time_for_silence) AND (has_battery || has_uptime)
-//   Info (0x05): (time_for_min || time_for_silence) AND (has_max_silence || has_hw_profile || has_fw_version)
-//
-// Payload fields: wire names (uptime_sec etc.) match v0 contracts; canon product name
-// uptime_10m is equivalent (unit conversion at app layer). hw_profile_id/fw_version_id
-// remain uint16 per packet_sets_v0.
+// TX sends v0.2 only: Node_Pos_Full (0x06), Node_Status (0x07), Alive (0x02).
+// Formation: PosFull when pos_valid and (time_for_min+allow_core) or time_for_silence;
+// Alive when !pos_valid and time_for_silence; Status per lifecycle (min_status_interval_ms,
+// T_status_max, bootstrap, no hitchhiking). See packet_truth_table_v02.md, packet_migration_v01_v02.md.
 
 void BeaconLogic::update_tx_queue(uint32_t now_ms,
                                   const protocol::GeoBeaconFields& self_fields,
@@ -164,51 +162,37 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
   const bool time_for_min     = elapsed >= min_interval_ms_;
   const bool time_for_silence = max_silence_ms_ > 0 && elapsed >= max_silence_ms_;
 
-  // #422 Path B: Track if we enqueue Core or Alive this pass — no hitchhiking (do not enqueue Op/Info same pass).
-  bool core_or_alive_enqueued = false;
+  bool pos_or_alive_enqueued = false;
 
-  // ── Core_Pos / Alive formation ────────────────────────────────────────────
+  // ── Node_Pos_Full (0x06) / Alive (0x02) formation ──────────────────────────
   if (self_fields.pos_valid != 0) {
-    // Core_Pos: enqueue when time_for_min (with allow_core gate) or time_for_silence.
-    const bool should_core = (time_for_min && allow_core) || time_for_silence;
-    if (should_core) {
-      const uint16_t core_seq = next_seq16();
-
-      // Encode Core_Pos frame.
-      protocol::GeoBeaconFields fields = self_fields;
-      fields.seq = core_seq;
-      uint8_t core_frame[protocol::kGeoBeaconFrameSize] = {};
-      const size_t core_len = protocol::encode_geo_beacon(
-          fields, protocol::ByteSpan{core_frame, sizeof(core_frame)});
-      if (core_len > 0) {
-        enqueue_slot(kSlotCore, TxPriority::P0_MUST_PERIODIC, TxBestEffortClass::BE_LOW,
-                     PacketLogType::CORE, core_frame, core_len, now_ms, 0);
+    const bool should_pos = (time_for_min && allow_core) || time_for_silence;
+    if (should_pos) {
+      const uint16_t seq = next_seq16();
+      protocol::PosFullFields pos{};
+      pos.node_id = self_fields.node_id;
+      pos.seq16 = seq;
+      pos.lat_deg = self_fields.lat_deg;
+      pos.lon_deg = self_fields.lon_deg;
+      pos.fix_type = 1;
+      pos.pos_sats = 0;
+      pos.pos_accuracy_bucket = 0;
+      pos.pos_flags_small = 0;
+      uint8_t pos_frame[protocol::kPosFullFrameSize] = {};
+      const size_t pos_len = protocol::encode_pos_full_frame(pos, pos_frame, sizeof(pos_frame));
+      if (pos_len > 0) {
+        enqueue_slot(kSlotPosFull, TxPriority::P0_MUST_PERIODIC, TxBestEffortClass::BE_LOW,
+                     PacketLogType::POS_FULL, pos_frame, pos_len, now_ms, 0);
         last_tx_ms_ = now_ms;
-        core_or_alive_enqueued = true;
-
-        // Core_Tail: formed immediately after Core_Pos, using next seq16.
-        // ref_core_seq16 = core_seq; tail's own seq16 = core_seq + 1.
-        const uint16_t tail_seq = next_seq16();
-        protocol::Tail1Fields tail{};
-        tail.node_id        = self_fields.node_id;
-        tail.seq16          = tail_seq;
-        tail.ref_core_seq16 = core_seq;
-        uint8_t tail_frame[protocol::kTail1FrameMin] = {};
-        const size_t tail_len = protocol::encode_tail1_frame(tail, tail_frame, sizeof(tail_frame));
-        if (tail_len > 0) {
-          // Core_Tail is P2_BEST_EFFORT / BE_HIGH: best-effort but above Op/Info.
-          enqueue_slot(kSlotTail1, TxPriority::P2_BEST_EFFORT, TxBestEffortClass::BE_HIGH,
-                       PacketLogType::TAIL1, tail_frame, tail_len, now_ms, core_seq);
-        }
+        pos_or_alive_enqueued = true;
       }
     }
   } else {
-    // No fix: Alive only at maxSilence.
     if (time_for_silence) {
       const uint16_t alive_seq = next_seq16();
       protocol::AliveFields alive{};
-      alive.node_id    = self_fields.node_id;
-      alive.seq        = alive_seq;
+      alive.node_id = self_fields.node_id;
+      alive.seq = alive_seq;
       alive.has_status = false;
       uint8_t alive_frame[protocol::kAliveFrameMin] = {};
       const size_t alive_len = protocol::encode_alive_frame(alive, alive_frame, sizeof(alive_frame));
@@ -216,59 +200,40 @@ void BeaconLogic::update_tx_queue(uint32_t now_ms,
         enqueue_slot(kSlotAlive, TxPriority::P0_MUST_PERIODIC, TxBestEffortClass::BE_LOW,
                      PacketLogType::ALIVE, alive_frame, alive_len, now_ms, 0);
         last_tx_ms_ = now_ms;
-        core_or_alive_enqueued = true;
+        pos_or_alive_enqueued = true;
       }
     }
   }
 
-  // ── Operational (0x04) / Informative (0x05) formation (#422 Path B) ─────────
-  // Canon: min_status_interval_ms (30s), T_status_max (300s), no hitchhiking, bootstrap (2 sends).
-  // Status is only enqueued when cadence is due (time_for_min || time_for_silence), then subject to status throttle.
+  // ── Node_Status (0x07) formation (#435: full snapshot, no hitchhiking) ───────
   const bool status_interval_ok = (last_status_tx_ms_ == 0) || (now_ms - last_status_tx_ms_ >= min_status_interval_ms_);
   const bool status_T_max_force = (last_status_enqueue_ms_ != 0) && (now_ms - last_status_enqueue_ms_ >= T_status_max_ms_);
   const bool status_bootstrap_ok = status_bootstrap_count_ < 2;
   const bool status_throttle_ok = status_bootstrap_ok || status_interval_ok || status_T_max_force;
-  const bool status_eligible = !core_or_alive_enqueued && (time_for_min || time_for_silence) && status_throttle_ok;
+  const bool status_eligible = !pos_or_alive_enqueued && (time_for_min || time_for_silence) && status_throttle_ok;
 
-  const bool has_op  = telemetry.has_battery || telemetry.has_uptime;
-  const bool has_info = telemetry.has_max_silence || telemetry.has_hw_profile || telemetry.has_fw_version;
+  const bool has_status = telemetry.has_battery || telemetry.has_uptime ||
+                          telemetry.has_max_silence || telemetry.has_hw_profile || telemetry.has_fw_version;
 
-  if (status_eligible && (has_op || has_info)) {
-    // Enqueue at most one: prefer Operational when it has data, else Informative.
-    if (has_op) {
-      const uint16_t op_seq = next_seq16();
-      protocol::Tail2Fields op{};
-      op.node_id         = self_fields.node_id;
-      op.seq16           = op_seq;
-      op.has_battery     = telemetry.has_battery;
-      op.battery_percent = telemetry.battery_percent;
-      op.has_uptime      = telemetry.has_uptime;
-      op.uptime_sec      = telemetry.uptime_sec;
-      uint8_t op_frame[protocol::kTail2FrameMax] = {};
-      const size_t op_len = protocol::encode_tail2_frame(op, op_frame, sizeof(op_frame));
-      if (op_len > 0) {
-        enqueue_slot(kSlotTail2, TxPriority::P3_THROTTLED, TxBestEffortClass::BE_LOW,
-                     PacketLogType::TAIL2, op_frame, op_len, now_ms, 0);
-        last_status_enqueue_ms_ = now_ms;
-      }
-    } else if (has_info) {
-      const uint16_t info_seq = next_seq16();
-      protocol::InfoFields info{};
-      info.node_id         = self_fields.node_id;
-      info.seq16           = info_seq;
-      info.has_max_silence = telemetry.has_max_silence;
-      info.max_silence_10s = telemetry.max_silence_10s;
-      info.has_hw_profile  = telemetry.has_hw_profile;
-      info.hw_profile_id   = telemetry.hw_profile_id;
-      info.has_fw_version  = telemetry.has_fw_version;
-      info.fw_version_id   = telemetry.fw_version_id;
-      uint8_t info_frame[protocol::kInfoFrameMax] = {};
-      const size_t info_len = protocol::encode_info_frame(info, info_frame, sizeof(info_frame));
-      if (info_len > 0) {
-        enqueue_slot(kSlotInfo, TxPriority::P3_THROTTLED, TxBestEffortClass::BE_LOW,
-                     PacketLogType::INFO, info_frame, info_len, now_ms, 0);
-        last_status_enqueue_ms_ = now_ms;
-      }
+  if (status_eligible && has_status) {
+    const uint16_t status_seq = next_seq16();
+    protocol::StatusFields st{};
+    st.node_id = self_fields.node_id;
+    st.seq16 = status_seq;
+    st.battery_percent = telemetry.battery_percent;
+    st.battery_est_rem_time = 0xFF;
+    st.tx_power_ch_throttle = 0;
+    st.uptime10m = (telemetry.uptime_sec != 0xFFFFFFFFu) ? static_cast<uint8_t>(telemetry.uptime_sec / 600u) : 0u;
+    st.role_id = 0;
+    st.max_silence_10s = telemetry.max_silence_10s;
+    st.hw_profile_id = telemetry.hw_profile_id;
+    st.fw_version_id = telemetry.fw_version_id;
+    uint8_t status_frame[protocol::kStatusFrameSize] = {};
+    const size_t status_len = protocol::encode_status_frame(st, status_frame, sizeof(status_frame));
+    if (status_len > 0) {
+      enqueue_slot(kSlotStatus, TxPriority::P3_THROTTLED, TxBestEffortClass::BE_LOW,
+                   PacketLogType::STATUS, status_frame, status_len, now_ms, 0);
+      last_status_enqueue_ms_ = now_ms;
     }
   }
 }
@@ -506,7 +471,51 @@ bool BeaconLogic::on_rx(uint32_t now_ms,
                             now_ms);
   }
 
-  // Unknown/future msg_type → drop.
+  // v0.2 Node_Pos_Full (0x06) — single-packet position + Pos_Quality (#435).
+  if (hdr.msg_type == protocol::MsgType::BeaconPosFull) {
+    protocol::PosFullFields pos{};
+    const protocol::PosFullDecodeError err =
+        protocol::decode_pos_full_payload(payload, payload_len, &pos);
+    if (err != protocol::PosFullDecodeError::Ok) {
+      return false;
+    }
+    if (out_node_id)  { *out_node_id  = pos.node_id; }
+    if (out_seq)      { *out_seq      = pos.seq16; }
+    if (out_pos_valid){ *out_pos_valid = true; }
+    if (out_type)     { *out_type     = PacketLogType::POS_FULL; }
+    if (out_core_seq) { *out_core_seq = 0; }
+
+    const int32_t lat_e7 = static_cast<int32_t>(std::llround(pos.lat_deg * 1e7));
+    const int32_t lon_e7 = static_cast<int32_t>(std::llround(pos.lon_deg * 1e7));
+    return table.apply_pos_full(pos.node_id, pos.seq16,
+                                lat_e7, lon_e7,
+                                pos.fix_type, pos.pos_sats,
+                                pos.pos_accuracy_bucket, pos.pos_flags_small,
+                                rssi_dbm, now_ms);
+  }
+
+  // v0.2 Node_Status (0x07) — full status snapshot (#435).
+  if (hdr.msg_type == protocol::MsgType::BeaconStatus) {
+    protocol::StatusFields st{};
+    const protocol::StatusDecodeError err =
+        protocol::decode_status_payload(payload, payload_len, &st);
+    if (err != protocol::StatusDecodeError::Ok) {
+      return false;
+    }
+    if (out_node_id)  { *out_node_id  = st.node_id; }
+    if (out_seq)      { *out_seq      = st.seq16; }
+    if (out_pos_valid){ *out_pos_valid = false; }
+    if (out_type)     { *out_type     = PacketLogType::STATUS; }
+    if (out_core_seq) { *out_core_seq = 0; }
+
+    return table.apply_status(st.node_id, st.seq16,
+                              st.battery_percent, st.battery_est_rem_time,
+                              st.tx_power_ch_throttle, st.uptime10m,
+                              st.role_id, st.max_silence_10s,
+                              st.hw_profile_id, st.fw_version_id,
+                              rssi_dbm, now_ms);
+  }
+
   return false;
 }
 

@@ -438,6 +438,131 @@ bool NodeTable::apply_info(uint64_t node_id,
   return true;
 }
 
+// apply_pos_full: v0.2 Node_Pos_Full (#435). Single-packet apply; last_core_seq16 := seq16.
+// Pos_Quality packed into existing pos_flags/sats (no new NodeEntry fields).
+bool NodeTable::apply_pos_full(uint64_t node_id,
+                               uint16_t seq16,
+                               int32_t lat_e7, int32_t lon_e7,
+                               uint8_t fix_type, uint8_t pos_sats,
+                               uint8_t pos_accuracy_bucket, uint8_t pos_flags_small,
+                               int8_t rssi_dbm,
+                               uint32_t now_ms) {
+  int idx = find_entry_index(node_id);
+  if (idx < 0) {
+    int free_idx = find_free_index();
+    if (free_idx < 0) {
+      if (!evict_oldest_grey(now_ms)) {
+        return false;
+      }
+      free_idx = find_free_index();
+      if (free_idx < 0) {
+        return false;
+      }
+    }
+    NodeEntry& new_entry = entries_[static_cast<size_t>(free_idx)];
+    new_entry = NodeEntry{};
+    new_entry.node_id = node_id;
+    new_entry.short_id = compute_short_id(node_id);
+    new_entry.is_self = false;
+    new_entry.in_use = true;
+    new_entry.last_seen_ms = now_ms;
+    new_entry.last_rx_rssi = rssi_dbm;
+    size_++;
+    recompute_collisions();
+    set_dirty();
+    idx = free_idx;
+  }
+
+  NodeEntry& entry = entries_[static_cast<size_t>(idx)];
+  const Seq16Order order = seq16_order(seq16, entry.last_seq);
+  if (order == Seq16Order::Same || order == Seq16Order::Older) {
+    entry.last_seen_ms = now_ms;
+    entry.last_rx_rssi = rssi_dbm;
+    set_dirty();
+    return true;
+  }
+
+  entry.pos_valid = true;
+  entry.lat_e7 = lat_e7;
+  entry.lon_e7 = lon_e7;
+  entry.pos_age_s = 0;
+  entry.last_seq = seq16;
+  entry.last_core_seq16 = seq16;
+  entry.has_core_seq16 = true;
+  entry.has_pos_flags = true;
+  entry.has_sats = true;
+  entry.pos_flags = (pos_flags_small & 0x0Fu) | ((fix_type & 0x07u) << 4) | ((pos_accuracy_bucket & 0x01u) << 7);
+  entry.sats = (pos_sats & 0x3Fu) | ((pos_accuracy_bucket & 0x06u) << 5);
+  entry.last_seen_ms = now_ms;
+  entry.last_rx_rssi = rssi_dbm;
+  set_dirty();
+  return true;
+}
+
+// apply_status: v0.2 Node_Status (#435). Full snapshot; does not update position.
+bool NodeTable::apply_status(uint64_t node_id,
+                             uint16_t seq16,
+                             uint8_t battery_percent, uint8_t battery_est_rem_time,
+                             uint8_t tx_power_ch_throttle, uint8_t uptime10m,
+                             uint8_t role_id, uint8_t max_silence_10s,
+                             uint16_t hw_profile_id, uint16_t fw_version_id,
+                             int8_t rssi_dbm,
+                             uint32_t now_ms) {
+  (void)tx_power_ch_throttle;
+  (void)role_id;
+  (void)battery_est_rem_time;
+  int idx = find_entry_index(node_id);
+  if (idx < 0) {
+    int free_idx = find_free_index();
+    if (free_idx < 0) {
+      if (!evict_oldest_grey(now_ms)) {
+        return false;
+      }
+      free_idx = find_free_index();
+      if (free_idx < 0) {
+        return false;
+      }
+    }
+    NodeEntry& new_entry = entries_[static_cast<size_t>(free_idx)];
+    new_entry = NodeEntry{};
+    new_entry.node_id = node_id;
+    new_entry.short_id = compute_short_id(node_id);
+    new_entry.is_self = false;
+    new_entry.in_use = true;
+    new_entry.last_seen_ms = now_ms;
+    new_entry.last_rx_rssi = rssi_dbm;
+    size_++;
+    recompute_collisions();
+    set_dirty();
+    idx = free_idx;
+  }
+
+  NodeEntry& entry = entries_[static_cast<size_t>(idx)];
+  const Seq16Order order = seq16_order(seq16, entry.last_seq);
+  if (order == Seq16Order::Same || order == Seq16Order::Older) {
+    entry.last_seen_ms = now_ms;
+    entry.last_rx_rssi = rssi_dbm;
+    set_dirty();
+    return true;
+  }
+
+  entry.last_seq = seq16;
+  entry.has_battery = true;
+  entry.battery_percent = battery_percent;
+  entry.has_uptime = true;
+  entry.uptime_sec = static_cast<uint32_t>(uptime10m) * 600u;
+  entry.has_max_silence = true;
+  entry.max_silence_10s = max_silence_10s;
+  entry.has_hw_profile = true;
+  entry.hw_profile_id = hw_profile_id;
+  entry.has_fw_version = true;
+  entry.fw_version_id = fw_version_id;
+  entry.last_seen_ms = now_ms;
+  entry.last_rx_rssi = rssi_dbm;
+  set_dirty();
+  return true;
+}
+
 size_t NodeTable::size() const {
   return size_;
 }

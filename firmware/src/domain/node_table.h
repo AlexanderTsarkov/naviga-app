@@ -165,6 +165,31 @@ class NodeTable {
                   int8_t rssi_dbm,
                   uint32_t now_ms);
 
+  /**
+   * Apply Node_Pos_Full v0.2 (#435): position + Pos_Quality in one step.
+   * Sets last_core_seq16 := seq16; no Tail ref. Single-packet apply.
+   */
+  bool apply_pos_full(uint64_t node_id,
+                      uint16_t seq16,
+                      int32_t lat_e7, int32_t lon_e7,
+                      uint8_t fix_type, uint8_t pos_sats,
+                      uint8_t pos_accuracy_bucket, uint8_t pos_flags_small,
+                      int8_t rssi_dbm,
+                      uint32_t now_ms);
+
+  /**
+   * Apply Node_Status v0.2 (#435): full status snapshot (operational + informative).
+   * Does not update position. Single-packet apply.
+   */
+  bool apply_status(uint64_t node_id,
+                    uint16_t seq16,
+                    uint8_t battery_percent, uint8_t battery_est_rem_time,
+                    uint8_t tx_power_ch_throttle, uint8_t uptime10m,
+                    uint8_t role_id, uint8_t max_silence_10s,
+                    uint16_t hw_profile_id, uint16_t fw_version_id,
+                    int8_t rssi_dbm,
+                    uint32_t now_ms);
+
 #if defined(NAVIGA_TEST)
   /** Test-only: copy the NodeEntry for node_id into *out. Returns false if not found.
    *  Not compiled into production firmware (guarded by NAVIGA_TEST). */

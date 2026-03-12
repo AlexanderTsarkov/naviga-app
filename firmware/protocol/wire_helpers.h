@@ -36,6 +36,18 @@ inline uint64_t read_nodeid48_le(const uint8_t* src) {
          (static_cast<uint64_t>(src[5]) << 40);
 }
 
+inline void write_u24_le(uint8_t* dst, uint32_t value) {
+  dst[0] = static_cast<uint8_t>(value & 0xFFu);
+  dst[1] = static_cast<uint8_t>((value >> 8) & 0xFFu);
+  dst[2] = static_cast<uint8_t>((value >> 16) & 0xFFu);
+}
+
+inline uint32_t read_u24_le(const uint8_t* src) {
+  return static_cast<uint32_t>(src[0]) |
+         (static_cast<uint32_t>(src[1]) << 8) |
+         (static_cast<uint32_t>(src[2]) << 16);
+}
+
 } // namespace wire
 } // namespace protocol
 } // namespace naviga
