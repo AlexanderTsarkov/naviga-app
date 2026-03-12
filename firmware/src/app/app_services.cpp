@@ -225,9 +225,10 @@ void AppServices::init() {
   }
 
   // --- Phase B: Provision role + radio profile (boot_pipeline_v0) ---
-  // Cadence params from current role profile record in flash (#289); pointers for role/radio id (display, consistency).
+  // Logical pointers only; radio hardware was configured in Phase A. current_radio_profile_id 0 = FACTORY (virtual, not in NVS).
+  // Missing or invalid pointers → normalize to 0/0 and persist (provisioning_baseline_v0 §4.2).
   constexpr uint32_t kDefaultRoleId = 0;
-  constexpr uint32_t kDefaultRadioProfileId = 0;
+  constexpr uint32_t kDefaultRadioProfileId = kRadioProfileIdFactoryDefault;  // 0 = FACTORY
   PersistedPointers ptrs{};
   const bool loaded = load_pointers(&ptrs);
   bool use_persisted = loaded && ptrs.has_current_role && ptrs.has_current_radio;

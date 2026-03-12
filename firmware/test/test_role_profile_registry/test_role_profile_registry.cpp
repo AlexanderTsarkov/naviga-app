@@ -1,6 +1,8 @@
 /**
  * Unit tests for #289: role profile record and OOTB defaults.
  * Tests get_ootb_role_profile (no NVS); fallback behavior is tested on device.
+ * #424: get_factory_default_radio_profile (FACTORY id 0) is in naviga_storage.cpp (uses NVS);
+ *       Phase A uses it via radio_factory; Default preset 21 dBm tested in test_radio_preset.
  */
 #include <unity.h>
 

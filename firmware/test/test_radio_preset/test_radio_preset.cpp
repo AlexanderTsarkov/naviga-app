@@ -94,6 +94,12 @@ void test_get_radio_preset_default_air_rate_2() {
   TEST_ASSERT_EQUAL_UINT8(1, p.channel);
 }
 
+// #424: Default preset = FACTORY MIN 21 dBm per provisioning_baseline_v0 / e220_radio_profile_mapping_s03.
+void test_get_radio_preset_default_tx_power_21_dbm() {
+  RadioPreset p = get_radio_preset(RadioPresetId::Default);
+  TEST_ASSERT_EQUAL_UINT8(21, p.tx_power_dbm);
+}
+
 void test_get_radio_preset_fast_air_rate_3() {
   RadioPreset p = get_radio_preset(RadioPresetId::Fast);
   TEST_ASSERT_EQUAL_UINT8(3, p.air_rate);
@@ -143,6 +149,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_verify_preset_readback_both_mismatch);
 
   RUN_TEST(test_get_radio_preset_default_air_rate_2);
+  RUN_TEST(test_get_radio_preset_default_tx_power_21_dbm);
   RUN_TEST(test_get_radio_preset_fast_air_rate_3);
   RUN_TEST(test_get_radio_preset_longrange_air_rate_2);
   RUN_TEST(test_all_canonical_presets_no_clamp_needed);
