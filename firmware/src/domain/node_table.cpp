@@ -439,7 +439,10 @@ bool NodeTable::apply_info(uint64_t node_id,
 }
 
 // apply_pos_full: v0.2 Node_Pos_Full (#435). Single-packet apply; last_core_seq16 := seq16.
-// Pos_Quality packed into existing pos_flags/sats (no new NodeEntry fields).
+// Pos_Quality → NodeTable: canonical fields fix_type, pos_sats, pos_accuracy_bucket, pos_flags_small
+// land in existing storage per nodetable_master_field_table_v0 §2 (pos_fix_type/pos_accuracy_bucket
+// stubs; pos_sats→sats, pos_flags_small→pos_flags). Packing: pos_flags = [0:3] pos_flags_small,
+// [4:6] fix_type, [7] pos_accuracy_bucket bit0; sats = [0:5] pos_sats, [6:7] pos_accuracy_bucket bits 1–2.
 bool NodeTable::apply_pos_full(uint64_t node_id,
                                uint16_t seq16,
                                int32_t lat_e7, int32_t lon_e7,

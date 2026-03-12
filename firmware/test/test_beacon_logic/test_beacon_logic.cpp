@@ -322,6 +322,10 @@ void test_rx_pos_full_applies_position_and_quality() {
   TEST_ASSERT_EQUAL_UINT16(3, entry.last_core_seq16);
   TEST_ASSERT_TRUE(entry.has_pos_flags);
   TEST_ASSERT_TRUE(entry.has_sats);
+  // Pos_Quality → NodeTable packing: pos_flags = pos_flags_small[0:3] | fix_type[4:6] | pos_accuracy_bucket bit0[7];
+  // sats = pos_sats[0:5] | (pos_accuracy_bucket bits 1–2)[6:7]. (fix_type=2, pos_sats=10, pos_accuracy_bucket=4, pos_flags_small=1)
+  TEST_ASSERT_EQUAL_UINT8(33, entry.pos_flags);   // 1 | (2<<4) | 0
+  TEST_ASSERT_EQUAL_UINT8(138, entry.sats);      // 10 | ((4 & 0x06u) << 5)
 }
 
 void test_rx_status_applies_full_snapshot() {
