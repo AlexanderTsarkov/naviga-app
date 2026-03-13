@@ -51,6 +51,9 @@ uint32_t gnss_diag_next_ms = 0;
 SelfUpdatePolicy self_policy;
 IRadio* radio = nullptr;
 
+// #448: single static buffer for NodeTable snapshot load/save; avoids 8KB on loopTask stack.
+static uint8_t g_nodetable_snapshot_buf[kMaxNodeTableSnapshotBytes];
+
 platform::ArduinoClock clock_;
 platform::ArduinoLogger logger_;
 platform::DefaultDeviceIdProvider device_id_provider_;
@@ -349,11 +352,9 @@ void AppServices::init() {
   }
   // #418: restore NodeTable from snapshot (after local identity known). Absent/corrupt => clean start.
   {
-    constexpr size_t kSnapshotBufSize = naviga::kMaxNodeTableSnapshotBytes;
-    uint8_t buf[kSnapshotBufSize];
     size_t len = 0;
-    if (load_nodetable_snapshot(buf, kSnapshotBufSize, &len) && len > 0) {
-      runtime_.restore_nodetable_snapshot(buf, len);
+    if (load_nodetable_snapshot(g_nodetable_snapshot_buf, kMaxNodeTableSnapshotBytes, &len) && len > 0) {
+      runtime_.restore_nodetable_snapshot(g_nodetable_snapshot_buf, len);
     }
   }
   provisioning_->set_instrumentation_flag(&instrumentation_enabled_);
@@ -508,10 +509,8 @@ void AppServices::tick(uint32_t now_ms) {
   constexpr uint32_t kMinNodetableSaveIntervalMs = 30000U;
   if (runtime_.nodetable_dirty() &&
       (last_nodetable_save_ms_ == 0 || (now_ms - last_nodetable_save_ms_) >= kMinNodetableSaveIntervalMs)) {
-    constexpr size_t kSnapshotBufSize = naviga::kMaxNodeTableSnapshotBytes;
-    uint8_t buf[kSnapshotBufSize];
-    const size_t len = runtime_.build_nodetable_snapshot(buf, kSnapshotBufSize);
-    if (len > 0 && save_nodetable_snapshot(buf, len)) {
+    const size_t len = runtime_.build_nodetable_snapshot(g_nodetable_snapshot_buf, kMaxNodeTableSnapshotBytes);
+    if (len > 0 && save_nodetable_snapshot(g_nodetable_snapshot_buf, len)) {
       runtime_.clear_nodetable_dirty();
       last_nodetable_save_ms_ = now_ms;
     }
