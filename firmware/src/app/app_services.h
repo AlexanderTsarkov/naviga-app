@@ -5,6 +5,7 @@
 #include "app/m1_runtime.h"
 #include "domain/beacon_logic.h"
 #include "domain/logger.h"
+#include "naviga/hal/interfaces.h"
 #include "services/gnss_scenario_override.h"
 #include "services/oled_status.h"
 #include "services/radio_smoke_service.h"
@@ -51,6 +52,15 @@ class AppServices {
   bool has_persisted_seq16_ = false;
   // #418: NodeTable snapshot save debounce (dirty + min interval).
   uint32_t last_nodetable_save_ms_ = 0;
+
+  // #450: effective role/profile/tx for OLED (set once in init).
+  uint32_t effective_role_id_ = 0;
+  uint16_t effective_min_interval_sec_ = 0;
+  uint16_t effective_min_distance_m_ = 0;
+  uint8_t effective_tx_power_dbm_ = 21;
+  GNSSFixState last_fix_state_ = GNSSFixState::NO_FIX;
+  static constexpr size_t kOledDisplayNameLen = 33;
+  char oled_display_name_buf_[kOledDisplayNameLen] = {0};
 };
 
 }  // namespace naviga

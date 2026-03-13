@@ -75,6 +75,12 @@ class M1Runtime {
   /** Restore table from snapshot blob; uses self identity to set is_self. Returns true on success. */
   bool restore_nodetable_snapshot(const uint8_t* data, size_t len);
 
+  /** #450: Copy self entry node_name into out (null-terminated). If no self or empty name, out is empty. */
+  void get_self_node_name(char* out, size_t len) const;
+
+  /** #450: Current GNSS fix state from last set_self_position. */
+  GNSSFixState get_gnss_fix_state() const { return gnss_snapshot_.fix_state; }
+
  private:
   void handle_tx(uint32_t now_ms);
   void handle_rx(uint32_t now_ms);

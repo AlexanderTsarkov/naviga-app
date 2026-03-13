@@ -304,6 +304,12 @@ void AppServices::init() {
   self_telemetry_.has_max_silence = true;
   self_telemetry_.max_silence_10s = effective_max_silence_10s_;
 
+  // #450: store effective role/profile/tx for OLED (factory radio = 21 dBm).
+  effective_role_id_ = effective_role_id;
+  effective_min_interval_sec_ = effective_interval_s;
+  effective_min_distance_m_ = static_cast<uint16_t>(effective_min_distance_m + 0.5);
+  effective_tx_power_dbm_ = 21;
+
   // --- Phase C: Start comms — wire runtime; tick() runs Alive/Beacon cadence ---
   format_short_id_hex(short_id_, short_id_hex_, sizeof(short_id_hex_));
   format_mac_colon_hex(device_id.bytes, mac_hex_, sizeof(mac_hex_));
@@ -433,6 +439,7 @@ void AppServices::tick(uint32_t now_ms) {
     have_snapshot = true;
   }
   if (have_snapshot) {
+    last_fix_state_ = snapshot.fix_state;
     if (snapshot.pos_valid && !fix_logged_) {
       log_line("GNSS: FIX acquired");
       fix_logged_ = true;
@@ -483,10 +490,12 @@ void AppServices::tick(uint32_t now_ms) {
                     static_cast<unsigned long>(decision.dt_ms));
       log_line(buffer);
     } else if (!snapshot.pos_valid) {
+      last_fix_state_ = GNSSFixState::NO_FIX;
       runtime_.set_self_position(false, 0, 0, 0, GNSSFixState::NO_FIX, now_ms);
     }
   } else if (gnss_override_.enabled()) {
     // Override active but get_snapshot_if_active returned false (shouldn't happen)
+    last_fix_state_ = GNSSFixState::NO_FIX;
     runtime_.set_self_position(false, 0, 0, 0, GNSSFixState::NO_FIX, now_ms);
   }
 
@@ -515,14 +524,32 @@ void AppServices::tick(uint32_t now_ms) {
       last_nodetable_save_ms_ = now_ms;
     }
   }
+  // #450: fill OLED with S03-aligned compact status.
+  runtime_.get_self_node_name(oled_display_name_buf_, kOledDisplayNameLen);
+  const char* display_name = (oled_display_name_buf_[0] != '\0') ? oled_display_name_buf_ : short_id_hex_;
+  const char* fix_str = "N";
+  if (last_fix_state_ == GNSSFixState::FIX_2D) fix_str = "2D";
+  else if (last_fix_state_ == GNSSFixState::FIX_3D) fix_str = "3D";
+  const char* role_str = "Person";
+  if (effective_role_id_ == 1) role_str = "Dog";
+  else if (effective_role_id_ == 2) role_str = "Infra";
+
+  const domain::TrafficCounters& tc = runtime_.traffic_counters();
   OledStatusData oled_data{};
-  oled_data.bt_short = bt_short_;
-  oled_data.firmware_version = kFirmwareVersion;
-  oled_data.ble_connected = runtime_.ble_connected();
-  oled_data.nodes_seen = runtime_.node_count();
-  oled_data.geo_seq = runtime_.geo_seq();
+  oled_data.display_name = display_name;
   oled_data.uptime_ms = now_ms;
-  oled_.update(now_ms, runtime_.stats(), oled_data);
+  oled_data.tx_power_dbm = effective_tx_power_dbm_;
+  oled_data.active_nodes = runtime_.node_count();
+  oled_data.fix_state = fix_str;
+  oled_data.role_name = role_str;
+  oled_data.min_interval_sec = effective_min_interval_sec_;
+  oled_data.min_distance_m = effective_min_distance_m_;
+  oled_data.max_silence_10s = effective_max_silence_10s_;
+  oled_data.pos_tx = tc.tx_sent_pos_full;
+  oled_data.st_tx = tc.tx_sent_status;
+  oled_data.pos_rx = tc.rx_ok_pos_full;
+  oled_data.st_rx = tc.rx_ok_status;
+  oled_.update(now_ms, oled_data);
 
   if ((now_ms - last_heartbeat_ms_) >= 1000U) {
     last_heartbeat_ms_ = now_ms;
