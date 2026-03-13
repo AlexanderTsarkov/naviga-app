@@ -14,6 +14,14 @@ const char* safe_text(const char* text) {
   return text ? text : "-";
 }
 
+/** Role as single letter for compact line 1: H=Person, D=Dog, I=Infra. */
+char role_to_letter(const char* role_name) {
+  if (!role_name) return '?';
+  if (role_name[0] == 'D') return 'D';  // Dog
+  if (role_name[0] == 'I') return 'I';  // Infra
+  return 'H';  // Person / Human
+}
+
 /** Format uptime as HH:MM:SS or MM:SS for #450 line 1. */
 void format_uptime(uint32_t uptime_ms, char* out, size_t out_len) {
   if (!out || out_len == 0) return;
@@ -70,11 +78,13 @@ void OledStatus::render(const OledStatusData& data) {
   char uptime_buf[16] = {0};
   format_uptime(data.uptime_ms, uptime_buf, sizeof(uptime_buf));
 
-  // Line 1: display_name (large) | uptime
+  // Line 1: display_name (large) <RoleLetter> | uptime
   display_.setTextSize(2);
   display_.setCursor(0, 0);
   display_.print(safe_text(data.display_name));
   display_.setTextSize(1);
+  display_.print(" ");
+  display_.print(role_to_letter(data.role_name));
   display_.print(" | ");
   display_.print(uptime_buf);
 
@@ -87,10 +97,9 @@ void OledStatus::render(const OledStatusData& data) {
   display_.print(" | Fix:");
   display_.print(safe_text(data.fix_state));
 
-  // Line 3: <Role> | MI:<s> | MD:<m> | MS:<s>
+  // Line 3: MI:<s> | MD:<m> | MS:<s>
   display_.setCursor(0, 26);
-  display_.print(safe_text(data.role_name));
-  display_.print(" | MI:");
+  display_.print("MI:");
   display_.print(static_cast<unsigned>(data.min_interval_sec));
   display_.print(" | MD:");
   display_.print(static_cast<unsigned>(data.min_distance_m));
