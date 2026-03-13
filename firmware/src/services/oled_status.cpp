@@ -14,28 +14,23 @@ const char* safe_text(const char* text) {
   return text ? text : "-";
 }
 
-void format_uptime_mmss(uint32_t uptime_ms, char* out, size_t out_len) {
-  if (!out || out_len == 0) {
-    return;
-  }
+/** Format uptime as HH:MM:SS or MM:SS for #450 line 1. */
+void format_uptime(uint32_t uptime_ms, char* out, size_t out_len) {
+  if (!out || out_len == 0) return;
   const uint32_t total_seconds = uptime_ms / 1000U;
-  const uint32_t minutes = total_seconds / 60U;
+  const uint32_t hours = total_seconds / 3600U;
+  const uint32_t minutes = (total_seconds % 3600U) / 60U;
   const uint32_t seconds = total_seconds % 60U;
-  std::snprintf(out, out_len, "%02lu:%02lu",
-                static_cast<unsigned long>(minutes),
-                static_cast<unsigned long>(seconds));
-}
-
-void format_fw_short(const char* fw, char* out, size_t out_len) {
-  if (!out || out_len == 0) {
-    return;
+  if (hours > 0U) {
+    std::snprintf(out, out_len, "%02lu:%02lu:%02lu",
+                  static_cast<unsigned long>(hours),
+                  static_cast<unsigned long>(minutes),
+                  static_cast<unsigned long>(seconds));
+  } else {
+    std::snprintf(out, out_len, "%02lu:%02lu",
+                  static_cast<unsigned long>(minutes),
+                  static_cast<unsigned long>(seconds));
   }
-  if (!fw) {
-    std::snprintf(out, out_len, "-");
-    return;
-  }
-  std::strncpy(out, fw, out_len - 1);
-  out[out_len - 1] = '\0';
 }
 
 } // namespace
@@ -56,7 +51,7 @@ void OledStatus::init(const HwProfile& profile) {
   display_.display();
 }
 
-void OledStatus::update(uint32_t now_ms, const RadioSmokeStats& stats, const OledStatusData& data) {
+void OledStatus::update(uint32_t now_ms, const OledStatusData& data) {
   if (!ready_) {
     return;
   }
@@ -64,46 +59,57 @@ void OledStatus::update(uint32_t now_ms, const RadioSmokeStats& stats, const Ole
     return;
   }
   last_render_ms_ = now_ms;
-  render(stats, data);
+  render(data);
 }
 
-void OledStatus::render(const RadioSmokeStats& stats, const OledStatusData& data) {
+void OledStatus::render(const OledStatusData& data) {
   display_.clearDisplay();
-
-  display_.fillRect(0, 0, 128, 16, SSD1306_WHITE);
-  display_.setTextColor(SSD1306_BLACK);
-  display_.setTextSize(1);
-  display_.setCursor(0, 0);
-  display_.print("BT_MAC:");
-  display_.setTextSize(2);
-  display_.setCursor(48, 0);
-  display_.print(safe_text(data.bt_short));
-
   display_.setTextColor(SSD1306_WHITE);
   display_.setTextSize(1);
-  char fw_short[13] = {0};
-  format_fw_short(data.firmware_version, fw_short, sizeof(fw_short));
-  display_.setCursor(0, 18);
-  display_.print("FW ");
-  display_.print(fw_short);
-  display_.print(" B:");
-  display_.print(data.ble_connected ? "C" : "A");
 
-  char uptime_buf[12] = {0};
-  format_uptime_mmss(data.uptime_ms, uptime_buf, sizeof(uptime_buf));
-  display_.setCursor(0, 34);
-  display_.print("N:");
-  display_.print(static_cast<unsigned long>(data.nodes_seen));
-  display_.print(" U:");
+  char uptime_buf[16] = {0};
+  format_uptime(data.uptime_ms, uptime_buf, sizeof(uptime_buf));
+
+  // Line 1: display_name (large) | uptime
+  display_.setTextSize(2);
+  display_.setCursor(0, 0);
+  display_.print(safe_text(data.display_name));
+  display_.setTextSize(1);
+  display_.print(" | ");
   display_.print(uptime_buf);
 
-  display_.setCursor(0, 50);
-  display_.print("S:");
-  display_.print(data.geo_seq);
-  display_.print(" T:");
-  display_.print(stats.tx_count);
-  display_.print(" R:");
-  display_.print(stats.rx_count);
+  // Line 2: TX:<power> | N:<n> | Fix:<state>
+  display_.setCursor(0, 16);
+  display_.print("TX:");
+  display_.print(static_cast<unsigned>(data.tx_power_dbm));
+  display_.print(" | N:");
+  display_.print(static_cast<unsigned long>(data.active_nodes));
+  display_.print(" | Fix:");
+  display_.print(safe_text(data.fix_state));
+
+  // Line 3: <Role> | MI:<s> | MD:<m> | MS:<s>
+  display_.setCursor(0, 26);
+  display_.print(safe_text(data.role_name));
+  display_.print(" | MI:");
+  display_.print(static_cast<unsigned>(data.min_interval_sec));
+  display_.print(" | MD:");
+  display_.print(static_cast<unsigned>(data.min_distance_m));
+  display_.print(" | MS:");
+  display_.print(static_cast<unsigned>(data.max_silence_10s));
+
+  // Line 4: PosTx:<n> | StTx:<n>
+  display_.setCursor(0, 36);
+  display_.print("PosTx:");
+  display_.print(static_cast<unsigned long>(data.pos_tx));
+  display_.print(" | StTx:");
+  display_.print(static_cast<unsigned long>(data.st_tx));
+
+  // Line 5: PosRx:<n> | StRx:<n>
+  display_.setCursor(0, 46);
+  display_.print("PosRx:");
+  display_.print(static_cast<unsigned long>(data.pos_rx));
+  display_.print(" | StRx:");
+  display_.print(static_cast<unsigned long>(data.st_rx));
 
   display_.display();
 }

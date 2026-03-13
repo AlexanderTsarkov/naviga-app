@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
 
 namespace naviga {
 
@@ -233,6 +234,18 @@ bool M1Runtime::restore_nodetable_snapshot(const uint8_t* data, size_t len) {
   if (n == 0) return false;
   node_table_.restore_from_entries(restore_scratch_, n);
   return true;
+}
+
+void M1Runtime::get_self_node_name(char* out, size_t len) const {
+  if (!out || len == 0) return;
+  out[0] = '\0';
+  node_table_.for_each_used_entry([out, len](const domain::NodeEntry& e) {
+    if (e.is_self && e.node_name[0] != '\0') {
+      const size_t n = (len - 1) < domain::kNodeTableNodeNameMaxLen ? (len - 1) : domain::kNodeTableNodeNameMaxLen;
+      std::strncpy(out, e.node_name, n);
+      out[n] = '\0';
+    }
+  });
 }
 
 void M1Runtime::handle_tx(uint32_t now_ms) {
