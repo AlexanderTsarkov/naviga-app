@@ -181,10 +181,9 @@ void test_subscription_batch_actual_packed_count() {
   NodeTable table;
   table.set_expected_interval_s(10);
   table.init_self(0x1111111111111111ULL, 1000);
+  bridge.update_subscription_batch(1000, table, transport);
   table.upsert_remote(0x2222222222222222ULL, true, 1000000, 2000000, 10, -65, 1, 1500);
   table.upsert_remote(0x3333333333333333ULL, true, 2000000, 3000000, 5, -70, 2, 1600);
-
-  bridge.update_subscription_batch(1000, table, transport);
   bridge.update_subscription_batch(1500, table, transport);
   bridge.update_subscription_batch(3500, table, transport);
 
@@ -203,13 +202,12 @@ void test_subscription_batch_overflow_retention() {
   NodeTable table;
   table.set_expected_interval_s(10);
   table.init_self(0x1111111111111111ULL, 1000);
+  bridge.update_subscription_batch(1000, table, transport);
   for (size_t i = 0; i < 7; ++i) {
     table.upsert_remote(0x2000000000000000ULL + i, true,
                         static_cast<int32_t>(1000000 + i), 2000000, 10, -65, 1,
                         static_cast<uint32_t>(1500 + i));
   }
-
-  bridge.update_subscription_batch(1000, table, transport);
   bridge.update_subscription_batch(1500, table, transport);
   bridge.update_subscription_batch(3500, table, transport);
 
@@ -225,6 +223,27 @@ void test_subscription_batch_overflow_retention() {
   TEST_ASSERT_EQUAL(1 + 2 * BleNodeTableBridge::kRecordBytesBle, transport.subscription_update_len());
 }
 
+/** S04 #465: Change in an exported BLE field (e.g. last_rx_rssi) triggers subscription update. */
+void test_subscription_exported_field_change_triggers_update() {
+  MockBleTransport transport;
+  BleNodeTableBridge bridge;
+  NodeTable table;
+  table.set_expected_interval_s(10);
+  table.init_self(0x1111111111111111ULL, 1000);
+  bridge.update_subscription_batch(1000, table, transport);
+  table.upsert_remote(0x2222222222222222ULL, true, 1000000, 2000000, 10, -65, 1, 1500);
+  bridge.update_subscription_batch(1500, table, transport);
+  bridge.update_subscription_batch(3500, table, transport);
+  TEST_ASSERT_TRUE(transport.subscription_update_len() >= 1 + BleNodeTableBridge::kRecordBytesBle);
+  TEST_ASSERT_EQUAL_UINT8(1, transport.subscription_update_data()[0]);
+  table.upsert_remote(0x2222222222222222ULL, true, 1000000, 2000000, 10, -70, 2, 4500);
+  bridge.update_subscription_batch(4500, table, transport);
+  bridge.update_subscription_batch(6500, table, transport);
+  TEST_ASSERT_TRUE(transport.subscription_update_len() >= 1 + BleNodeTableBridge::kRecordBytesBle);
+  TEST_ASSERT_EQUAL_UINT8(1, transport.subscription_update_data()[0]);
+  TEST_ASSERT_EQUAL_UINT64(0x2222222222222222ULL, read_u64_le(transport.subscription_update_data() + 1));
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_device_info_payload);
@@ -234,5 +253,6 @@ int main(int argc, char** argv) {
   RUN_TEST(test_subscription_batch_coalescing);
   RUN_TEST(test_subscription_batch_actual_packed_count);
   RUN_TEST(test_subscription_batch_overflow_retention);
+  RUN_TEST(test_subscription_exported_field_change_triggers_update);
   return UNITY_END();
 }
