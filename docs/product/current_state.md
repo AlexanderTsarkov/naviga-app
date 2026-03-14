@@ -50,7 +50,7 @@
 
 - **Canon:** Normative specs under [docs/product/areas/](areas/). Process policies under [docs/product/policy/](policy/). Layout: [docs_layout_policy_v0](policy/docs_layout_policy_v0.md).
 - **WIP / index:** Drafts and inventory in [docs/product/wip/](wip/); spec map [spec_map_v0](wip/spec_map_v0.md).
-- **Evidence / archive:** Bench and iteration evidence in [\_working/](../../_working/README.md); iteration snapshots canonical location `archive/iterations/` (repo root); deprecated canon versions in [docs/product/archive/](archive/README.md). [docs_layout_policy_v0](policy/docs_layout_policy_v0.md) §10.
+- **Evidence / archive:** Bench and iteration evidence in \_working/ (repo root); iteration snapshots canonical location `archive/iterations/` (repo root); deprecated canon versions in [docs/product/archive/](archive/README.md). [docs_layout_policy_v0](policy/docs_layout_policy_v0.md) §10.
 
 ---
 
