@@ -10,7 +10,7 @@ This contract defines the **v0 BeaconTail-1 payload**: byte layout, field semant
 
 ## 0) Frame header (framing layer — not part of this contract)
 
-Every on-air `Node_OOTB_Core_Tail` frame is preceded by a **2-byte frame header** defined in [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0).
+Every on-air `Node_OOTB_Core_Tail` frame is preceded by a **2-byte frame header** defined in [ootb_radio_v0.md §3](../../../archive/legacy_protocols/ootb_radio_v0.md#3-radio-frame-format-v0).
 
 - **`msg_type` for Node_OOTB_Core_Tail:** `0x03` (`BEACON_TAIL1`). Dispatched independently at the framing layer.
 - **`payload_len`** in the header = number of payload bytes (11 minimum; see §3 below). Does not include the 2-byte header.
@@ -21,7 +21,7 @@ Every on-air `Node_OOTB_Core_Tail` frame is preceded by a **2-byte frame header*
 
 ## 0.1) Payload structure: Common prefix vs Useful payload
 
-Every `Node_*` payload begins with the same **9-byte Common prefix** (see [ootb_radio_v0.md §3.0](../../../../protocols/ootb_radio_v0.md#30-packet-anatomy--invariants)):
+Every `Node_*` payload begins with the same **9-byte Common prefix** (see [ootb_radio_v0.md §3.0](../../../archive/legacy_protocols/ootb_radio_v0.md#30-packet-anatomy--invariants)):
 
 | Offset | Field | Bytes | Notes |
 |--------|-------|-------|-------|
@@ -57,8 +57,8 @@ After the Common prefix, each packet type has its own **Useful payload** (bytes 
 
 ## 2) Packet type and naming
 
-- **Canonical alias:** `Node_OOTB_Core_Tail`. Legacy wire enum: `BEACON_TAIL1`. See [ootb_radio_v0.md §3.0a](../../../../protocols/ootb_radio_v0.md#30a-canonical-packet-naming) for the full alias table.
-- **`msg_type` value:** `0x03` (`BEACON_TAIL1`) in the 2-byte frame header. See [ootb_radio_v0.md §3.2](../../../../protocols/ootb_radio_v0.md#32-msg_type-registry-v0) for the full registry.
+- **Canonical alias:** `Node_OOTB_Core_Tail`. Legacy wire enum: `BEACON_TAIL1`. See [ootb_radio_v0.md §3.0a](../../../archive/legacy_protocols/ootb_radio_v0.md#30a-canonical-packet-naming) for the full alias table.
+- **`msg_type` value:** `0x03` (`BEACON_TAIL1`) in the 2-byte frame header. See [ootb_radio_v0.md §3.2](../../../archive/legacy_protocols/ootb_radio_v0.md#32-msg_type-registry-v0) for the full registry.
 - **Distinct packet family:** `msg_type = 0x03` is dispatched independently from `Node_OOTB_Core_Pos` (`0x01`), `Node_OOTB_I_Am_Alive` (`0x02`), `Node_OOTB_Operational` (`0x04`), and `Node_OOTB_Informative` (`0x05`).
 
 ---
@@ -167,7 +167,7 @@ Node `N` has `last_core_seq16 = 7`. Incoming Core_Tail carries `ref_core_seq16 =
 
 - **Unknown `payloadVersion`:** If `payloadVersion != 0x00`, receiver MUST discard the payload for NodeTable update purposes. Do not attempt partial decode.
 - **v0.x:** Reserved for backward-compatible extensions (new optional fields at end). Until defined, only `0x00` is valid.
-- **Layer separation:** `msg_type` (frame header) and `payloadVersion` (payload byte 0) are independent axes. See [ootb_radio_v0.md §3.3](../../../../protocols/ootb_radio_v0.md#33-layer-separation).
+- **Layer separation:** `msg_type` (frame header) and `payloadVersion` (payload byte 0) are independent axes. See [ootb_radio_v0.md §3.3](../../../archive/legacy_protocols/ootb_radio_v0.md#33-layer-separation).
 
 ---
 
@@ -181,6 +181,6 @@ Node `N` has `last_core_seq16 = 7`. Incoming Core_Tail carries `ref_core_seq16 =
 - **Field cadence (Tail-1 tier):** [../policy/field_cadence_v0.md](../policy/field_cadence_v0.md) — Tier B fields; degrade-under-load order.
 - **Position quality flags:** [../policy/position_quality_v0.md](../policy/position_quality_v0.md) — posFlags bit definitions.
 - **NodeID policy:** [../../../identity/nodeid_policy_v0.md](../../../identity/nodeid_policy_v0.md) — [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298)
-- **Packet header framing:** [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0) — [#304](https://github.com/AlexanderTsarkov/naviga-app/issues/304)
+- **Packet header framing:** [ootb_radio_v0.md §3](../../../archive/legacy_protocols/ootb_radio_v0.md#3-radio-frame-format-v0) — [#304](https://github.com/AlexanderTsarkov/naviga-app/issues/304)
 - **Tail productization issue:** [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307)
 - **NodeTable hub:** [../index.md](../index.md) — [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)

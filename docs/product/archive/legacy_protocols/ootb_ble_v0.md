@@ -4,7 +4,7 @@
 
 **Purpose:** GATT-контракт между донглом и приложением OOTB v0: сервисы, характеристики, форматы. Issue [#15](https://github.com/AlexanderTsarkov/naviga-app/issues/15).
 
-**Related:** [OOTB plan](../product/OOTB_v0_analysis_and_plan.md), [NodeTable v0](../firmware/ootb_node_table_v0.md), [Radio v0](ootb_radio_v0.md).
+**Related:** [OOTB plan](../legacy_product/OOTB_v0_analysis_and_plan.md), [NodeTable v0](../legacy_firmware/ootb_node_table_v0.md), [Radio v0](ootb_radio_v0.md).
 
 ---
 

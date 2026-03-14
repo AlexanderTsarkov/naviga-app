@@ -35,5 +35,5 @@
 ## Consequences
 
 - BLE- и Radio- payload не зависят от телефона как источника координат; beacon всегда берёт позицию из донгла (GNSS или stub).
-- В firmware нужен интерфейс **IGnss** (HAL) и реализация (реальный GNSS или **stub** для разработки без железа). См. [hal_contracts_v0.md](../firmware/hal_contracts_v0.md), [gnss_v0.md](../firmware/gnss_v0.md).
+- В firmware нужен интерфейс **IGnss** (HAL) и реализация (реальный GNSS или **stub** для разработки без железа). См. [hal_contracts_v0.md](../product/archive/legacy_firmware/hal_contracts_v0.md), [gnss_v0.md](../product/archive/legacy_firmware/gnss_v0.md).
 - Domain-слой не знает про NMEA/serial — только через IGnss.

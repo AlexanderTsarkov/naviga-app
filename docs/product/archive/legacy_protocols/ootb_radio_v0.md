@@ -1,6 +1,6 @@
 # OOTB Radio v0 — спецификация
 
-**Status:** Non-normative (OOTB). As-implemented v0 reference. May diverge from canon. Canon: [beacon payload & NodeTable](../product/areas/nodetable/contract/beacon_payload_encoding_v0.md), [NodeTable hub](../product/areas/nodetable/index.md).
+**Status:** Non-normative (OOTB). As-implemented v0 reference. May diverge from canon. Canon: [beacon payload & NodeTable](../../areas/nodetable/contract/beacon_payload_encoding_v0.md), [NodeTable hub](../../areas/nodetable/index.md).
 
 **Purpose:** Формат и правила радиоканала OOTB v0 (GEO_BEACON, дефолты, пресеты). Issue [#14](https://github.com/AlexanderTsarkov/naviga-app/issues/14).
 
@@ -130,11 +130,11 @@ Wire: [0x0F, 0x02]
 | `msg_type` | Canonical alias | Legacy wire enum | Payload contract | Notes |
 |---|---|---|---|---|
 | `0x00` | (reserved) | — | — | MUST NOT be used; drop on receive |
-| `0x01` | `Node_OOTB_Core_Pos` | `BEACON_CORE` | [beacon_payload_encoding_v0 §4.1](../product/areas/nodetable/contract/beacon_payload_encoding_v0.md) | Position-bearing; 15 B payload |
-| `0x02` | `Node_OOTB_I_Am_Alive` | `BEACON_ALIVE` | [alive_packet_encoding_v0 §3](../product/areas/nodetable/contract/alive_packet_encoding_v0.md) | Alive-bearing, non-position; 9–10 B payload |
-| `0x03` | `Node_OOTB_Core_Tail` | `BEACON_TAIL1` | [tail1_packet_encoding_v0 §3](../product/areas/nodetable/contract/tail1_packet_encoding_v0.md) | Core-attached extension; 11 B min payload |
-| `0x04` | `Node_OOTB_Operational` | `BEACON_TAIL2` | [tail2_packet_encoding_v0 §3](../product/areas/nodetable/contract/tail2_packet_encoding_v0.md) | Operational slow state (dynamic runtime); 11 B min payload |
-| `0x05` | `Node_OOTB_Informative` | `BEACON_INFO` | [info_packet_encoding_v0 §3](../product/areas/nodetable/contract/info_packet_encoding_v0.md) | Informative/static config; 11 B min payload |
+| `0x01` | `Node_OOTB_Core_Pos` | `BEACON_CORE` | [beacon_payload_encoding_v0 §4.1](../../areas/nodetable/contract/beacon_payload_encoding_v0.md) | Position-bearing; 15 B payload |
+| `0x02` | `Node_OOTB_I_Am_Alive` | `BEACON_ALIVE` | [alive_packet_encoding_v0 §3](../../areas/nodetable/contract/alive_packet_encoding_v0.md) | Alive-bearing, non-position; 9–10 B payload |
+| `0x03` | `Node_OOTB_Core_Tail` | `BEACON_TAIL1` | [tail1_packet_encoding_v0 §3](../../areas/nodetable/contract/tail1_packet_encoding_v0.md) | Core-attached extension; 11 B min payload |
+| `0x04` | `Node_OOTB_Operational` | `BEACON_TAIL2` | [tail2_packet_encoding_v0 §3](../../areas/nodetable/contract/tail2_packet_encoding_v0.md) | Operational slow state (dynamic runtime); 11 B min payload |
+| `0x05` | `Node_OOTB_Informative` | `BEACON_INFO` | [info_packet_encoding_v0 §3](../../areas/nodetable/contract/info_packet_encoding_v0.md) | Informative/static config; 11 B min payload |
 | `0x06`–`0x7F` | (reserved) | — | — | Reserved for future types; drop on receive |
 
 ### 3.3. Layer separation
@@ -226,7 +226,7 @@ Within `P2_BEST_EFFORT` only (Core_Tail); P3 slots are not sub-ranked by `be_ran
 
 #### Relation to field_cadence_v0 tiers
 
-The priority classes map to the delivery tiers in [field_cadence_v0.md](../product/areas/nodetable/policy/field_cadence_v0.md) as follows:
+The priority classes map to the delivery tiers in [field_cadence_v0.md](../../areas/nodetable/policy/field_cadence_v0.md) as follows:
 
 | field_cadence_v0 tier | TX queue mapping |
 |-----------------------|-----------------|
@@ -245,7 +245,7 @@ The degrade-under-load order in field_cadence_v0 §4 (keep Tier A, reduce Tier B
 ### 5.1. LBT (Listen Before Talk)
 
 - **По умолчанию:** в OOTB Public profile (channel 1 «public») **LBT включён** — перед TX выполняется проверка занятости канала (sense before send).
-- **Примечание по железу:** серия **E220** поддерживает LBT / определение активности канала перед передачей; см. пользовательскую документацию модуля (E220 user manual — разделы по LBT / channel busy detection) и [poc_e220_evidence.md § CCA/LBT](../firmware/poc_e220_evidence.md).
+- **Примечание по железу:** серия **E220** поддерживает LBT / определение активности канала перед передачей; см. пользовательскую документацию модуля (E220 user manual — разделы по LBT / channel busy detection) и [poc_e220_evidence.md § CCA/LBT](../../../../firmware/poc_e220_evidence.md).
 
 ### 5.2. Software-level randomization
 

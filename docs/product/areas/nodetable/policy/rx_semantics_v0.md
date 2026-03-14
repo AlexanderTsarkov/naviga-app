@@ -19,7 +19,7 @@ This policy defines how the receiver interprets and applies incoming packets (`N
 
 **seq16 scope — sender counter:** The sender maintains **one global seq16 counter per node**, incremented on every transmitted packet regardless of type. This counter is shared across all `Node_*` packet types during uptime.
 
-**seq16 scope — payload presence:** `seq16` is part of the **Common prefix** of every `Node_*` packet (see [ootb_radio_v0.md §3.0](../../../../protocols/ootb_radio_v0.md#30-packet-anatomy--invariants)). All packet types embed the current counter value as `seq16` at payload bytes 7–8. **Dedupe key: `(nodeId48, seq16)` — payload-agnostic.** Exception: `Node_OOTB_Core_Tail` additionally carries `ref_core_seq16` in its Useful payload (bytes 9–10) as a Core linkage key; this is distinct from `seq16`.
+**seq16 scope — payload presence:** `seq16` is part of the **Common prefix** of every `Node_*` packet (see [ootb_radio_v0.md §3.0](../../../archive/legacy_protocols/ootb_radio_v0.md#30-packet-anatomy--invariants)). All packet types embed the current counter value as `seq16` at payload bytes 7–8. **Dedupe key: `(nodeId48, seq16)` — payload-agnostic.** Exception: `Node_OOTB_Core_Tail` additionally carries `ref_core_seq16` in its Useful payload (bytes 9–10) as a Core linkage key; this is distinct from `seq16`.
 
 **Duplicate / OOO handling per packet type:**
 - **`Node_OOTB_Core_Pos` / `Node_OOTB_I_Am_Alive`:** Use the seq16 wrap rule (modulo subtraction) for duplicate and OOO detection. The seen seq16 set is per-node global across all packet types.
