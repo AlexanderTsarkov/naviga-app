@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <cstring>
 
+#include "platform/ble_esp32_transport.h"
+
 namespace naviga {
 
 namespace {
@@ -414,6 +416,18 @@ void M1Runtime::update_ble(uint32_t now_ms) {
   last_ble_update_ms_ = now_ms;
   ble_bridge_.update_all(now_ms, device_info_, node_table_, ble_transport_);
   ble_status_bridge_.update_status(now_ms, gnss_snapshot_, ble_transport_);
+
+  char node_name_buf[domain::kNodeTableNodeNameMaxLen];
+  get_self_node_name(node_name_buf, sizeof(node_name_buf));
+  char display_identity[64];
+  if (std::strlen(node_name_buf) > 0) {
+    std::snprintf(display_identity, sizeof(display_identity), "%s %04X",
+                  node_name_buf, device_info_.short_id);
+  } else {
+    std::snprintf(display_identity, sizeof(display_identity), "%04X", device_info_.short_id);
+  }
+  ble_transport_.set_advertising_content(
+      display_identity, kBleContractVersionMajor, kBleContractVersionMinor);
 }
 
 void M1Runtime::log_event(uint32_t now_ms,
