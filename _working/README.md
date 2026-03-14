@@ -77,5 +77,5 @@ This keeps the root small and ready for the next phase without losing history.
 
 ## Current state
 
-- **Iteration:** See first line of [ITERATION.md](ITERATION.md). (S03 is closed; structure is ready for the next phase.)
+- **Iteration:** See first line of [ITERATION.md](ITERATION.md). (S04 active: planning/design — BLE canon-promotion and slicing prep.)
 - **Evidence index:** See [hw_tests/](hw_tests/) subfolders; each run typically has a `notes.md` with issue links.
