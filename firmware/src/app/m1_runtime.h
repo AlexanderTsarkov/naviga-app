@@ -11,6 +11,7 @@
 #include "domain/traffic_counters.h"
 #include "naviga/hal/interfaces.h"
 #include "platform/ble_esp32_transport.h"
+#include "../../protocol/ble_profiles_bridge.h"
 #include "../../protocol/ble_status_bridge.h"
 #include "../../protocol/ble_node_table_bridge.h"
 #include "../../protocol/geo_beacon_codec.h"
@@ -98,6 +99,7 @@ class M1Runtime : public IBleRequestHandler {
   domain::NodeTable node_table_{};
   domain::BeaconLogic beacon_logic_{};
   protocol::BleNodeTableBridge ble_bridge_{};
+  protocol::BleProfilesBridge ble_profiles_bridge_{};
   protocol::BleStatusBridge ble_status_bridge_{};
   BleEsp32Transport ble_transport_{};
   protocol::DeviceInfoModel device_info_{};

@@ -70,6 +70,18 @@ class IBleTransport {
   /** S04 #465: Subscription batch payload (1 byte count + N × 72-byte records). Set then send. */
   virtual void set_subscription_update_payload(const uint8_t* data, size_t len) = 0;
   virtual void send_subscription_update() = 0;
+
+  /** S04 #467: Profiles list payload (n_radio, radio_ids, n_user, user_ids). Single read. */
+  virtual void set_profiles_list(const uint8_t* data, size_t len) = 0;
+  virtual const uint8_t* profiles_list_data() const = 0;
+  virtual size_t profiles_list_len() const = 0;
+  /** S04 #467: Profile read request (type + id); response (one profile). Write-then-read. */
+  virtual bool get_profile_read_request(uint8_t* type, uint32_t* id) const = 0;
+  virtual bool has_profile_read_request() const = 0;
+  virtual void set_profile_read_response(const uint8_t* data, size_t len) = 0;
+  virtual const uint8_t* profile_read_response_data() const = 0;
+  virtual size_t profile_read_response_len() const = 0;
+  virtual void clear_profile_read_request() = 0;
 };
 
 class IGnss {

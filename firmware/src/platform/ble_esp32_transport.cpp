@@ -160,6 +160,61 @@ class StubReadCallbacks : public BLECharacteristicCallbacks {
   }
 };
 
+/** S04 #467: Profiles list — single read from core buffer. */
+class ProfilesListCallbacks : public BLECharacteristicCallbacks {
+ public:
+  explicit ProfilesListCallbacks(BleEsp32Transport* transport) : transport_(transport) {}
+
+  void onRead(BLECharacteristic* characteristic) override {
+    if (!characteristic || !transport_) return;
+    BleTransportCore* core = transport_->core_for_callbacks();
+    const uint8_t* data = core->profiles_list_data();
+    const size_t len = core->profiles_list_len();
+    if (len > 0) {
+      characteristic->setValue(const_cast<uint8_t*>(data), len);
+    } else {
+      characteristic->setValue("");
+    }
+  }
+
+ private:
+  BleEsp32Transport* transport_ = nullptr;
+};
+
+/** S04 #467: Profile read — write request (1B type + 4B id LE), read response (one profile). */
+class ProfileReadCallbacks : public BLECharacteristicCallbacks {
+ public:
+  explicit ProfileReadCallbacks(BleEsp32Transport* transport) : transport_(transport) {}
+
+  void onRead(BLECharacteristic* characteristic) override {
+    if (!characteristic || !transport_) return;
+    BleTransportCore* core = transport_->core_for_callbacks();
+    const uint8_t* data = core->profile_read_response_data();
+    const size_t len = core->profile_read_response_len();
+    if (len > 0) {
+      characteristic->setValue(const_cast<uint8_t*>(data), len);
+    } else {
+      characteristic->setValue("");
+    }
+  }
+
+  void onWrite(BLECharacteristic* characteristic) override {
+    if (!characteristic || !transport_) return;
+    const std::string value = characteristic->getValue();
+    if (value.size() != 5) return;
+    const auto* bytes = reinterpret_cast<const uint8_t*>(value.data());
+    const uint8_t type = bytes[0];
+    uint32_t id = 0;
+    for (int i = 0; i < 4; ++i) {
+      id |= static_cast<uint32_t>(bytes[1 + i]) << (8 * i);
+    }
+    transport_->core_for_callbacks()->set_profile_read_request(type, id);
+  }
+
+ private:
+  BleEsp32Transport* transport_ = nullptr;
+};
+
 /** S04 #466: Self node_name. First-phase encoding: 1-byte length (0–32) + UTF-8 payload. Callbacks only read/write core; runtime applies write. */
 class NodeNameCallbacks : public BLECharacteristicCallbacks {
  public:
@@ -244,10 +299,12 @@ void BleEsp32Transport::init() {
   node_table_subscribe_char_->setCallbacks(new StubReadCallbacks());
 
   profiles_list_char_ = service_->createCharacteristic(kProfilesListUuid, BLECharacteristic::PROPERTY_READ);
-  profiles_list_char_->setCallbacks(new StubReadCallbacks());
+  profiles_list_char_->setCallbacks(new ProfilesListCallbacks(this));
 
-  profile_read_char_ = service_->createCharacteristic(kProfileReadUuid, BLECharacteristic::PROPERTY_READ);
-  profile_read_char_->setCallbacks(new StubReadCallbacks());
+  profile_read_char_ = service_->createCharacteristic(
+      kProfileReadUuid,
+      BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
+  profile_read_char_->setCallbacks(new ProfileReadCallbacks(this));
 
   service_->start();
 
@@ -375,6 +432,42 @@ void BleEsp32Transport::clear_node_name_write_request() {
   core_.clear_node_name_write_request();
 }
 
+void BleEsp32Transport::set_profiles_list(const uint8_t* data, size_t len) {
+  core_.set_profiles_list(data, len);
+}
+
+const uint8_t* BleEsp32Transport::profiles_list_data() const {
+  return core_.profiles_list_data();
+}
+
+size_t BleEsp32Transport::profiles_list_len() const {
+  return core_.profiles_list_len();
+}
+
+bool BleEsp32Transport::get_profile_read_request(uint8_t* type, uint32_t* id) const {
+  return core_.get_profile_read_request(type, id);
+}
+
+bool BleEsp32Transport::has_profile_read_request() const {
+  return core_.has_profile_read_request();
+}
+
+void BleEsp32Transport::set_profile_read_response(const uint8_t* data, size_t len) {
+  core_.set_profile_read_response(data, len);
+}
+
+const uint8_t* BleEsp32Transport::profile_read_response_data() const {
+  return core_.profile_read_response_data();
+}
+
+size_t BleEsp32Transport::profile_read_response_len() const {
+  return core_.profile_read_response_len();
+}
+
+void BleEsp32Transport::clear_profile_read_request() {
+  core_.clear_profile_read_request();
+}
+
 bool BleEsp32Transport::connected() const {
   return connected_;
 }
@@ -461,6 +554,42 @@ size_t BleEsp32Transport::node_name_write_request_len() const {
 
 void BleEsp32Transport::clear_node_name_write_request() {
   core_.clear_node_name_write_request();
+}
+
+void BleEsp32Transport::set_profiles_list(const uint8_t* data, size_t len) {
+  core_.set_profiles_list(data, len);
+}
+
+const uint8_t* BleEsp32Transport::profiles_list_data() const {
+  return core_.profiles_list_data();
+}
+
+size_t BleEsp32Transport::profiles_list_len() const {
+  return core_.profiles_list_len();
+}
+
+bool BleEsp32Transport::get_profile_read_request(uint8_t* type, uint32_t* id) const {
+  return core_.get_profile_read_request(type, id);
+}
+
+bool BleEsp32Transport::has_profile_read_request() const {
+  return core_.has_profile_read_request();
+}
+
+void BleEsp32Transport::set_profile_read_response(const uint8_t* data, size_t len) {
+  core_.set_profile_read_response(data, len);
+}
+
+const uint8_t* BleEsp32Transport::profile_read_response_data() const {
+  return core_.profile_read_response_data();
+}
+
+size_t BleEsp32Transport::profile_read_response_len() const {
+  return core_.profile_read_response_len();
+}
+
+void BleEsp32Transport::clear_profile_read_request() {
+  core_.clear_profile_read_request();
 }
 
 bool BleEsp32Transport::connected() const {

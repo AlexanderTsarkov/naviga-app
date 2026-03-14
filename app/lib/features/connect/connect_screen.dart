@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'connect_controller.dart';
+import 'profiles_parser.dart';
 
 class ConnectScreen extends ConsumerWidget {
   const ConnectScreen({super.key});
@@ -68,6 +69,12 @@ class ConnectScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: _ConnectedDeviceNameCard(controller: controller),
+          ),
+        if (state.connectionStatus == ConnectionStatus.connected &&
+            state.connectedDeviceId != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _ProfilesCard(controller: controller),
           ),
         if (state.connectionStatus == ConnectionStatus.connected &&
             state.connectedDeviceId != null)
@@ -289,6 +296,97 @@ class _ConnectedDeviceNameCard extends StatelessWidget {
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to update name: $e')));
     }
+  }
+}
+
+/// S04 #467: Minimal UI to show profiles list and read one profile (display only).
+class _ProfilesCard extends StatefulWidget {
+  const _ProfilesCard({required this.controller});
+
+  final ConnectController controller;
+
+  @override
+  State<_ProfilesCard> createState() => _ProfilesCardState();
+}
+
+class _ProfilesCardState extends State<_ProfilesCard> {
+  ParsedProfilesList? _list;
+  String? _loadError;
+
+  Future<void> _loadList() async {
+    setState(() => _loadError = null);
+    final list = await widget.controller.fetchProfilesList();
+    if (!mounted) return;
+    setState(() {
+      _list = list;
+      _loadError = list == null ? 'Failed to load list' : null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                const Text('Profiles', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: _loadList,
+                  child: const Text('Refresh list'),
+                ),
+              ],
+            ),
+            if (_loadError != null)
+              Text(_loadError!, style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12)),
+            if (_list != null) ...[
+              Text(
+                'Radio: ${_list!.radioIds.join(', ')} · User: ${_list!.userIds.join(', ')}',
+                style: const TextStyle(fontSize: 12),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                children: [
+                  FilledButton.tonal(
+                    onPressed: () async {
+                      final p = await widget.controller.readProfile(0, 0);
+                      if (!mounted) return;
+                      _showProfileSnackBar(context, 'Radio 0', p);
+                    },
+                    child: const Text('Read radio 0'),
+                  ),
+                  FilledButton.tonal(
+                    onPressed: () async {
+                      final p = await widget.controller.readProfile(1, 0);
+                      if (!mounted) return;
+                      _showProfileSnackBar(context, 'User 0', p);
+                    },
+                    child: const Text('Read user 0'),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showProfileSnackBar(BuildContext context, String label, ParsedProfile? p) {
+    final msg = p == null
+        ? '$label: failed'
+        : p is ParsedProfileRadio
+            ? '$label: ch=${p.data.channelSlot} rate=${p.data.rateTier}'
+            : p is ParsedProfileRole
+                ? '$label: interval=${p.data.minIntervalSec}s silence=${p.data.maxSilence10s}×10s'
+                : '$label: ok';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 }
 
