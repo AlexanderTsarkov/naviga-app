@@ -56,4 +56,52 @@ void main() {
       expect(kBLEContractVersionMinor, 0);
     });
   });
+
+  group(
+    'parseBleContractVersionFromManufacturerPayload (payload = [major, minor])',
+    () {
+      test('returns (1, 0) for 2-byte payload [1, 0]', () {
+        expect(
+          ConnectController.parseBleContractVersionFromManufacturerPayload([
+            1,
+            0,
+          ]),
+          (1, 0),
+        );
+      });
+
+      test('returns (2, 1) for incompatible payload [2, 1]', () {
+        expect(
+          ConnectController.parseBleContractVersionFromManufacturerPayload([
+            2,
+            1,
+          ]),
+          (2, 1),
+        );
+      });
+
+      test('returns null for null manufacturer data', () {
+        expect(
+          ConnectController.parseBleContractVersionFromManufacturerPayload(
+            null,
+          ),
+          isNull,
+        );
+      });
+
+      test('returns null for empty list', () {
+        expect(
+          ConnectController.parseBleContractVersionFromManufacturerPayload([]),
+          isNull,
+        );
+      });
+
+      test('returns null for single byte (missing minor)', () {
+        expect(
+          ConnectController.parseBleContractVersionFromManufacturerPayload([1]),
+          isNull,
+        );
+      });
+    },
+  );
 }

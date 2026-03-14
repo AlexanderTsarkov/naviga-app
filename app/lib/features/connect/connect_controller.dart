@@ -20,8 +20,10 @@ const String kNavigaNodeTableSnapshotUuid =
     '6e4f0003-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaStatusUuid = '6e4f0007-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaNamePrefix = 'Naviga';
+
 /// S04 Slice 1: Naviga manufacturer ID for BLE contract version in advertising.
 const int kNavigaManufacturerId = 0x6E4F;
+
 /// S04 Slice 1: Expected BLE contract version (exact match required for normal connect).
 const int kBLEContractVersionMajor = 1;
 const int kBLEContractVersionMinor = 0;
@@ -548,13 +550,26 @@ class ConnectController extends StateNotifier<ConnectState> {
   }
 
   /// Parses BLE contract version from manufacturer data (S04 Slice 1).
-  /// Returns (major, minor) if kNavigaManufacturerId data has at least 2 bytes; else null.
+  /// On standard BLE scan APIs, manufacturerData[key] is the payload *after* the
+  /// 2-byte company ID, so the value is [major, minor] (2 bytes). Returns (major, minor)
+  /// if present; else null.
   (int, int)? _parseBleContractVersion(ScanResult result) {
-    final data = result.advertisementData.manufacturerData[kNavigaManufacturerId];
-    if (data == null || data.length < 4) {
+    final data =
+        result.advertisementData.manufacturerData[kNavigaManufacturerId];
+    return ConnectController.parseBleContractVersionFromManufacturerPayload(
+      data,
+    );
+  }
+
+  /// Parses BLE contract version from manufacturer payload bytes. Exposed for tests.
+  /// Payload shape: [major, minor] (2 bytes); company ID is not included in the value.
+  static (int, int)? parseBleContractVersionFromManufacturerPayload(
+    List<int>? data,
+  ) {
+    if (data == null || data.length < 2) {
       return null;
     }
-    return (data[2] & 0xFF, data[3] & 0xFF);
+    return (data[0] & 0xFF, data[1] & 0xFF);
   }
 
   bool _isBleContractVersionCompatible(NavigaScanDevice device) {
@@ -563,7 +578,8 @@ class ConnectController extends StateNotifier<ConnectState> {
     if (major == null || minor == null) {
       return false;
     }
-    return major == kBLEContractVersionMajor && minor == kBLEContractVersionMinor;
+    return major == kBLEContractVersionMajor &&
+        minor == kBLEContractVersionMinor;
   }
 
   bool _isNavigaDevice(ScanResult result) {
@@ -742,6 +758,7 @@ class NavigaScanDevice {
   final String name;
   final int rssi;
   final DateTime lastSeen;
+
   /// S04 Slice 1: BLE contract version from advertising (null if not present).
   final int? bleContractVersionMajor;
   final int? bleContractVersionMinor;
