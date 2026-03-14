@@ -162,7 +162,7 @@ The `on_rx` switch handles `MsgType::BeaconTail2` and calls `decode_tail2_payloa
 **File:** `firmware/src/domain/beacon_logic.cpp`
 **Lines:** 18–86 (`build_tx`)
 
-`build_tx` currently produces only `BeaconCore` (`0x01`) or `BeaconAlive` (`0x02`). **Tail-2 TX is unreachable** — `encode_tail2_frame` is never called from `build_tx`. This is confirmed by `_working/protocol_research/2026-02-25_tail_scheduling_prep.md §2.3`.
+`build_tx` currently produces only `BeaconCore` (`0x01`) or `BeaconAlive` (`0x02`). **Tail-2 TX is unreachable** — `encode_tail2_frame` is never called from `build_tx`. This is confirmed by code inspection and protocol research (tail scheduling; see issue #316).
 
 **Changes needed (#316):**
 - Add independent `build_tail2_tx` (Operational path): triggers on Operational field change + at forced Core.

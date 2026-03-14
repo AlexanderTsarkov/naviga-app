@@ -98,7 +98,7 @@ When a doc is **Promoted** (status WIP-Ready → Promoted):
 
 ## 10) Archive locations
 
-- **`/archive/**`** (repo root): Sandbox/evidence archive (bench logs, HW transcripts, POC snapshots, iteration copies). May be gitignored; not canon or WIP. Iteration snapshots: canonical location **`archive/iterations/`**; **`_archive/iterations`** is deprecated (back-compat only) — see [\_working/README.md](../../_working/README.md) and [\_archive/iterations/README.md](../../_archive/iterations/README.md).
+- **`/archive/**`** (repo root): Sandbox/evidence archive (bench logs, HW transcripts, POC snapshots, iteration copies). May be gitignored; not canon or WIP. Iteration snapshots: canonical location **`archive/iterations/`**; **`_archive/iterations`** is deprecated (back-compat only) — locations at repo root (\_working/, \_archive/iterations/). **Canon and WIP must not link to \_working** (iteration sandbox only).
 - **`docs/product/archive/**`**: **Canon archive** (tracked). Deprecated or previous versions of canon docs (policy, spec, contract) for historical reference only. See [docs/product/archive/README.md](../archive/README.md) for what belongs here and deprecation workflow.
 
 ---
