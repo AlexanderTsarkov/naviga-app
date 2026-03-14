@@ -25,21 +25,21 @@
 | Topic | Primary doc | Related docs/ADRs | Status |
 |---|---|---|---|
 | Product vision & core | [naviga_product_core.md](../product/naviga_product_core.md) | [naviga_vision_decision_edition.md](../product/naviga_vision_decision_edition.md), [naviga_ootb_and_activation_scenarios.md](../product/naviga_ootb_and_activation_scenarios.md) | Seed |
-| OOTB scope + workmap | [ootb_scope_v0.md](../product/ootb_scope_v0.md) | [ootb_workmap.md](../../_archive/ootb_v1/project/ootb_workmap.md), [OOTB_v0_analysis_and_plan.md](../product/OOTB_v0_analysis_and_plan.md) | Seed |
-| Radio: band strategy | [radio_band_strategy_v0.md](../adr/radio_band_strategy_v0.md) | [radio_profile_presets_v0.md](../protocols/radio_profile_presets_v0.md) | Seed |
-| Radio: preset (OOTB public) | [ootb_radio_preset_v0.md](../product/ootb_radio_preset_v0.md) | [radio_profile_presets_v0.md](../protocols/radio_profile_presets_v0.md), [radio_channel_mapping_v0.md](../product/radio_channel_mapping_v0.md) | Seed |
-| Radio: channel mapping | [radio_channel_mapping_v0.md](../product/radio_channel_mapping_v0.md) | [ootb_radio_preset_v0.md](../product/ootb_radio_preset_v0.md) | Seed |
-| Radio protocol (GEO_BEACON) | [ootb_radio_v0.md](../protocols/ootb_radio_v0.md) | [radio_profile_presets_v0.md](../protocols/radio_profile_presets_v0.md), [ootb_firmware_arch_v0.md](../firmware/ootb_firmware_arch_v0.md) | Seed |
-| BLE protocol (GATT, NodeTableSnapshot) | [ootb_ble_v0.md](../protocols/ootb_ble_v0.md) | [ootb_node_table_v0.md](../firmware/ootb_node_table_v0.md), [hal_contracts_v0.md](../firmware/hal_contracts_v0.md) | Seed |
-| Firmware architecture (tick/timebase) | [ootb_firmware_arch_v0.md](../firmware/ootb_firmware_arch_v0.md) | [hal_contracts_v0.md](../firmware/hal_contracts_v0.md), [ootb_scope_v0.md](../product/ootb_scope_v0.md) | Seed |
-| HAL contracts | [hal_contracts_v0.md](../firmware/hal_contracts_v0.md) | [gnss_v0.md](../firmware/gnss_v0.md), [ootb_firmware_arch_v0.md](../firmware/ootb_firmware_arch_v0.md) | Seed |
-| GNSS (stub now, real later) | [gnss_stub_v0.md](../firmware/gnss_stub_v0.md) | [gnss_v0.md](../firmware/gnss_v0.md), [ootb_position_source_v0.md](../adr/ootb_position_source_v0.md) | Seed |
-| Node identity + short_id | [ootb_node_table_v0.md](../firmware/ootb_node_table_v0.md) | [ootb_ble_v0.md](../protocols/ootb_ble_v0.md) | Seed |
-| NodeTable spec | [ootb_node_table_v0.md](../firmware/ootb_node_table_v0.md) | [ootb_ble_v0.md](../protocols/ootb_ble_v0.md) | Seed |
-| Logging spec | [logging_v0.md](../product/logging_v0.md) | [hal_contracts_v0.md](../firmware/hal_contracts_v0.md), [ootb_test_plan_v0.md](../product/ootb_test_plan_v0.md) | Seed |
+| OOTB scope + workmap | [ootb_scope_v0.md](../product/archive/legacy_product/ootb_scope_v0.md) | [ootb_workmap.md](../../_archive/ootb_v1/project/ootb_workmap.md), [OOTB_v0_analysis_and_plan.md](../product/archive/legacy_product/OOTB_v0_analysis_and_plan.md) | Seed |
+| Radio: band strategy | [radio_band_strategy_v0.md](../adr/radio_band_strategy_v0.md) | [radio_profile_presets_v0.md](../product/archive/legacy_protocols/radio_profile_presets_v0.md) | Seed |
+| Radio: preset (OOTB public) | [ootb_radio_preset_v0.md](../product/archive/legacy_product/ootb_radio_preset_v0.md) | [radio_profile_presets_v0.md](../product/archive/legacy_protocols/radio_profile_presets_v0.md), [radio_channel_mapping_v0.md](../product/archive/legacy_product/radio_channel_mapping_v0.md) | Seed |
+| Radio: channel mapping | [radio_channel_mapping_v0.md](../product/archive/legacy_product/radio_channel_mapping_v0.md) | [ootb_radio_preset_v0.md](../product/archive/legacy_product/ootb_radio_preset_v0.md) | Seed |
+| Radio protocol (GEO_BEACON) | [ootb_radio_v0.md](../product/archive/legacy_protocols/ootb_radio_v0.md) | [radio_profile_presets_v0.md](../product/archive/legacy_protocols/radio_profile_presets_v0.md), [ootb_firmware_arch_v0.md](../product/archive/legacy_firmware/ootb_firmware_arch_v0.md) | Seed |
+| BLE protocol (GATT, NodeTableSnapshot) | [ootb_ble_v0.md](../product/archive/legacy_protocols/ootb_ble_v0.md) | [ootb_node_table_v0.md](../product/archive/legacy_firmware/ootb_node_table_v0.md), [hal_contracts_v0.md](../product/archive/legacy_firmware/hal_contracts_v0.md) | Seed |
+| Firmware architecture (tick/timebase) | [ootb_firmware_arch_v0.md](../product/archive/legacy_firmware/ootb_firmware_arch_v0.md) | [hal_contracts_v0.md](../product/archive/legacy_firmware/hal_contracts_v0.md), [ootb_scope_v0.md](../product/archive/legacy_product/ootb_scope_v0.md) | Seed |
+| HAL contracts | [hal_contracts_v0.md](../product/archive/legacy_firmware/hal_contracts_v0.md) | [gnss_v0.md](../product/archive/legacy_firmware/gnss_v0.md), [ootb_firmware_arch_v0.md](../product/archive/legacy_firmware/ootb_firmware_arch_v0.md) | Seed |
+| GNSS (stub now, real later) | [gnss_stub_v0.md](../product/archive/legacy_firmware/gnss_stub_v0.md) | [gnss_v0.md](../product/archive/legacy_firmware/gnss_v0.md), [ootb_position_source_v0.md](../adr/ootb_position_source_v0.md) | Seed |
+| Node identity + short_id | [ootb_node_table_v0.md](../product/archive/legacy_firmware/ootb_node_table_v0.md) | [ootb_ble_v0.md](../product/archive/legacy_protocols/ootb_ble_v0.md) | Seed |
+| NodeTable spec | [ootb_node_table_v0.md](../product/archive/legacy_firmware/ootb_node_table_v0.md) | [ootb_ble_v0.md](../product/archive/legacy_protocols/ootb_ble_v0.md) | Seed |
+| Logging spec | [logging_v0.md](../product/logging_v0.md) | [hal_contracts_v0.md](../product/archive/legacy_firmware/hal_contracts_v0.md), [ootb_test_plan_v0.md](../product/archive/legacy_product/ootb_test_plan_v0.md) | Seed |
 | Mesh protocol concept | [naviga_mesh_protocol_concept_v1_4.md](../product/naviga_mesh_protocol_concept_v1_4.md) | [naviga_join_session_logic_v1_2.md](../product/naviga_join_session_logic_v1_2.md) | Future |
 | Join / session logic | [naviga_join_session_logic_v1_2.md](../product/naviga_join_session_logic_v1_2.md) | [naviga_mesh_protocol_concept_v1_4.md](../product/naviga_mesh_protocol_concept_v1_4.md) | Future |
-| Test plan / field tests | [ootb_test_plan_v0.md](../product/ootb_test_plan_v0.md) | [poc_e220_evidence.md](../firmware/poc_e220_evidence.md), [poc_gaps_risks.md](../product/poc_gaps_risks.md) | Seed |
+| Test plan / field tests | [ootb_test_plan_v0.md](../product/archive/legacy_product/ootb_test_plan_v0.md) | [poc_e220_evidence.md](../firmware/poc_e220_evidence.md), [poc_gaps_risks.md](../product/poc_gaps_risks.md) | Seed |
 | ADR index / ADR rules | [adr/README.md](../adr/README.md) | [ootb_workmap.md](../../_archive/ootb_v1/project/ootb_workmap.md) | Seed |
 
 ## D) Key runtime flows (short diagrams)
@@ -55,11 +55,13 @@ See: [naviga_join_session_logic_v1_2.md](../product/naviga_join_session_logic_v1
 See: [naviga_mesh_protocol_concept_v1_4.md](../product/naviga_mesh_protocol_concept_v1_4.md)
 
 ## E) Repo layout (docs and code)
-- `docs/` — архитектура, продукт, протоколы, firmware, mobile, ADR
+- `docs/` — архитектура, продукт, firmware (build/status), mobile, ADR
 - `docs/architecture/` — этот индекс и архитектурные карты
-- `docs/product/` — продуктовые решения, scope, тест-план
-- `docs/protocols/` — wire-контракты (Radio, BLE, Join, Mesh)
-- `docs/firmware/` — архитектура и контракты прошивки (NodeTable, HAL, GNSS)
+- `docs/product/` — продукт: **canon** = `areas/` + `current_state.md`; WIP = `wip/`; legacy = `archive/` (post-S03)
+- `docs/product/areas/` — канонические спецификации (nodetable, radio, firmware, domain)
+- `docs/product/archive/` — устаревшие OOTB-era спецификации (legacy_firmware, legacy_protocols, legacy_product)
+- `docs/protocols/` — README + ссылки на canon и archive (wire-контракты перенесены в product/archive/legacy_protocols)
+- `docs/firmware/` — build/BLE test, implementation status; canon для прошивки — `docs/product/areas/firmware/`
 - `docs/mobile/` — решения по app (SDK, UI/flows)
 - `docs/adr/` — решения/ADR
 - `app/` — mobile app (Flutter)

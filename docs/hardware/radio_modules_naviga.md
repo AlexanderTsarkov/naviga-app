@@ -2,7 +2,7 @@
 
 **Purpose:** Живой документ — выжимка из мануалов радиомодулей, используемых в Навига. Источник решений по пресетам и HAL. В будущем сюда добавляются новые модули.
 
-**Related:** [OOTB Radio preset v0](../product/ootb_radio_preset_v0.md), [Radio channel mapping v0](../product/radio_channel_mapping_v0.md).
+**Related:** [OOTB Radio preset v0](../product/archive/legacy_product/ootb_radio_preset_v0.md), [Radio channel mapping v0](../product/archive/legacy_product/radio_channel_mapping_v0.md).
 
 ---
 
@@ -33,7 +33,7 @@
 
 - **Формула по мануалам:** частота (MHz) = база + CH × шаг. Для 433 MHz band: диапазон CH задаётся мануалом (типично **CH = 0..83**, шаг **1 MHz**; точный диапазон — в даташите модуля).
 - **Якорь Naviga:** продуктовый **ChannelId = 1** (Public) → **module CH = 0x17** (23) → **433.125 MHz**.
-- **Private:** ChannelId = 2..N; N выводится из допустимого диапазона CH модуля (жёстко N не зашиваем). Маппинг ChannelId → CH: [radio_channel_mapping_v0.md](../product/radio_channel_mapping_v0.md).
+- **Private:** ChannelId = 2..N; N выводится из допустимого диапазона CH модуля (жёстко N не зашиваем). Маппинг ChannelId → CH: [radio_channel_mapping_v0.md](../product/archive/legacy_product/radio_channel_mapping_v0.md).
 
 ---
 
@@ -138,7 +138,7 @@
 - **sub_packet_length:** 128 bytes.
 - **WOR:** OFF; **encryption:** OFF.
 
-Полная спецификация пресета и маппинг каналов: [ootb_radio_preset_v0.md](../product/ootb_radio_preset_v0.md), [radio_channel_mapping_v0.md](../product/radio_channel_mapping_v0.md).
+Полная спецификация пресета и маппинг каналов: [ootb_radio_preset_v0.md](../product/archive/legacy_product/ootb_radio_preset_v0.md), [radio_channel_mapping_v0.md](../product/archive/legacy_product/radio_channel_mapping_v0.md).
 
 ---
 

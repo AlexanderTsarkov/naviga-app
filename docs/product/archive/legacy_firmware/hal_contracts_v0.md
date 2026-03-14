@@ -1,6 +1,6 @@
 # HAL contracts v0 (OOTB)
 
-**Purpose:** Интерфейсы железа для firmware OOTB v0. Domain-слой не зависит от конкретного железа — только от этих интерфейсов. Реализации: реальные драйверы или моки (для тестов/ПК/без железа). См. [OOTB plan](../product/OOTB_v0_analysis_and_plan.md) (раздел 3.5 — полный объём архитектуры).
+**Purpose:** Интерфейсы железа для firmware OOTB v0. Domain-слой не зависит от конкретного железа — только от этих интерфейсов. Реализации: реальные драйверы или моки (для тестов/ПК/без железа). См. [OOTB plan](../legacy_product/OOTB_v0_analysis_and_plan.md) (раздел 3.5 — полный объём архитектуры).
 
 **Принцип:** Domain не знает про NMEA, UART, serial, конкретные чипы — только про IRadio, IBleTransport, IGnss, ILog.
 
@@ -9,7 +9,7 @@
 ## 1. IRadio
 
 - **Ответственность:** отправка/приём пакетов по радио (GEO_BEACON и т.п.); конфиг (частота, мощность, при необходимости CCA/LBT); снапшот статуса и capability info для BLE telemetry (см. § 6).
-- **Методы (концептуально):** init, **send(payload) → RadioTxResult**, receive / poll или callback, setPower, setFrequency (или общий setConfig); **getRadioStatusSnapshot()** (tx_count, rx_count, last_rx_rssi; см. § 1.1 счётчики); **getRadioCapabilityInfo()** (band_id, channel_min/max, power_min/max, module_model). Детали — в [ootb_radio_v0.md](../protocols/ootb_radio_v0.md) и [poc_e220_evidence.md](poc_e220_evidence.md).
+- **Методы (концептуально):** init, **send(payload) → RadioTxResult**, receive / poll или callback, setPower, setFrequency (или общий setConfig); **getRadioStatusSnapshot()** (tx_count, rx_count, last_rx_rssi; см. § 1.1 счётчики); **getRadioCapabilityInfo()** (band_id, channel_min/max, power_min/max, module_model). Детали — в [ootb_radio_v0.md](../legacy_protocols/ootb_radio_v0.md) и [poc_e220_evidence.md](../../../../firmware/poc_e220_evidence.md).
 - **Реализации:** реальный драйвер (например E220-400T30D), mock для тестов.
 
 ### 1.1. Radio TX API result normalization (Issue #13)
@@ -34,7 +34,7 @@
 | **tx_ok** | uint32 | Успешные отправки (результат OK). |
 | **tx_busy** | uint32 | Попытки, завершившиеся BUSY_OR_CCA_FAIL. |
 | **tx_fail** | uint32 | Попытки, завершившиеся FAIL. |
-| **tx_retries_used** | uint32 | Число повторных попыток (retry) после busy/fail в рамках одной «логической» beacon-отправки (для согласования с ограниченным retry в [Radio v0 § 5.2](../protocols/ootb_radio_v0.md#52-software-level-randomization)). |
+| **tx_retries_used** | uint32 | Число повторных попыток (retry) после busy/fail в рамках одной «логической» beacon-отправки (для согласования с ограниченным retry в [Radio v0 § 5.2](../legacy_protocols/ootb_radio_v0.md#52-software-level-randomization)). |
 
 **Примечание:** Различия UART-библиотек и модулей (разные коды ошибок, наличие/отсутствие CCA) **должны маппиться** в RadioTxResult и эти счётчики, чтобы поведение BeaconTxTask (backoff, ограниченный retry, skip цикла) было единообразным.
 
@@ -42,7 +42,7 @@
 
 ## 2. IBleTransport
 
-- **Ответственность:** BLE-транспорт: подключение, отправка/получение данных (снапшот NodeTable, события, настройки). Контракт формата — [ootb_ble_v0.md](../protocols/ootb_ble_v0.md).
+- **Ответственность:** BLE-транспорт: подключение, отправка/получение данных (снапшот NodeTable, события, настройки). Контракт формата — [ootb_ble_v0.md](../legacy_protocols/ootb_ble_v0.md).
 - **Методы (концептуально):** init, startAdvertising / startScan, onConnected / onDisconnected, sendSnapshot, notifyUpdate, receiveFromApp. Детали — в BLE v0 spec.
 - **Реализации:** реальный BLE-стек (ESP32), mock для тестов без железа.
 
@@ -98,7 +98,7 @@
 
 ## 4. ILog
 
-- **Ответственность:** кольцевой буфер событий и экспорт (UART и/или BLE characteristic). События: TX/RX, decode ok/err, NodeTable update, BLE notify, GNSS (cold start, fix acquired, fix lost, stale). См. [gnss_v0.md](gnss_v0.md) § Logging requirements, [OOTB plan](../product/OOTB_v0_analysis_and_plan.md) Phase 2.2.
+- **Ответственность:** кольцевой буфер событий и экспорт (UART и/или BLE characteristic). События: TX/RX, decode ok/err, NodeTable update, BLE notify, GNSS (cold start, fix acquired, fix lost, stale). См. [gnss_v0.md](gnss_v0.md) § Logging requirements, [OOTB plan](../legacy_product/OOTB_v0_analysis_and_plan.md) Phase 2.2.
 - **Методы (концептуально):** log(level, event, message/payload), getRingBuffer(), exportToUart / exportToBle (TBD).
 - **Реализации:** реальный вывод в UART/BLE, mock (in-memory) для тестов.
 
@@ -114,7 +114,7 @@
 
 ## 6. Telemetry contract for BLE v0
 
-**Purpose:** Зафиксировать контракт HAL/domain, необходимый для заполнения BLE характеристик [DeviceInfo и Health](../protocols/ootb_ble_v0.md#1-telemetry-v0-seed-deviceinfo--health), без утечки деталей железа в приложение. BLE-слой **подтягивает** данные из провайдеров; новые поведения не вводятся — только форма контракта.
+**Purpose:** Зафиксировать контракт HAL/domain, необходимый для заполнения BLE характеристик [DeviceInfo и Health](../legacy_protocols/ootb_ble_v0.md#1-telemetry-v0-seed-deviceinfo--health), без утечки деталей железа в приложение. BLE-слой **подтягивает** данные из провайдеров; новые поведения не вводятся — только форма контракта.
 
 ### 6.1. Откуда BLE берёт данные
 
@@ -175,17 +175,17 @@
 
 ### 6.4. NodeTable snapshot contract (for BLE NodeTableSnapshot characteristic) — Issue #13
 
-**Purpose:** Контракт, который BLE вызывает для постраничного чтения NodeTable ([NodeTableSnapshot characteristic](../protocols/ootb_ble_v0.md#13-nodatablesnapshot-characteristic)). Без кода — только форма контракта.
+**Purpose:** Контракт, который BLE вызывает для постраничного чтения NodeTable ([NodeTableSnapshot characteristic](../legacy_protocols/ootb_ble_v0.md#13-nodatablesnapshot-characteristic)). Без кода — только форма контракта.
 
 **Методы (концептуально):**
 
 - **create_snapshot() → snapshot_id.** Создаёт снапшот NodeTable на текущий момент; возвращает идентификатор снапшота (uint16 или аналог). BLE вызывает при первом запросе страницы (например page 0 с «новым снапшотом»).
-- **get_snapshot_page(snapshot_id, page_index, page_size = 10) → { total_nodes, page_count, records[] }.** Возвращает одну страницу записей для данного снапшота. **total_nodes** — общее число записей в снапшоте; **page_count** — число страниц (ceil(total_nodes / page_size)); **records[]** — массив записей в формате **NodeRecord v1** (см. [ootb_ble_v0.md § 1.3 NodeRecord v1](../protocols/ootb_ble_v0.md#13-nodatablesnapshot-characteristic)). Все **timestamp’ы** в NodeTable и в этом контракте — **uptime_ms** (монотонные мс с включения); при экспорте в BLE в записях передаётся **last_seen_age_s** (производный возраст), а не сырой timestamp.
+- **get_snapshot_page(snapshot_id, page_index, page_size = 10) → { total_nodes, page_count, records[] }.** Возвращает одну страницу записей для данного снапшота. **total_nodes** — общее число записей в снапшоте; **page_count** — число страниц (ceil(total_nodes / page_size)); **records[]** — массив записей в формате **NodeRecord v1** (см. [ootb_ble_v0.md § 1.3 NodeRecord v1](../legacy_protocols/ootb_ble_v0.md#13-nodatablesnapshot-characteristic)). Все **timestamp’ы** в NodeTable и в этом контракте — **uptime_ms** (монотонные мс с включения); при экспорте в BLE в записях передаётся **last_seen_age_s** (производный возраст), а не сырой timestamp.
 - **release_snapshot(snapshot_id)** — **FUTURE/TBD.** Опционально освободить ресурсы снапшота; в seed может не реализовываться.
 
 **Правила:**
 
 - **Self entry** должна входить в записи снапшота (одна запись с is_self = true); порядок записей (в т.ч. self на странице) — TBD (например self всегда первая, или по порядку last_seen).
-- **is_grey** в flags каждой записи вычисляется по политике NodeTable (spec #12; [ootb_node_table_v0.md § 4.1 UI state](../firmware/ootb_node_table_v0.md#41-ui-state-normal-vs-grey)): expected_interval_s, grace_s, переход в GREY при (now - last_seen) > expected_interval_s + grace_s.
-- **Records** возвращаются в **NodeRecord v1** layout (node_id, short_id, flags, last_seen_age_s, lat_e7, lon_e7, pos_age_s, last_rx_rssi, last_seq) — см. [ootb_ble_v0.md § 1.3](../protocols/ootb_ble_v0.md#13-nodatablesnapshot-characteristic).
+- **is_grey** в flags каждой записи вычисляется по политике NodeTable (spec #12; [ootb_node_table_v0.md § 4.1 UI state](ootb_node_table_v0.md#41-ui-state-normal-vs-grey)): expected_interval_s, grace_s, переход в GREY при (now - last_seen) > expected_interval_s + grace_s.
+- **Records** возвращаются в **NodeRecord v1** layout (node_id, short_id, flags, last_seen_age_s, lat_e7, lon_e7, pos_age_s, last_rx_rssi, last_seq) — см. [ootb_ble_v0.md § 1.3](../legacy_protocols/ootb_ble_v0.md#13-nodatablesnapshot-characteristic).
 - **Seed: best effort** — снапшот может быть не строго консистентным (страницы могут отражать слегка разные моменты); допустимо для seed. Строгая консистенция — FUTURE.

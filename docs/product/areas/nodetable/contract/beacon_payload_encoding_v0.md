@@ -10,13 +10,13 @@ This contract defines the **v0 beacon payload**: byte layout, size budgets, and 
 
 ## 0) Frame header (framing layer — not part of this contract)
 
-Every on-air frame is preceded by a **2-byte frame header** defined in [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0). This contract defines **payload bytes only**; the header is handled at the framing layer.
+Every on-air frame is preceded by a **2-byte frame header** defined in [ootb_radio_v0.md §3](../../../archive/legacy_protocols/ootb_radio_v0.md#3-radio-frame-format-v0). This contract defines **payload bytes only**; the header is handled at the framing layer.
 
 **Key invariants:**
 
 - `payload_len` in the header counts **payload bytes only** (not including the 2-byte header itself).
 - `payloadVersion` is the **first byte of the payload** (byte 0 of the payload body). It is **not** a header field.
-- `msg_type` in the header identifies the packet family (BEACON_CORE = `0x01`, BEACON_TAIL1 = `0x03`, BEACON_TAIL2 = `0x04`). See registry in [ootb_radio_v0.md §3.2](../../../../protocols/ootb_radio_v0.md#32-msg_type-registry-v0).
+- `msg_type` in the header identifies the packet family (BEACON_CORE = `0x01`, BEACON_TAIL1 = `0x03`, BEACON_TAIL2 = `0x04`). See registry in [ootb_radio_v0.md §3.2](../../../archive/legacy_protocols/ootb_radio_v0.md#32-msg_type-registry-v0).
 - The payload byte offsets in §4 below are **unchanged** by the presence of the frame header.
 
 **On-air total size** = 2 (header) + payload bytes. Example: BeaconCore = 2 + 15 = **17 bytes on-air**.
@@ -61,7 +61,7 @@ Policy and semantics for Core / Tail-1 / Tail-2 are in [field_cadence_v0.md](../
 
 ### Common prefix (all Node_* packets)
 
-Every `Node_*` payload begins with the same **9-byte Common prefix**. See [ootb_radio_v0.md §3.0](../../../../protocols/ootb_radio_v0.md#30-packet-anatomy--invariants) for the full anatomy and `seq16` invariants.
+Every `Node_*` payload begins with the same **9-byte Common prefix**. See [ootb_radio_v0.md §3.0](../../../archive/legacy_protocols/ootb_radio_v0.md#30-packet-anatomy--invariants) for the full anatomy and `seq16` invariants.
 
 | Offset | Field | Bytes | Notes |
 |--------|-------|-------|-------|
@@ -89,7 +89,7 @@ After the Common prefix, each packet type has its own **Useful payload** (bytes 
 | **`Node_OOTB_Informative`** | `BEACON_INFO` | Static/config fields; rarely changes. Optional, loss-tolerant. | payloadVersion(1), nodeId48(6), seq16(2) | maxSilence10s(1), hwProfileId(2), fwVersionId(2) | No CoreRef; apply unconditionally. MUST NOT update position. Full contract: [info_packet_encoding_v0.md](info_packet_encoding_v0.md). |
 
 - **Byte order:** Little-endian for all multi-byte integers.
-- **Frame header:** Every on-air frame is preceded by a 2-byte header (7+3+6 bit layout) defined in [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0). See registry in [ootb_radio_v0.md §3.2](../../../../protocols/ootb_radio_v0.md#32-msg_type-registry-v0). The header is **not part of this contract**; payload byte offsets below start at byte 0 of the payload body.
+- **Frame header:** Every on-air frame is preceded by a 2-byte header (7+3+6 bit layout) defined in [ootb_radio_v0.md §3](../../../archive/legacy_protocols/ootb_radio_v0.md#3-radio-frame-format-v0). See registry in [ootb_radio_v0.md §3.2](../../../archive/legacy_protocols/ootb_radio_v0.md#32-msg_type-registry-v0). The header is **not part of this contract**; payload byte offsets below start at byte 0 of the payload body.
 - **Layer separation:** `msg_type` lives in the **frame header** (separate from payload; not part of this contract). `payloadVersion` is the **first byte of the payload** and determines the **entire payload layout** for that `msg_type`. Unknown `payloadVersion` → discard (per §7).
 - **Version tag:** `payloadVersion` = `0x00` for v0. This is a payload-layer version, not a header/frame version.
 
@@ -128,7 +128,7 @@ After the Common prefix, each packet type has its own **Useful payload** (bytes 
 
 **`pos_valid` / `pos_age_s` are NOT part of BeaconCore.** Core is transmitted only when fix is valid (§3.1); the packet type itself encodes validity. Per-sample position quality (posFlags, sats) and age are carried by the optional Tail-1 packet (§4.2), which may be lost or omitted without breaking the product.
 
-**Size:** **15 bytes** (payload only). With 2-byte frame header ([ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0)): **17 bytes on-air**. Fits within LongDist (24), Default (32), Fast (40).
+**Size:** **15 bytes** (payload only). With 2-byte frame header ([ootb_radio_v0.md §3](../../../archive/legacy_protocols/ootb_radio_v0.md#3-radio-frame-format-v0)): **17 bytes on-air**. Fits within LongDist (24), Default (32), Fast (40).
 
 ### 4.2 Node_OOTB_Core_Tail (BeaconTail-1)
 
@@ -245,7 +245,7 @@ Payload size (in bytes) **MUST NOT** exceed the budget for the **RadioProfile cl
 
 ## 7) Versioning / compat (v0 → v0.x)
 
-- **Layer separation:** `msg_type` (in the 2-byte frame header; see [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0)) identifies the packet family (Core, Tail, Alive, …). `payloadVersion` (first byte of payload) determines the **entire payload layout** for that `msg_type`. These are independent versioning axes; do not conflate them.
+- **Layer separation:** `msg_type` (in the 2-byte frame header; see [ootb_radio_v0.md §3](../../../archive/legacy_protocols/ootb_radio_v0.md#3-radio-frame-format-v0)) identifies the packet family (Core, Tail, Alive, …). `payloadVersion` (first byte of payload) determines the **entire payload layout** for that `msg_type`. These are independent versioning axes; do not conflate them.
 - **Unknown `payloadVersion`:** If the first payload byte is not a known version for the given `msg_type` (e.g. not `0x00` for BeaconCore v0), the receiver **MUST** discard the payload for NodeTable update purposes (do not overwrite node-owned fields from that packet). Optionally log or pass to debug; no normative interpretation.
 - **v0.x:** Reserved for backward-compatible extensions (e.g. new optional fields at end, or new version byte with same semantics for existing fields). Future doc will define v0.x if needed; until then, only `0x00` is valid.
 
@@ -257,7 +257,7 @@ Payload size (in bytes) **MUST NOT** exceed the budget for the **RadioProfile cl
 - **Node_OOTB_Operational contract (full layout + RX rules):** [tail2_packet_encoding_v0.md](tail2_packet_encoding_v0.md) — [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307)
 - **Node_OOTB_Informative contract (full layout + RX rules):** [info_packet_encoding_v0.md](info_packet_encoding_v0.md) — [#314](https://github.com/AlexanderTsarkov/naviga-app/issues/314)
 - **Alive packet (no-fix liveness):** [alive_packet_encoding_v0.md](alive_packet_encoding_v0.md) — Alive packet encoding; position-bearing vs alive-bearing in §3.1 above.
-- **Packet anatomy & naming:** [ootb_radio_v0.md §3.0](../../../../protocols/ootb_radio_v0.md#30-packet-anatomy--invariants) — Common prefix invariants, seq16 rules, canonical alias table.
+- **Packet anatomy & naming:** [ootb_radio_v0.md §3.0](../../../archive/legacy_protocols/ootb_radio_v0.md#30-packet-anatomy--invariants) — Common prefix invariants, seq16 rules, canonical alias table.
 - **Field cadence (Core/Tail semantics):** [../policy/field_cadence_v0.md](../policy/field_cadence_v0.md) — §2 Beacon split definitions; Operational vs Informative packets.
 - **RX semantics (CoreRef-lite, Tail apply rules):** [../policy/rx_semantics_v0.md](../policy/rx_semantics_v0.md) — §2 Tail acceptance; §4 no revocation of Core.
 - **Minset (field semantics):** [link-telemetry-minset-v0.md](link-telemetry-minset-v0.md) — [#158](https://github.com/AlexanderTsarkov/naviga-app/issues/158)
@@ -265,5 +265,5 @@ Payload size (in bytes) **MUST NOT** exceed the budget for the **RadioProfile cl
 - **NodeTable hub:** [../index.md](../index.md) — [#147](https://github.com/AlexanderTsarkov/naviga-app/issues/147)
 - **NodeID policy (wire format, source, ShortId):** [../../../identity/nodeid_policy_v0.md](../../../identity/nodeid_policy_v0.md) — [#298](https://github.com/AlexanderTsarkov/naviga-app/issues/298)
 - **Geo encoding productization (packed24 decision):** [#301](https://github.com/AlexanderTsarkov/naviga-app/issues/301)
-- **Packet header framing (2B 7+3+6, msg_type registry):** [ootb_radio_v0.md §3](../../../../protocols/ootb_radio_v0.md#3-radio-frame-format-v0) — [#304](https://github.com/AlexanderTsarkov/naviga-app/issues/304)
+- **Packet header framing (2B 7+3+6, msg_type registry):** [ootb_radio_v0.md §3](../../../archive/legacy_protocols/ootb_radio_v0.md#3-radio-frame-format-v0) — [#304](https://github.com/AlexanderTsarkov/naviga-app/issues/304)
 - **Tail productization:** [#307](https://github.com/AlexanderTsarkov/naviga-app/issues/307)

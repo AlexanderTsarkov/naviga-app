@@ -4,7 +4,7 @@
 
 **Purpose:** Структура записи о ноде, типы/единицы, правила stale, лимиты и вытеснение. Контракт с приложением по BLE. Issue [#12](https://github.com/AlexanderTsarkov/naviga-app/issues/12).
 
-**Related:** [OOTB plan](../product/OOTB_v0_analysis_and_plan.md), [OOTB BLE v0](../protocols/ootb_ble_v0.md).
+**Related:** [OOTB plan](../legacy_product/OOTB_v0_analysis_and_plan.md), [OOTB BLE v0](../legacy_protocols/ootb_ble_v0.md).
 
 ---
 
@@ -64,7 +64,7 @@
 | **last_seq** | u8 или u16 | Последний известный seq из beacon; для дедупликации и порядка. |
 | **short_id_collision** | bool (optional) | true, если в NodeTable есть другая запись с тем же short_id; для UI (показать «ABCD*» или индекс). См. § 1a. |
 
-Дополнительные поля (battery, alias и т.п.) — см. § 5 Future notes и [OOTB plan](../product/OOTB_v0_analysis_and_plan.md).
+Дополнительные поля (battery, alias и т.п.) — см. § 5 Future notes и [OOTB plan](../legacy_product/OOTB_v0_analysis_and_plan.md).
 
 ---
 

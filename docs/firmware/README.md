@@ -2,6 +2,8 @@
 
 Документы по прошивке Naviga.
 
+**Product canon:** Normative firmware/radio/NodeTable specs live under [docs/product/areas/](../product/areas/). Legacy OOTB-era specs (NodeTable, HAL, GNSS, arch) are in [docs/product/archive/legacy_firmware/](../product/archive/legacy_firmware/). This folder keeps build/BLE test instructions and implementation-status/evidence docs only.
+
 ## Build + flash (PlatformIO)
 PlatformIO проект находится в `firmware/`.
 

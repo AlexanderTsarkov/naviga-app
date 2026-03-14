@@ -1,10 +1,10 @@
 # OOTB Firmware architecture v0
 
-**Status:** Non-normative (OOTB). As-implemented v0 reference. May diverge from canon. Canon: [boot_pipeline_v0](../product/areas/firmware/policy/boot_pipeline_v0.md).
+**Status:** Non-normative (OOTB). As-implemented v0 reference. May diverge from canon. Canon: [boot_pipeline_v0](../../areas/firmware/policy/boot_pipeline_v0.md).
 
 **Purpose:** Слои, границы и модель выполнения прошивки OOTB v0. Issue [#11](https://github.com/AlexanderTsarkov/naviga-app/issues/11).
 
-**Related:** [HAL contracts](hal_contracts_v0.md), [OOTB plan § 3.5](../product/OOTB_v0_analysis_and_plan.md), [Radio v0](../protocols/ootb_radio_v0.md), [BLE v0](../protocols/ootb_ble_v0.md).
+**Related:** [HAL contracts](hal_contracts_v0.md), [OOTB plan § 3.5](../legacy_product/OOTB_v0_analysis_and_plan.md), [Radio v0](../legacy_protocols/ootb_radio_v0.md), [BLE v0](../legacy_protocols/ootb_ble_v0.md).
 
 ---
 
@@ -32,7 +32,7 @@
 
 **TX scheduling (BeaconTxTask):**
 
-- **Should-send decision:** BeaconTxTask на каждом тике вычисляет **should_send_now** по правилам cadence (min_update_interval_s / min_time_s, movement / min_distance_m, max_silence; см. [Radio v0 § 4 Beacon cadence](../protocols/ootb_radio_v0.md#4-beacon-cadence-seed)). Дефолт Sprint 1 («Human» profile): min_distance_m=25, min_time_s=20, max_silence_s=80 — см. [ootb_scope_v0.md § Sprint 1 default cadence](../product/ootb_scope_v0.md#1-ootb-sprint-breakdown).
+- **Should-send decision:** BeaconTxTask на каждом тике вычисляет **should_send_now** по правилам cadence (min_update_interval_s / min_time_s, movement / min_distance_m, max_silence; см. [Radio v0 § 4 Beacon cadence](../legacy_protocols/ootb_radio_v0.md#4-beacon-cadence-seed)). Дефолт Sprint 1 («Human» profile): min_distance_m=25, min_time_s=20, max_silence_s=80 — см. [ootb_scope_v0.md § Sprint 1 default cadence](../legacy_product/ootb_scope_v0.md#1-ootb-sprint-breakdown).
 - **Before TX:** к запланированному моменту отправки применяется **jitter** (случайное смещение), затем выполняется попытка TX.
 - **LBT and retry:** если у модуля включён LBT — используется проверка канала перед TX. Если модуль/библиотека сообщает **busy** или **send fail:** применяется **ограниченный случайный backoff** и **ограниченное число retry** (1–2 для beacon; см. [Radio v0 § 5 Contention handling](../protocols/ootb_radio_v0.md#5-contention-handling-seed)).
 - **Non-blocking:** повторные попытки **планируются на следующий тик (или следующий допустимый слот)**, а не выполняются в цикле ожидания (no busy-wait). За один тик — одна попытка TX или один шаг backoff/retry; следующий тик решает, повторять ли попытку или выйти из цикла и пропустить beacon.
@@ -64,7 +64,7 @@
 |---------|------------|
 | **common/types** | GeoPoint (lat_e7, lon_e7), NodeId, типы для timestamps (uptime ms и т.п.). |
 | **common/math/geo_distance** | Расстояние и bearing: geo_distance_m(), geo_bearing_deg() (и при необходимости geo_distance_bearing()); контракт — [geo_utils_v0.md](geo_utils_v0.md). |
-| **common/proto** | Упаковка/разбор радио-фреймов (GEO_BEACON и т.д.); packing/parsing по [Radio v0](../protocols/ootb_radio_v0.md). |
+| **common/proto** | Упаковка/разбор радио-фреймов (GEO_BEACON и т.д.); packing/parsing по [Radio v0](../legacy_protocols/ootb_radio_v0.md). |
 | **platform** | Специфика ESP32 (инициализация, таймеры, UART/SPI для драйверов). |
 | **app** | Доменная логика и сервисы: NodeTable, beacon cadence, BLE-сервисы (DeviceInfo, Health, NodeTableSnapshot). |
 | **drivers** | Реализации HAL: радио-модуль (E220 и т.п.), GNSS provider (stub или u-blox M8N). |

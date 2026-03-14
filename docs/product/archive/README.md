@@ -24,6 +24,16 @@
 - **Canon and WIP** may link to docs under `docs/product/archive/` only when the intent is **historical reference** (e.g. "Previous version: [archived doc](archive/nodetable/policy/foo_v0_2025-02.md)."). Label such links explicitly so they are not treated as normative.
 - **Normative** references must point to the current canon path under `docs/product/areas/`, not to the archive.
 
+## Subsections (post-S03 cleanup, 2026-03)
+
+| Subfolder | Contents |
+|-----------|----------|
+| **legacy_firmware/** | OOTB-era firmware specs moved from `docs/firmware/`: NodeTable, HAL, GNSS, arch, geo_utils, ublox driver plan. Canon for firmware/boot/NodeTable is in `docs/product/areas/`. |
+| **legacy_protocols/** | OOTB-era protocol specs moved from `docs/protocols/`: ootb_radio_v0, ootb_ble_v0, radio_profile_presets_v0. Canon for packets/TX/radio is in `docs/product/areas/nodetable/` and `docs/product/areas/radio/`. |
+| **legacy_product/** | OOTB planning/scope docs moved from `docs/product/` root: OOTB_v0_analysis_and_plan, ootb_scope_v0, ootb_radio_preset_v0, ootb_test_plan_v0, ootb_gap_analysis_v0, radio_channel_mapping_v0. |
+
+---
+
 ## Related
 
 - Layout and archive split: [docs_layout_policy_v0.md](../policy/docs_layout_policy_v0.md) (§ Archive locations).

@@ -2,7 +2,7 @@
 
 **Purpose:** Extract engineering evidence from the archived POC for the E220-400T30D radio path. No code migration—documentation only. Used to inform the OOTB Radio v0 spec and firmware HAL.
 
-**Related:** [OOTB v0 analysis and plan](../product/OOTB_v0_analysis_and_plan.md) (Phase 0.5.1), Issue #7. Конфигурация OOTB для Sprint 1 — [OOTB Radio preset v0](../product/ootb_radio_preset_v0.md).
+**Related:** [OOTB v0 analysis and plan](../product/archive/legacy_product/OOTB_v0_analysis_and_plan.md) (Phase 0.5.1), Issue #7. Конфигурация OOTB для Sprint 1 — [OOTB Radio preset v0](../product/archive/legacy_product/ootb_radio_preset_v0.md).
 
 ---
 
@@ -130,4 +130,4 @@ Derived from the OOTB plan and archive contents (no E220 firmware or raw test lo
 - [ ] Hardware setup, checklist, parameters table, gaps, and HAL/logging implications are complete.
 - [ ] No code from archive imported; PR adds only this documentation (and possibly references under `docs/`).
 
-This document is sufficient for future Radio v0 implementation and HAL design (e.g. `IRadio` under `docs/firmware/hal_contracts_v0.md` and `docs/protocols/ootb_radio_v0.md`).
+This document is sufficient for future Radio v0 implementation and HAL design (e.g. `IRadio` under `docs/product/archive/legacy_firmware/hal_contracts_v0.md` and `docs/product/archive/legacy_protocols/ootb_radio_v0.md`).
