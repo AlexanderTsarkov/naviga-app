@@ -7,10 +7,7 @@ import 'dart:typed_data';
 
 /// Parsed profiles list (radio IDs and user/role IDs).
 class ParsedProfilesList {
-  const ParsedProfilesList({
-    required this.radioIds,
-    required this.userIds,
-  });
+  const ParsedProfilesList({required this.radioIds, required this.userIds});
 
   final List<int> radioIds;
   final List<int> userIds;
@@ -66,7 +63,8 @@ class ParsedProfileRole extends ParsedProfile {
 class BleProfilesParser {
   BleProfilesParser._();
 
-  static int _readU32Le(List<int> d, int i) => (d[i] & 0xFF) |
+  static int _readU32Le(List<int> d, int i) =>
+      (d[i] & 0xFF) |
       ((d[i + 1] & 0xFF) << 8) |
       ((d[i + 2] & 0xFF) << 16) |
       ((d[i + 3] & 0xFF) << 24);
@@ -108,14 +106,16 @@ class BleProfilesParser {
       final label = bytes.length >= 9 + labelLen
           ? String.fromCharCodes(bytes.sublist(9, 9 + labelLen))
           : '';
-      return ParsedProfileRadio(ParsedRadioProfile(
-        profileId: profileId,
-        kind: kind,
-        channelSlot: channelSlot,
-        rateTier: rateTier,
-        txPowerBaselineStep: txPowerBaselineStep,
-        label: label,
-      ));
+      return ParsedProfileRadio(
+        ParsedRadioProfile(
+          profileId: profileId,
+          kind: kind,
+          channelSlot: channelSlot,
+          rateTier: rateTier,
+          txPowerBaselineStep: txPowerBaselineStep,
+          label: label,
+        ),
+      );
     }
     if (type == 1) {
       if (bytes.length < 11) return null;
@@ -124,12 +124,14 @@ class BleProfilesParser {
       final maxSilence10s = bytes[6] & 0xFF;
       final floatBits = _readU32Le(bytes, 7);
       final minDisplacementM = _uint32ToFloat(floatBits);
-      return ParsedProfileRole(ParsedRoleProfile(
-        roleId: roleId,
-        minIntervalSec: minIntervalSec,
-        maxSilence10s: maxSilence10s,
-        minDisplacementM: minDisplacementM,
-      ));
+      return ParsedProfileRole(
+        ParsedRoleProfile(
+          roleId: roleId,
+          minIntervalSec: minIntervalSec,
+          maxSilence10s: maxSilence10s,
+          minDisplacementM: minDisplacementM,
+        ),
+      );
     }
     return null;
   }

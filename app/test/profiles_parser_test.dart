@@ -8,9 +8,7 @@ void main() {
   group('BleProfilesParser.parseList', () {
     test('parses list with 1 radio and 3 user ids', () {
       // n_radio=1, radio_id=0, n_user=3, user_ids=0,1,2. LE.
-      final bytes = <int>[
-        1, 0, 0, 0, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0,
-      ];
+      final bytes = <int>[1, 0, 0, 0, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0];
       final result = BleProfilesParser.parseList(bytes);
       expect(result, isNotNull);
       expect(result!.radioIds, [0]);

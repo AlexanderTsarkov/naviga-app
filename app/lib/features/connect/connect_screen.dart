@@ -334,7 +334,10 @@ class _ProfilesCardState extends State<_ProfilesCard> {
           children: [
             Row(
               children: [
-                const Text('Profiles', style: TextStyle(fontWeight: FontWeight.w500)),
+                const Text(
+                  'Profiles',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
                 const SizedBox(width: 8),
                 TextButton(
                   onPressed: _loadList,
@@ -343,7 +346,13 @@ class _ProfilesCardState extends State<_ProfilesCard> {
               ],
             ),
             if (_loadError != null)
-              Text(_loadError!, style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12)),
+              Text(
+                _loadError!,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontSize: 12,
+                ),
+              ),
             if (_list != null) ...[
               Text(
                 'Radio: ${_list!.radioIds.join(', ')} · User: ${_list!.userIds.join(', ')}',
@@ -356,7 +365,7 @@ class _ProfilesCardState extends State<_ProfilesCard> {
                   FilledButton.tonal(
                     onPressed: () async {
                       final p = await widget.controller.readProfile(0, 0);
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       _showProfileSnackBar(context, 'Radio 0', p);
                     },
                     child: const Text('Read radio 0'),
@@ -364,7 +373,7 @@ class _ProfilesCardState extends State<_ProfilesCard> {
                   FilledButton.tonal(
                     onPressed: () async {
                       final p = await widget.controller.readProfile(1, 0);
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       _showProfileSnackBar(context, 'User 0', p);
                     },
                     child: const Text('Read user 0'),
@@ -378,14 +387,18 @@ class _ProfilesCardState extends State<_ProfilesCard> {
     );
   }
 
-  void _showProfileSnackBar(BuildContext context, String label, ParsedProfile? p) {
+  void _showProfileSnackBar(
+    BuildContext context,
+    String label,
+    ParsedProfile? p,
+  ) {
     final msg = p == null
         ? '$label: failed'
         : p is ParsedProfileRadio
-            ? '$label: ch=${p.data.channelSlot} rate=${p.data.rateTier}'
-            : p is ParsedProfileRole
-                ? '$label: interval=${p.data.minIntervalSec}s silence=${p.data.maxSilence10s}×10s'
-                : '$label: ok';
+        ? '$label: ch=${p.data.channelSlot} rate=${p.data.rateTier}'
+        : p is ParsedProfileRole
+        ? '$label: interval=${p.data.minIntervalSec}s silence=${p.data.maxSilence10s}×10s'
+        : '$label: ok';
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 }
