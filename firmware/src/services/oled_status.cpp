@@ -106,14 +106,14 @@ void OledStatus::render(const OledStatusData& data) {
   display_.print(" | MS:");
   display_.print(static_cast<unsigned>(data.max_silence_10s));
 
-  // Line 4: PosTx:<n> | StTx:<n>
+  // Line 4: PosTx:<n> | StTx:<n> — this node's sent position/status packets (#452: aggregate, not per-peer).
   display_.setCursor(0, 36);
   display_.print("PosTx:");
   display_.print(static_cast<unsigned long>(data.pos_tx));
   display_.print(" | StTx:");
   display_.print(static_cast<unsigned long>(data.st_tx));
 
-  // Line 5: PosRx:<n> | StRx:<n>
+  // Line 5: PosRx:<n> | StRx:<n> — accepted position/status from any peer (#452: aggregate).
   display_.setCursor(0, 46);
   display_.print("PosRx:");
   display_.print(static_cast<unsigned long>(data.pos_rx));
