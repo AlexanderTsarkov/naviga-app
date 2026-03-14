@@ -237,7 +237,7 @@ class _ScanStatusIndicator extends StatelessWidget {
   }
 }
 
-/// S04 #466: Minimal UI to view/edit self node_name when connected.
+/// S04 #466: Minimal UI to view/edit self node_name when connected (short label, max 12 chars).
 class _ConnectedDeviceNameCard extends StatelessWidget {
   const _ConnectedDeviceNameCard({required this.controller});
 
@@ -249,7 +249,7 @@ class _ConnectedDeviceNameCard extends StatelessWidget {
       child: ListTile(
         title: const Text('Device name'),
         subtitle: const Text(
-          'Tap Edit to change the name shown in discovery',
+          'Short label for discovery (max 12 characters)',
           style: TextStyle(fontSize: 12),
         ),
         trailing: TextButton(
@@ -268,17 +268,26 @@ class _ConnectedDeviceNameCard extends StatelessWidget {
       builder: (context) => _NodeNameEditDialog(initialName: name),
     );
     if (result == null || !context.mounted) return;
-    try {
-      await controller.writeNodeName(result);
-      if (!context.mounted) return;
+    final validated = ConnectController.validateAndTruncateNodeName(result);
+    if (validated == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Device name updated')),
+        const SnackBar(
+          content: Text('Only letters, digits, and - _ # = @ + allowed'),
+        ),
       );
+      return;
+    }
+    try {
+      await controller.writeNodeName(validated);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Device name updated')));
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update name: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to update name: $e')));
     }
   }
 }
@@ -314,10 +323,10 @@ class _NodeNameEditDialogState extends State<_NodeNameEditDialog> {
       content: TextField(
         controller: _controller,
         decoration: const InputDecoration(
-          hintText: 'Name (max 32 characters)',
+          hintText: 'Short label (max 12 characters)',
           border: OutlineInputBorder(),
         ),
-        maxLength: ConnectController.kNodeNameMaxBytes,
+        maxLength: ConnectController.kNodeNameMaxChars,
         autofocus: true,
       ),
       actions: [

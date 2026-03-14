@@ -442,12 +442,12 @@ void M1Runtime::update_ble(uint32_t now_ms) {
     const uint8_t* data = ble_transport_.node_name_write_request_data();
     const size_t len = ble_transport_.node_name_write_request_len();
     if (len >= 1u) {
-      const uint8_t name_len = (data[0] <= domain::kNodeTableNodeNameMaxLen)
+      const uint8_t name_len = (data[0] <= BleTransportCore::kMaxNodeNameLen)
           ? data[0]
-          : static_cast<uint8_t>(domain::kNodeTableNodeNameMaxLen);
+          : static_cast<uint8_t>(BleTransportCore::kMaxNodeNameLen);
       const size_t copy_len = (len >= 1u + name_len) ? name_len : (len - 1u);
       if (copy_len > 0) {
-        char name_buf[domain::kNodeTableNodeNameMaxLen + 1];
+        char name_buf[domain::kNodeTableNodeNameDisplayMaxBytes + 1];
         std::memcpy(name_buf, data + 1, copy_len);
         name_buf[copy_len] = '\0';
         node_table_.set_self_node_name(name_buf);
@@ -458,10 +458,10 @@ void M1Runtime::update_ble(uint32_t now_ms) {
     ble_transport_.clear_node_name_write_request();
   }
 
-  char node_name_buf[domain::kNodeTableNodeNameMaxLen + 1];
+  char node_name_buf[domain::kNodeTableNodeNameDisplayMaxBytes + 1];
   get_self_node_name(node_name_buf, sizeof(node_name_buf));
   const size_t name_len = std::min(
-      static_cast<size_t>(strnlen(node_name_buf, domain::kNodeTableNodeNameMaxLen)),
+      static_cast<size_t>(strnlen(node_name_buf, sizeof(node_name_buf))),
       static_cast<size_t>(BleTransportCore::kMaxNodeNameLen));
   uint8_t node_name_payload[1 + BleTransportCore::kMaxNodeNameLen];
   node_name_payload[0] = static_cast<uint8_t>(name_len);

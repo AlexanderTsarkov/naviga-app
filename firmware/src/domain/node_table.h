@@ -8,8 +8,10 @@
 namespace naviga {
 namespace domain {
 
-/** Max length for canonical node_name (self + remote); single field per product truth. */
+/** Max length for canonical node_name (self + remote); single field per product truth. Struct/persistence size. */
 constexpr size_t kNodeTableNodeNameMaxLen = 32;
+/** S04 #466: Short display label limit: max 24 UTF-8 bytes. Write path must not exceed this to avoid OOB. */
+constexpr size_t kNodeTableNodeNameDisplayMaxBytes = 24;
 
 /** Sentinel for snr_last when SNR is not available (e.g. E22 unsupported). Canon: link_metrics_v0. */
 constexpr int8_t kSnrLastNa = 127;

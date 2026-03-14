@@ -534,8 +534,9 @@ class ConnectController extends StateNotifier<ConnectState> {
 
   int? get lastNodeTableSnapshotId => _lastNodeTableSnapshotId;
 
-  /// S04 #466: Max length for self node_name (first-phase encoding).
-  static const int kNodeNameMaxBytes = 32;
+  /// S04 #466: Short display label — max 12 characters, max 24 UTF-8 bytes.
+  static const int kNodeNameMaxChars = 12;
+  static const int kNodeNameMaxBytes = 24;
 
   /// S04 #466: Read current self node_name over BLE. Encoding: 1-byte length + UTF-8. Returns empty string if not connected or characteristic missing.
   Future<String> readNodeName() async {
@@ -555,7 +556,7 @@ class ConnectController extends StateNotifier<ConnectState> {
     }
   }
 
-  /// S04 #466: Write self node_name over BLE. Encoding: 1-byte length + UTF-8 (max 32 bytes). Clamps name to kNodeNameMaxBytes.
+  /// S04 #466: Write self node_name over BLE. [name] must be validated and truncated (max 12 chars, 24 UTF-8 bytes, allowlist). Use [validateAndTruncateNodeName] first.
   Future<void> writeNodeName(String name) async {
     final char = _nodeNameCharacteristic;
     if (char == null || !char.properties.write) {
@@ -565,6 +566,60 @@ class ConnectController extends StateNotifier<ConnectState> {
     final len = bytes.length.clamp(0, kNodeNameMaxBytes);
     final payload = <int>[len, ...bytes.sublist(0, len)];
     await char.write(payload, withoutResponse: false);
+  }
+
+  /// S04 #466: Truncate to max 12 code points and max 24 UTF-8 bytes without splitting multibyte characters. Returns trimmed string.
+  static String truncateNodeNameToLimit(String name) {
+    final runes = name.runes.toList();
+    if (runes.isEmpty) return '';
+    final take = runes.length > kNodeNameMaxChars
+        ? kNodeNameMaxChars
+        : runes.length;
+    String s = String.fromCharCodes(runes.take(take));
+    List<int> bytes = utf8.encode(s);
+    if (bytes.length <= kNodeNameMaxBytes) return s;
+    // Truncate at UTF-8 code point boundary: drop trailing bytes that are continuation bytes (0x80–0xBF).
+    int end = kNodeNameMaxBytes;
+    while (end > 0 && (bytes[end - 1] & 0xC0) == 0x80) {
+      end--;
+    }
+    if (end == 0) return '';
+    return utf8.decode(bytes.sublist(0, end));
+  }
+
+  /// S04 #466: Allowed: Latin, Cyrillic, digits 0–9, symbols - _ # = @ +. Reject control, emoji, other.
+  static bool isNodeNameAllowed(String name) {
+    for (final rune in name.runes) {
+      if (rune < 0x20) return false; // control
+      if (rune <= 0x7F) {
+        // ASCII: 0-9, A-Z, a-z, - _ # = @ +
+        if ((rune >= 0x30 && rune <= 0x39) ||
+            (rune >= 0x41 && rune <= 0x5A) ||
+            (rune >= 0x61 && rune <= 0x7A) ||
+            rune == 0x2D ||
+            rune == 0x5F ||
+            rune == 0x23 ||
+            rune == 0x3D ||
+            rune == 0x40 ||
+            rune == 0x2B) {
+          continue;
+        }
+        return false;
+      }
+      // Cyrillic block U+0400..U+04FF
+      if (rune >= 0x0400 && rune <= 0x04FF) continue;
+      return false; // disallow emoji, other scripts, etc.
+    }
+    return true;
+  }
+
+  /// S04 #466: Validate and truncate for write. Returns null if invalid (disallowed chars); otherwise trimmed/truncated string.
+  static String? validateAndTruncateNodeName(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return '';
+    final truncated = truncateNodeNameToLimit(trimmed);
+    if (!isNodeNameAllowed(truncated)) return null;
+    return truncated;
   }
 
   /// S04 #465: Enable notify on NodeTable subscribe characteristic; only call after baseline load.

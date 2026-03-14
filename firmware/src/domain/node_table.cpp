@@ -168,9 +168,10 @@ bool NodeTable::set_self_node_name(const char* name) {
     return false;
   }
   NodeEntry& entry = entries_[static_cast<size_t>(self_index_)];
+  // S04 #466: Cap at display label size so we never write past node_name[24]; null at copy_len (0..24).
   const size_t len = std::min(
-      static_cast<size_t>(strnlen(name, kNodeTableNodeNameMaxLen)),
-      kNodeTableNodeNameMaxLen);
+      static_cast<size_t>(strnlen(name, kNodeTableNodeNameDisplayMaxBytes + 1)),
+      kNodeTableNodeNameDisplayMaxBytes);
   std::memcpy(entry.node_name, name, len);
   entry.node_name[len] = '\0';
   set_dirty();

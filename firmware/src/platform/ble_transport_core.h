@@ -44,8 +44,8 @@ class BleTransportCore {
   const uint8_t* subscription_update_data() const;
   size_t subscription_update_len() const;
 
-  /** S04 #466: Self node_name read/write. First-phase encoding: 1-byte length + UTF-8 payload (max 32 bytes). */
-  static constexpr size_t kMaxNodeNameLen = 32;
+  /** S04 #466: Self node_name short display label: 1-byte length + UTF-8 payload (max 24 bytes). */
+  static constexpr size_t kMaxNodeNameLen = 24;
   static constexpr size_t kMaxNodeNamePayloadLen = 1 + kMaxNodeNameLen;  // length byte + payload
 
   void set_node_name_value(const uint8_t* data, size_t len);
