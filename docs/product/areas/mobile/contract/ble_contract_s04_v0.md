@@ -109,6 +109,17 @@ Not a blind RAM dump; not aggressive early pruning. Broad product-facing contrac
 - **Remote human-readable aliases** stored only for the user/app (mobile-local) are **not** part of the BLE contract; they belong to future mobile-local persistence and UI logic. Do not mix that into #361 BLE contract.
 - **Remote local alias persistence** (on-node) is not in scope.
 
+### 9.1 node_name label constraints (S04 #466)
+
+`node_name` is a **short display label** for map/list/discovery. Implementations must enforce:
+
+- **Product/UI limit:** max **12 characters** (user-facing).
+- **Storage/transport ceiling:** max **24 bytes UTF-8** (BLE payload and node storage).
+- **Allowed characters:** Latin letters, Cyrillic letters, digits `0`–`9`, symbols: `-`, `_`, `#`, `=`, `@`, `+`.
+- **Disallowed:** emoji/pictograms, control characters, and any symbol not in the allowlist above.
+
+Rationale: compact readable label, predictable BLE/storage footprint, and a future radio-friendly upper bound.
+
 ---
 
 ## 10. Profiles contract

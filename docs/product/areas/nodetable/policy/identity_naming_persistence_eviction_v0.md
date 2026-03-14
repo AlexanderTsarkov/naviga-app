@@ -20,9 +20,10 @@ This document is the **canonical reference** for the S03 "Identity + Naming + Pe
 
 ## 2) Human-readable node name (node_name)
 
-- **node_name:** Human-readable name for a node.
+- **node_name:** Short display label for a node (map/list/discovery).
   - **S03 scope:** Self-only. Set via BLE, persisted in NVS on the device. Remote entries usually empty (no over-air propagation in S03).
   - **Sxx (future):** Remote node_name may be populated from over-air propagation (e.g. session or Informative); when present, it is the **authoritative** value.
+- **Label constraints (S04 #466):** **Product/UI limit:** max 12 characters. **Storage/transport ceiling:** max 24 bytes UTF-8. **Allowed:** Latin letters, Cyrillic letters, digits `0`–`9`, symbols `-`, `_`, `#`, `=`, `@`, `+`. **Disallowed:** emoji/pictograms, control characters, symbols outside the allowlist. Rationale: compact readable label, predictable BLE/storage footprint, future radio-friendly upper bound.
 - **Authority rule:** Node-reported name is **authoritative** and **replaces** any previously stored local phone name for that node. If the node (or self via BLE) provides a name, that value wins.
 - **UI fallback order:** `node_name` (authoritative) → local phone name (only if no authoritative name) → short_id.
 
