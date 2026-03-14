@@ -113,4 +113,42 @@ size_t BleTransportCore::subscription_update_len() const {
   return subscription_update_len_;
 }
 
+void BleTransportCore::set_node_name_value(const uint8_t* data, size_t len) {
+  const size_t copy_len = std::min(len, node_name_value_buf_.size());
+  if (data && copy_len > 0) {
+    std::memcpy(node_name_value_buf_.data(), data, copy_len);
+  }
+  node_name_value_len_ = copy_len;
+}
+
+const uint8_t* BleTransportCore::node_name_value_data() const {
+  return node_name_value_buf_.data();
+}
+
+size_t BleTransportCore::node_name_value_len() const {
+  return node_name_value_len_;
+}
+
+void BleTransportCore::set_node_name_write_request(const uint8_t* data, size_t len) {
+  const size_t copy_len = std::min(len, node_name_write_buf_.size());
+  if (data && copy_len > 0) {
+    std::memcpy(node_name_write_buf_.data(), data, copy_len);
+  }
+  node_name_write_len_ = copy_len;
+  has_node_name_write_ = true;
+}
+
+const uint8_t* BleTransportCore::node_name_write_request_data() const {
+  return node_name_write_buf_.data();
+}
+
+size_t BleTransportCore::node_name_write_request_len() const {
+  return node_name_write_len_;
+}
+
+void BleTransportCore::clear_node_name_write_request() {
+  has_node_name_write_ = false;
+  node_name_write_len_ = 0;
+}
+
 } // namespace naviga

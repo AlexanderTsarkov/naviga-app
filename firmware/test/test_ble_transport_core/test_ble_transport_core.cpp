@@ -71,11 +71,38 @@ void test_getters_exact_bytes() {
   }
 }
 
+// S04 #466: node_name read value and write request buffers.
+void test_node_name_value_and_write_request() {
+  BleTransportCore core;
+  const uint8_t read_payload[] = {3, 'A', 'B', 'C'};
+  core.set_node_name_value(read_payload, sizeof(read_payload));
+  TEST_ASSERT_EQUAL_UINT32(sizeof(read_payload), core.node_name_value_len());
+  const uint8_t* rd = core.node_name_value_data();
+  TEST_ASSERT_NOT_NULL(rd);
+  TEST_ASSERT_EQUAL_UINT8(3, rd[0]);
+  TEST_ASSERT_EQUAL_UINT8('A', rd[1]);
+
+  TEST_ASSERT_FALSE(core.has_node_name_write_request());
+  const uint8_t write_payload[] = {2, 'X', 'Y'};
+  core.set_node_name_write_request(write_payload, sizeof(write_payload));
+  TEST_ASSERT_TRUE(core.has_node_name_write_request());
+  TEST_ASSERT_EQUAL_UINT32(sizeof(write_payload), core.node_name_write_request_len());
+  const uint8_t* wr = core.node_name_write_request_data();
+  TEST_ASSERT_NOT_NULL(wr);
+  TEST_ASSERT_EQUAL_UINT8(2, wr[0]);
+  TEST_ASSERT_EQUAL_UINT8('X', wr[1]);
+
+  core.clear_node_name_write_request();
+  TEST_ASSERT_FALSE(core.has_node_name_write_request());
+  TEST_ASSERT_EQUAL_UINT32(0, core.node_name_write_request_len());
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_device_info_store_and_truncate);
   RUN_TEST(test_node_table_response_truncate);
   RUN_TEST(test_node_table_request_store);
   RUN_TEST(test_getters_exact_bytes);
+  RUN_TEST(test_node_name_value_and_write_request);
   return UNITY_END();
 }

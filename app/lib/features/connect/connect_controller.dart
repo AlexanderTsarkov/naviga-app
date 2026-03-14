@@ -20,6 +20,9 @@ const String kNavigaNodeTableSnapshotUuid =
     '6e4f0003-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaStatusUuid = '6e4f0007-1b9a-4c3a-9a3b-000000000001';
 
+/// S04 #466: Self node_name — read/write; first-phase encoding: 1-byte length + UTF-8 (max 32 bytes).
+const String kNavigaNodeNameUuid = '6e4f0008-1b9a-4c3a-9a3b-000000000001';
+
 /// S04 #464: Targeted read — write 8 bytes node_id (little-endian), read one 72-byte canon record.
 const String kNavigaTargetedReadUuid = '6e4f000c-1b9a-4c3a-9a3b-000000000001';
 
@@ -56,6 +59,7 @@ class ConnectController extends StateNotifier<ConnectState> {
   BluetoothCharacteristic? _deviceInfoCharacteristic;
   BluetoothCharacteristic? _nodeTableSnapshotCharacteristic;
   BluetoothCharacteristic? _statusCharacteristic;
+  BluetoothCharacteristic? _nodeNameCharacteristic;
   BluetoothCharacteristic? _nodeTableSubscribeCharacteristic;
   StreamSubscription<List<int>>? _nodeTableSubscribeSubscription;
   int? _lastNodeTableSnapshotId;
@@ -310,6 +314,10 @@ class ConnectController extends StateNotifier<ConnectState> {
         navigaService,
         Guid(kNavigaNodeTableSubscribeUuid),
       );
+      _nodeNameCharacteristic = _findCharacteristic(
+        navigaService,
+        Guid(kNavigaNodeNameUuid),
+      );
 
       if (_deviceInfoCharacteristic == null) {
         state = state.copyWith(
@@ -504,6 +512,7 @@ class ConnectController extends StateNotifier<ConnectState> {
     await _nodeTableSubscribeSubscription?.cancel();
     _nodeTableSubscribeSubscription = null;
     _nodeTableSubscribeCharacteristic = null;
+    _nodeNameCharacteristic = null;
     _deviceInfoCharacteristic = null;
     _nodeTableSnapshotCharacteristic = null;
     _statusCharacteristic = null;
@@ -524,6 +533,111 @@ class ConnectController extends StateNotifier<ConnectState> {
   }
 
   int? get lastNodeTableSnapshotId => _lastNodeTableSnapshotId;
+
+  /// S04 #466: Short display label — max 12 characters, max 24 UTF-8 bytes.
+  static const int kNodeNameMaxChars = 12;
+  static const int kNodeNameMaxBytes = 24;
+
+  /// S04 #466: Read current self node_name over BLE. Encoding: 1-byte length + UTF-8. Returns empty string if not connected or characteristic missing.
+  Future<String> readNodeName() async {
+    final char = _nodeNameCharacteristic;
+    if (char == null || !char.properties.read) {
+      return '';
+    }
+    try {
+      final payload = await char.read();
+      if (payload.isEmpty) return '';
+      final length = payload[0].clamp(0, kNodeNameMaxBytes);
+      if (length == 0 || payload.length < 1 + length) return '';
+      final bytes = payload.sublist(1, 1 + length);
+      return utf8.decode(bytes);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /// S04 #466: Write self node_name over BLE. [name] must be validated and truncated (max 12 chars, 24 UTF-8 bytes, allowlist). Use [validateAndTruncateNodeName] first.
+  Future<void> writeNodeName(String name) async {
+    final char = _nodeNameCharacteristic;
+    if (char == null || !char.properties.write) {
+      throw StateError('Node name characteristic not available for write');
+    }
+    final bytes = utf8.encode(name);
+    final len = bytes.length.clamp(0, kNodeNameMaxBytes);
+    final payload = <int>[len, ...bytes.sublist(0, len)];
+    await char.write(payload, withoutResponse: false);
+  }
+
+  /// S04 #466: Truncate to max 12 code points and max 24 UTF-8 bytes without splitting multibyte characters. Never throws; returns empty string on invalid UTF-8.
+  static String truncateNodeNameToLimit(String name) {
+    final runes = name.runes.toList();
+    if (runes.isEmpty) return '';
+    final take = runes.length > kNodeNameMaxChars
+        ? kNodeNameMaxChars
+        : runes.length;
+    String s = String.fromCharCodes(runes.take(take));
+    List<int> bytes = utf8.encode(s);
+    if (bytes.length <= kNodeNameMaxBytes) return s;
+    // Truncate at UTF-8 code point boundary: back up so we never leave a partial code point (continuation or incomplete start).
+    int end = kNodeNameMaxBytes;
+    while (end > 0) {
+      final b = bytes[end - 1];
+      if ((b & 0xC0) == 0x80) {
+        end--;
+        continue;
+      }
+      if (b >= 0xC0) {
+        end--;
+        continue;
+      }
+      break;
+    }
+    if (end == 0) return '';
+    try {
+      return utf8.decode(bytes.sublist(0, end));
+    } on FormatException {
+      return '';
+    }
+  }
+
+  /// S04 #466: Allowed: Latin, Cyrillic, digits 0–9, symbols - _ # = @ +. Reject control, emoji, other.
+  static bool isNodeNameAllowed(String name) {
+    for (final rune in name.runes) {
+      if (rune < 0x20) return false; // control
+      if (rune <= 0x7F) {
+        // ASCII: 0-9, A-Z, a-z, - _ # = @ +
+        if ((rune >= 0x30 && rune <= 0x39) ||
+            (rune >= 0x41 && rune <= 0x5A) ||
+            (rune >= 0x61 && rune <= 0x7A) ||
+            rune == 0x2D ||
+            rune == 0x5F ||
+            rune == 0x23 ||
+            rune == 0x3D ||
+            rune == 0x40 ||
+            rune == 0x2B) {
+          continue;
+        }
+        return false;
+      }
+      // Cyrillic block U+0400..U+04FF
+      if (rune >= 0x0400 && rune <= 0x04FF) continue;
+      return false; // disallow emoji, other scripts, etc.
+    }
+    return true;
+  }
+
+  /// S04 #466: Validate and truncate for write. Returns null if invalid (disallowed chars) or on any error; never throws.
+  static String? validateAndTruncateNodeName(String name) {
+    try {
+      final trimmed = name.trim();
+      if (trimmed.isEmpty) return '';
+      final truncated = truncateNodeNameToLimit(trimmed);
+      if (!isNodeNameAllowed(truncated)) return null;
+      return truncated;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// S04 #465: Enable notify on NodeTable subscribe characteristic; only call after baseline load.
   Future<void> _startNodeTableSubscription() async {

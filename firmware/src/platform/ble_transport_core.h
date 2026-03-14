@@ -44,6 +44,20 @@ class BleTransportCore {
   const uint8_t* subscription_update_data() const;
   size_t subscription_update_len() const;
 
+  /** S04 #466: Self node_name short display label: 1-byte length + UTF-8 payload (max 24 bytes). */
+  static constexpr size_t kMaxNodeNameLen = 24;
+  static constexpr size_t kMaxNodeNamePayloadLen = 1 + kMaxNodeNameLen;  // length byte + payload
+
+  void set_node_name_value(const uint8_t* data, size_t len);
+  const uint8_t* node_name_value_data() const;
+  size_t node_name_value_len() const;
+
+  void set_node_name_write_request(const uint8_t* data, size_t len);
+  bool has_node_name_write_request() const { return has_node_name_write_; }
+  const uint8_t* node_name_write_request_data() const;
+  size_t node_name_write_request_len() const;
+  void clear_node_name_write_request();
+
  private:
   std::array<uint8_t, kMaxDeviceInfoLen> device_info_{};
   size_t device_info_len_ = 0;
@@ -63,6 +77,13 @@ class BleTransportCore {
 
   std::array<uint8_t, kMaxSubscriptionBatchLen> subscription_update_buf_{};
   size_t subscription_update_len_ = 0;
+
+  std::array<uint8_t, kMaxNodeNamePayloadLen> node_name_value_buf_{};
+  size_t node_name_value_len_ = 0;
+
+  std::array<uint8_t, kMaxNodeNamePayloadLen> node_name_write_buf_{};
+  size_t node_name_write_len_ = 0;
+  bool has_node_name_write_ = false;
 };
 
 } // namespace naviga

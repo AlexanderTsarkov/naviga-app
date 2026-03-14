@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <cstring>
 
 #include "../../src/domain/node_table.h"
 #include "../../src/domain/node_table.cpp"
@@ -457,6 +458,61 @@ void test_nodetable_dirty_cleared_after_clear() {
   TEST_ASSERT_FALSE(table.is_dirty());
 }
 
+// S04 #466: set_self_node_name updates self entry and sets dirty.
+void test_set_self_node_name() {
+  NodeTable table;
+  table.set_expected_interval_s(18);
+  const uint64_t self_id = 0x1111111111111111ULL;
+  table.init_self(self_id, 1000);
+  table.clear_dirty();
+
+  TEST_ASSERT_TRUE(table.set_self_node_name("MyNode"));
+  TEST_ASSERT_TRUE(table.is_dirty());
+  NodeEntry e{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(self_id, &e));
+  TEST_ASSERT_TRUE(e.is_self);
+  TEST_ASSERT_EQUAL_STRING("MyNode", e.node_name);
+
+  table.clear_dirty();
+  TEST_ASSERT_TRUE(table.set_self_node_name(""));
+  TEST_ASSERT_TRUE(table.is_dirty());
+  TEST_ASSERT_TRUE(table.find_entry_for_test(self_id, &e));
+  TEST_ASSERT_EQUAL_STRING("", e.node_name);
+}
+
+// S04 #466: set_self_node_name returns false when self entry not present.
+void test_set_self_node_name_no_self() {
+  NodeTable table;
+  table.set_expected_interval_s(18);
+  TEST_ASSERT_FALSE(table.set_self_node_name("X"));
+  TEST_ASSERT_FALSE(table.set_self_node_name(nullptr));
+}
+
+// S04 #466: Max-length (24-byte) name is stored safely; no write past node_name[24].
+void test_set_self_node_name_max_length_safe() {
+  NodeTable table;
+  table.set_expected_interval_s(18);
+  table.init_self(1, 1000);
+  char name_24[25];
+  for (size_t i = 0; i < 24; ++i) {
+    name_24[i] = static_cast<char>('A' + (i % 26));
+  }
+  name_24[24] = '\0';
+  TEST_ASSERT_TRUE(table.set_self_node_name(name_24));
+  NodeEntry e{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(1, &e));
+  TEST_ASSERT_EQUAL(24, strnlen(e.node_name, 32));
+  TEST_ASSERT_EQUAL('\0', e.node_name[24]);
+  // Name longer than 24 is truncated to 24
+  char name_30[31];
+  for (size_t i = 0; i < 30; ++i) name_30[i] = 'x';
+  name_30[30] = '\0';
+  TEST_ASSERT_TRUE(table.set_self_node_name(name_30));
+  TEST_ASSERT_TRUE(table.find_entry_for_test(1, &e));
+  TEST_ASSERT_EQUAL(24, strnlen(e.node_name, 32));
+  TEST_ASSERT_EQUAL('\0', e.node_name[24]);
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_self_init_and_serialization);
@@ -479,5 +535,8 @@ int main(int argc, char** argv) {
   RUN_TEST(test_nodetable_snapshot_corrupt_returns_zero);
   RUN_TEST(test_nodetable_snapshot_old_version_rejected);
   RUN_TEST(test_nodetable_dirty_cleared_after_clear);
+  RUN_TEST(test_set_self_node_name);
+  RUN_TEST(test_set_self_node_name_no_self);
+  RUN_TEST(test_set_self_node_name_max_length_safe);
   return UNITY_END();
 }
