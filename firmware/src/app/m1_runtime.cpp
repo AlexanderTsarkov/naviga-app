@@ -437,6 +437,10 @@ void M1Runtime::update_ble(uint32_t now_ms) {
   }
   ble_status_bridge_.update_status(now_ms, gnss_snapshot_, ble_transport_);
 
+  // S04 #467: Profiles list and profile read (radio [0], user [0,1,2]; read by type+id).
+  ble_profiles_bridge_.update_profiles_list(ble_transport_);
+  ble_profiles_bridge_.update_profile_read(ble_transport_);
+
   // S04 #466: Apply pending self node_name write (from BLE callback) then refresh read buffer and advertising.
   if (ble_transport_.has_node_name_write_request()) {
     const uint8_t* data = ble_transport_.node_name_write_request_data();

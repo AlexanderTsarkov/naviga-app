@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../shared/logging.dart';
 import '../nodes/node_table_debug_hook.dart';
+import 'profiles_parser.dart';
 import 'status_parser.dart';
 
 const String kNavigaServiceUuid = '6e4f0001-1b9a-4c3a-9a3b-000000000001';
@@ -25,6 +26,12 @@ const String kNavigaNodeNameUuid = '6e4f0008-1b9a-4c3a-9a3b-000000000001';
 
 /// S04 #464: Targeted read — write 8 bytes node_id (little-endian), read one 72-byte canon record.
 const String kNavigaTargetedReadUuid = '6e4f000c-1b9a-4c3a-9a3b-000000000001';
+
+/// S04 #467: Profiles list — single read; payload: n_radio(1), radio_ids(4×n), n_user(1), user_ids(4×n). LE.
+const String kNavigaProfilesListUuid = '6e4f000a-1b9a-4c3a-9a3b-000000000001';
+
+/// S04 #467: Profile read — write request (1B type: 0=radio, 1=user; 4B id LE), then read response (one profile).
+const String kNavigaProfileReadUuid = '6e4f000b-1b9a-4c3a-9a3b-000000000001';
 
 /// S04 #465: NodeTable subscription — notify with batched full records (1 byte count + N×72 bytes).
 const String kNavigaNodeTableSubscribeUuid =
@@ -61,6 +68,8 @@ class ConnectController extends StateNotifier<ConnectState> {
   BluetoothCharacteristic? _statusCharacteristic;
   BluetoothCharacteristic? _nodeNameCharacteristic;
   BluetoothCharacteristic? _nodeTableSubscribeCharacteristic;
+  BluetoothCharacteristic? _profilesListCharacteristic;
+  BluetoothCharacteristic? _profileReadCharacteristic;
   StreamSubscription<List<int>>? _nodeTableSubscribeSubscription;
   int? _lastNodeTableSnapshotId;
 
@@ -317,6 +326,14 @@ class ConnectController extends StateNotifier<ConnectState> {
       _nodeNameCharacteristic = _findCharacteristic(
         navigaService,
         Guid(kNavigaNodeNameUuid),
+      );
+      _profilesListCharacteristic = _findCharacteristic(
+        navigaService,
+        Guid(kNavigaProfilesListUuid),
+      );
+      _profileReadCharacteristic = _findCharacteristic(
+        navigaService,
+        Guid(kNavigaProfileReadUuid),
       );
 
       if (_deviceInfoCharacteristic == null) {
@@ -666,6 +683,41 @@ class ConnectController extends StateNotifier<ConnectState> {
       throw StateError('NodeTableSnapshot characteristic missing');
     }
     return _fetchNodeTableSnapshot();
+  }
+
+  /// S04 #467: Read profiles list (radio [0], user [0,1,2]). Returns null if not connected or parse error.
+  Future<ParsedProfilesList?> fetchProfilesList() async {
+    final char = _profilesListCharacteristic;
+    if (char == null || !char.properties.read) return null;
+    try {
+      final payload = await char.read();
+      return BleProfilesParser.parseList(payload);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// S04 #467: Read one profile by type (0=radio, 1=user) and id. Write request then read response; short delay for FW to fill.
+  Future<ParsedProfile?> readProfile(int type, int id) async {
+    final char = _profileReadCharacteristic;
+    if (char == null || !char.properties.write || !char.properties.read) {
+      return null;
+    }
+    try {
+      final request = <int>[
+        type & 0xFF,
+        id & 0xFF,
+        (id >> 8) & 0xFF,
+        (id >> 16) & 0xFF,
+        (id >> 24) & 0xFF,
+      ];
+      await char.write(request, withoutResponse: false);
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+      final payload = await char.read();
+      return BleProfilesParser.parseProfileResponse(type, payload);
+    } catch (_) {
+      return null;
+    }
   }
 
   void _logServices(List<BluetoothService> services) {

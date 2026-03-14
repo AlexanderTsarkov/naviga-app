@@ -58,6 +58,25 @@ class BleTransportCore {
   size_t node_name_write_request_len() const;
   void clear_node_name_write_request();
 
+  /** S04 #467: Profiles list (single read). Payload: n_radio(1), radio_ids(4×n), n_user(1), user_ids(4×n). LE. */
+  static constexpr size_t kMaxProfilesListLen = 64;
+  void set_profiles_list(const uint8_t* data, size_t len);
+  const uint8_t* profiles_list_data() const;
+  size_t profiles_list_len() const;
+
+  /** S04 #467: Profile read request (1 byte type: 0=radio, 1=user; 4 bytes id LE). Set from GATT onWrite. */
+  static constexpr size_t kProfileReadRequestLen = 5;
+  void set_profile_read_request(uint8_t type, uint32_t id);
+  bool get_profile_read_request(uint8_t* type, uint32_t* id) const;
+  bool has_profile_read_request() const { return has_profile_read_request_; }
+  void clear_profile_read_request();
+
+  /** S04 #467: Profile read response (one serialized profile). Filled by bridge in update_ble. */
+  static constexpr size_t kMaxProfileReadResponseLen = 64;
+  void set_profile_read_response(const uint8_t* data, size_t len);
+  const uint8_t* profile_read_response_data() const;
+  size_t profile_read_response_len() const;
+
  private:
   std::array<uint8_t, kMaxDeviceInfoLen> device_info_{};
   size_t device_info_len_ = 0;
@@ -84,6 +103,16 @@ class BleTransportCore {
   std::array<uint8_t, kMaxNodeNamePayloadLen> node_name_write_buf_{};
   size_t node_name_write_len_ = 0;
   bool has_node_name_write_ = false;
+
+  std::array<uint8_t, kMaxProfilesListLen> profiles_list_buf_{};
+  size_t profiles_list_len_ = 0;
+
+  uint8_t profile_read_request_type_ = 0;
+  uint32_t profile_read_request_id_ = 0;
+  bool has_profile_read_request_ = false;
+
+  std::array<uint8_t, kMaxProfileReadResponseLen> profile_read_response_buf_{};
+  size_t profile_read_response_len_ = 0;
 };
 
 } // namespace naviga

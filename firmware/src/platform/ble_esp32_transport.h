@@ -60,6 +60,17 @@ class BleEsp32Transport : public IBleTransport {
   size_t node_name_write_request_len() const;
   void clear_node_name_write_request();
 
+  /** S04 #467: Profiles list (single read) and profile read (write request, read response). */
+  void set_profiles_list(const uint8_t* data, size_t len) override;
+  const uint8_t* profiles_list_data() const override;
+  size_t profiles_list_len() const override;
+  bool get_profile_read_request(uint8_t* type, uint32_t* id) const override;
+  bool has_profile_read_request() const override;
+  void set_profile_read_response(const uint8_t* data, size_t len) override;
+  const uint8_t* profile_read_response_data() const override;
+  size_t profile_read_response_len() const override;
+  void clear_profile_read_request() override;
+
   /** For GATT callbacks (same TU) to read/write core buffer. */
   BleTransportCore* core_for_callbacks() { return &core_; }
   /** Not used from BLE callback; request handling deferred to runtime loop. */

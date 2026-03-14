@@ -77,6 +77,53 @@ void MockBleTransport::set_subscription_update_payload(const uint8_t* data, size
 
 void MockBleTransport::send_subscription_update() {}
 
+void MockBleTransport::set_profiles_list(const uint8_t* data, size_t len) {
+  const size_t copy_len = std::min(len, sizeof(profiles_list_buf_));
+  if (data && copy_len > 0) {
+    std::memcpy(profiles_list_buf_, data, copy_len);
+  }
+  profiles_list_len_ = copy_len;
+}
+
+const uint8_t* MockBleTransport::profiles_list_data() const {
+  return profiles_list_buf_;
+}
+
+size_t MockBleTransport::profiles_list_len() const {
+  return profiles_list_len_;
+}
+
+bool MockBleTransport::get_profile_read_request(uint8_t* type, uint32_t* id) const {
+  if (!has_profile_read_request_ || !type || !id) return false;
+  *type = profile_read_request_type_;
+  *id = profile_read_request_id_;
+  return true;
+}
+
+bool MockBleTransport::has_profile_read_request() const {
+  return has_profile_read_request_;
+}
+
+void MockBleTransport::set_profile_read_response(const uint8_t* data, size_t len) {
+  const size_t copy_len = std::min(len, sizeof(profile_read_response_buf_));
+  if (data && copy_len > 0) {
+    std::memcpy(profile_read_response_buf_, data, copy_len);
+  }
+  profile_read_response_len_ = copy_len;
+}
+
+const uint8_t* MockBleTransport::profile_read_response_data() const {
+  return profile_read_response_buf_;
+}
+
+size_t MockBleTransport::profile_read_response_len() const {
+  return profile_read_response_len_;
+}
+
+void MockBleTransport::clear_profile_read_request() {
+  has_profile_read_request_ = false;
+}
+
 size_t MockBleTransport::device_info_len() const {
   return device_info_len_;
 }
