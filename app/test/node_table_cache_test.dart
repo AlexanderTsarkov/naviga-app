@@ -10,7 +10,7 @@ NodeRecordV1 _record(int nodeId) {
     shortId: nodeId & 0xFFFF,
     isSelf: false,
     posValid: true,
-    isGrey: false,
+    isStale: false,
     shortIdCollision: false,
     lastSeenAgeS: 10,
     latE7: 123,

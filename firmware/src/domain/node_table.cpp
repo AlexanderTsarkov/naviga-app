@@ -578,17 +578,16 @@ size_t NodeTable::get_snapshot_page_entries(uint16_t snapshot_id,
   return n;
 }
 
-bool NodeTable::find_entry_by_short_id(uint16_t short_id, NodeEntry* out) const {
+bool NodeTable::find_entry_by_node_id(uint64_t node_id, NodeEntry* out) const {
   if (!out) {
     return false;
   }
-  for (size_t i = 0; i < entries_.size(); ++i) {
-    if (entries_[i].in_use && entries_[i].short_id == short_id) {
-      *out = entries_[i];
-      return true;
-    }
+  const int idx = find_entry_index(node_id);
+  if (idx < 0) {
+    return false;
   }
-  return false;
+  *out = entries_[static_cast<size_t>(idx)];
+  return true;
 }
 
 void NodeTable::for_each_used_entry(std::function<void(const NodeEntry&)> fn) const {

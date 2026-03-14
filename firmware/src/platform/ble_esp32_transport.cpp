@@ -22,7 +22,7 @@ constexpr char kNodeNameUuid[] = "6e4f0008-1b9a-4c3a-9a3b-000000000001";
 constexpr char kNodeTableSubscribeUuid[] = "6e4f0009-1b9a-4c3a-9a3b-000000000001";
 constexpr char kProfilesListUuid[] = "6e4f000a-1b9a-4c3a-9a3b-000000000001";
 constexpr char kProfileReadUuid[] = "6e4f000b-1b9a-4c3a-9a3b-000000000001";
-/** S04 #464: Targeted read — write short_id (2 bytes), read one canon record. */
+/** S04 #464: Targeted read — write node_id (8 bytes LE), read one canon record. */
 constexpr char kTargetedReadUuid[] = "6e4f000c-1b9a-4c3a-9a3b-000000000001";
 constexpr size_t kMaxDisplayIdentityLen = 32;
 
@@ -118,14 +118,16 @@ class TargetedReadCallbacks : public BLECharacteristicCallbacks {
       return;
     }
     const std::string value = characteristic->getValue();
-    if (value.size() != 2) {
+    if (value.size() != 8) {
       return;
     }
     const auto* bytes = reinterpret_cast<const uint8_t*>(value.data());
-    const uint16_t short_id =
-        static_cast<uint16_t>(bytes[0] | (static_cast<uint16_t>(bytes[1]) << 8));
-    transport_->core_for_callbacks()->set_targeted_read_request(short_id);
-    transport_->handle_targeted_read_write(short_id);
+    uint64_t node_id = 0;
+    for (int i = 0; i < 8; ++i) {
+      node_id |= static_cast<uint64_t>(bytes[i]) << (8 * i);
+    }
+    transport_->core_for_callbacks()->set_targeted_read_request(node_id);
+    transport_->handle_targeted_read_write(node_id);
   }
 
  private:
@@ -277,12 +279,12 @@ void BleEsp32Transport::set_targeted_read_response(const uint8_t* data, size_t l
   core_.set_targeted_read_response(data, len);
 }
 
-void BleEsp32Transport::set_targeted_read_request(uint16_t short_id) {
-  core_.set_targeted_read_request(short_id);
+void BleEsp32Transport::set_targeted_read_request(uint64_t node_id) {
+  core_.set_targeted_read_request(node_id);
 }
 
-bool BleEsp32Transport::get_targeted_read_request(uint16_t* short_id) const {
-  return core_.get_targeted_read_request(short_id);
+bool BleEsp32Transport::get_targeted_read_request(uint64_t* node_id) const {
+  return core_.get_targeted_read_request(node_id);
 }
 
 const uint8_t* BleEsp32Transport::targeted_read_response_data() const {
@@ -299,9 +301,9 @@ void BleEsp32Transport::handle_node_table_write(uint16_t snapshot_id, uint16_t p
   }
 }
 
-void BleEsp32Transport::handle_targeted_read_write(uint16_t short_id) {
+void BleEsp32Transport::handle_targeted_read_write(uint64_t node_id) {
   if (request_handler_) {
-    request_handler_->on_targeted_read_request(short_id);
+    request_handler_->on_targeted_read_request(node_id);
   }
 }
 
@@ -347,12 +349,12 @@ void BleEsp32Transport::set_targeted_read_response(const uint8_t* data, size_t l
   core_.set_targeted_read_response(data, len);
 }
 
-void BleEsp32Transport::set_targeted_read_request(uint16_t short_id) {
-  core_.set_targeted_read_request(short_id);
+void BleEsp32Transport::set_targeted_read_request(uint64_t node_id) {
+  core_.set_targeted_read_request(node_id);
 }
 
-bool BleEsp32Transport::get_targeted_read_request(uint16_t* short_id) const {
-  return core_.get_targeted_read_request(short_id);
+bool BleEsp32Transport::get_targeted_read_request(uint64_t* node_id) const {
+  return core_.get_targeted_read_request(node_id);
 }
 
 const uint8_t* BleEsp32Transport::targeted_read_response_data() const {
@@ -365,7 +367,7 @@ size_t BleEsp32Transport::targeted_read_response_len() const {
 
 void BleEsp32Transport::handle_node_table_write(uint16_t /*snapshot_id*/, uint16_t /*page_index*/) {}
 
-void BleEsp32Transport::handle_targeted_read_write(uint16_t /*short_id*/) {}
+void BleEsp32Transport::handle_targeted_read_write(uint64_t /*node_id*/) {}
 
 bool BleEsp32Transport::connected() const {
   return connected_;

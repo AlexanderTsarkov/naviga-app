@@ -139,9 +139,9 @@ class NodeTable {
                                   size_t page_size,
                                   NodeEntry* out,
                                   size_t max_count) const;
-  /** Copy entry for short_id into *out. Returns true if found. For BLE targeted read. */
-  bool find_entry_by_short_id(uint16_t short_id, NodeEntry* out) const;
-  /** Whether entry is stale (grey) at snapshot_time_ms. For BLE export is_stale. */
+  /** Copy entry for node_id into *out. Returns true if found. For BLE targeted read. */
+  bool find_entry_by_node_id(uint64_t node_id, NodeEntry* out) const;
+  /** Whether entry is stale at snapshot_time_ms. For BLE export is_stale. */
   bool is_stale(const NodeEntry& entry, uint32_t snapshot_time_ms) const { return is_grey(entry, snapshot_time_ms); }
 
   // #418: persistence dirty tracking and restore.

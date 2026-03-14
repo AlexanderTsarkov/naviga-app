@@ -418,10 +418,10 @@ void M1Runtime::on_node_table_request(uint16_t snapshot_id, uint16_t page_index)
   (void)page_index;
 }
 
-void M1Runtime::on_targeted_read_request(uint16_t short_id) {
+void M1Runtime::on_targeted_read_request(uint64_t node_id) {
   const uint32_t now_ms = uptime_ms();
   ble_bridge_.update_targeted_read(now_ms, node_table_, ble_transport_);
-  (void)short_id;
+  (void)node_id;
 }
 
 void M1Runtime::update_ble(uint32_t now_ms) {

@@ -19,6 +19,8 @@ const String kNavigaDeviceInfoUuid = '6e4f0002-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaNodeTableSnapshotUuid =
     '6e4f0003-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaStatusUuid = '6e4f0007-1b9a-4c3a-9a3b-000000000001';
+/// S04 #464: Targeted read — write 8 bytes node_id (little-endian), read one 72-byte canon record.
+const String kNavigaTargetedReadUuid = '6e4f000c-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaNamePrefix = 'Naviga';
 
 /// S04 Slice 1: Naviga manufacturer ID for BLE contract version in advertising.
@@ -309,6 +311,7 @@ class ConnectController extends StateNotifier<ConnectState> {
           await nodeTableDebugRefreshOnConnect!();
         } catch (error) {
           logInfo('NodeTable: baseline refresh failed: $error');
+          // Non-fatal: connection stays valid; nodes list may be empty until retry.
         }
       }
     } catch (error) {
@@ -946,13 +949,14 @@ class NodeTableSnapshotHeader {
 }
 
 /// S04 #464: Canon BLE record (format ver 2). lastSeq excluded from BLE; use 0 when from BLE.
+/// Product-facing staleness is [isStale]. [isGrey] is a backward-compat getter for the same value.
 class NodeRecordV1 {
   const NodeRecordV1({
     required this.nodeId,
     required this.shortId,
     required this.isSelf,
     required this.posValid,
-    required this.isGrey,
+    required this.isStale,
     required this.shortIdCollision,
     required this.lastSeenAgeS,
     required this.latE7,
@@ -962,7 +966,6 @@ class NodeRecordV1 {
     required this.lastSeq,
     this.nodeName = '',
     this.snrLast,
-    this.isStale = false,
     this.hasPosFlags = false,
     this.posFlags = 0,
     this.hasSats = false,
@@ -983,7 +986,10 @@ class NodeRecordV1 {
   final int shortId;
   final bool isSelf;
   final bool posValid;
-  final bool isGrey;
+  /// Canon product-facing staleness (BLE baseline path). Prefer this over [isGrey].
+  final bool isStale;
+  /// Backward compat: same as [isStale]. Do not use for new BLE-baseline code.
+  bool get isGrey => isStale;
   final bool shortIdCollision;
   final int lastSeenAgeS;
   final int latE7;
@@ -995,7 +1001,6 @@ class NodeRecordV1 {
   final int lastSeq;
   final String nodeName;
   final int? snrLast;
-  final bool isStale;
   final bool hasPosFlags;
   final int posFlags;
   final bool hasSats;
@@ -1129,7 +1134,7 @@ class BleNodeTableParser {
           shortId: shortId,
           isSelf: isSelf,
           posValid: posValid,
-          isGrey: isStale,
+          isStale: isStale,
           shortIdCollision: shortIdCollision,
           lastSeenAgeS: lastSeenAgeS,
           latE7: latE7,
@@ -1139,7 +1144,6 @@ class BleNodeTableParser {
           lastSeq: 0,
           nodeName: nodeName,
           snrLast: snrLast,
-          isStale: isStale,
           hasPosFlags: hasPosFlags,
           posFlags: posFlags,
           hasSats: hasSats,

@@ -41,7 +41,7 @@ NodeRecordV1 _record({
     shortId: nodeId & 0xFFFF,
     isSelf: isSelf,
     posValid: false,
-    isGrey: false,
+    isStale: false,
     shortIdCollision: false,
     lastSeenAgeS: lastSeenAgeS,
     latE7: 0,

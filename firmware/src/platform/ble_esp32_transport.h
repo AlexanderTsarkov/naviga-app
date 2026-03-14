@@ -25,7 +25,7 @@ class IBleRequestHandler {
  public:
   virtual ~IBleRequestHandler() = default;
   virtual void on_node_table_request(uint16_t snapshot_id, uint16_t page_index) = 0;
-  virtual void on_targeted_read_request(uint16_t short_id) = 0;
+  virtual void on_targeted_read_request(uint64_t node_id) = 0;
 };
 
 class BleEsp32Transport : public IBleTransport {
@@ -44,8 +44,8 @@ class BleEsp32Transport : public IBleTransport {
   void set_status(const uint8_t* data, size_t len) override;
   bool get_node_table_request(uint16_t* snapshot_id, uint16_t* page_index) const override;
   void set_targeted_read_response(const uint8_t* data, size_t len) override;
-  void set_targeted_read_request(uint16_t short_id) override;
-  bool get_targeted_read_request(uint16_t* short_id) const override;
+  void set_targeted_read_request(uint64_t node_id) override;
+  bool get_targeted_read_request(uint64_t* node_id) const override;
   const uint8_t* targeted_read_response_data() const override;
   size_t targeted_read_response_len() const override;
   bool connected() const;
@@ -55,7 +55,7 @@ class BleEsp32Transport : public IBleTransport {
   BleTransportCore* core_for_callbacks() { return &core_; }
   /** S04 #464: Invoked from GATT onWrite so response is ready for next read. */
   void handle_node_table_write(uint16_t snapshot_id, uint16_t page_index);
-  void handle_targeted_read_write(uint16_t short_id);
+  void handle_targeted_read_write(uint64_t node_id);
 
  private:
   BleTransportCore core_;

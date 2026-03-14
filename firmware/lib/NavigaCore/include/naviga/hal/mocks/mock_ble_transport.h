@@ -14,8 +14,8 @@ class MockBleTransport : public IBleTransport {
   void set_status(const uint8_t* data, size_t len) override;
   bool get_node_table_request(uint16_t* snapshot_id, uint16_t* page_index) const override;
   void set_targeted_read_response(const uint8_t* data, size_t len) override;
-  void set_targeted_read_request(uint16_t short_id) override;
-  bool get_targeted_read_request(uint16_t* short_id) const override;
+  void set_targeted_read_request(uint64_t node_id) override;
+  bool get_targeted_read_request(uint64_t* node_id) const override;
   const uint8_t* targeted_read_response_data() const override;
   size_t targeted_read_response_len() const override;
 
@@ -39,7 +39,7 @@ class MockBleTransport : public IBleTransport {
 
   uint8_t targeted_read_buf_[72] = {0};
   size_t targeted_read_len_ = 0;
-  uint16_t req_targeted_short_id_ = 0;
+  uint64_t req_targeted_node_id_ = 0;
   bool has_targeted_request_ = false;
 };
 

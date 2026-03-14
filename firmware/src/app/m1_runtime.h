@@ -82,7 +82,7 @@ class M1Runtime : public IBleRequestHandler {
   GNSSFixState get_gnss_fix_state() const { return gnss_snapshot_.fix_state; }
 
   void on_node_table_request(uint16_t snapshot_id, uint16_t page_index) override;
-  void on_targeted_read_request(uint16_t short_id) override;
+  void on_targeted_read_request(uint64_t node_id) override;
 
  private:
   void handle_tx(uint32_t now_ms);

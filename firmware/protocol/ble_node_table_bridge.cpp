@@ -239,13 +239,13 @@ bool BleNodeTableBridge::update_node_table(uint32_t now_ms,
 void BleNodeTableBridge::update_targeted_read(uint32_t now_ms,
                                               domain::NodeTable& table,
                                               IBleTransport& transport) const {
-  uint16_t short_id = 0;
-  if (!transport.get_targeted_read_request(&short_id)) {
+  uint64_t node_id = 0;
+  if (!transport.get_targeted_read_request(&node_id)) {
     transport.set_targeted_read_response(nullptr, 0);
     return;
   }
   domain::NodeEntry entry{};
-  if (!table.find_entry_by_short_id(short_id, &entry)) {
+  if (!table.find_entry_by_node_id(node_id, &entry)) {
     transport.set_targeted_read_response(nullptr, 0);
     return;
   }

@@ -47,7 +47,7 @@ class BleNodeTableBridge {
 
   bool update_device_info(const DeviceInfoModel& model, IBleTransport& transport) const;
   bool update_node_table(uint32_t now_ms, domain::NodeTable& table, IBleTransport& transport) const;
-  /** Fill targeted-read response for one record by short_id. now_ms used for age/stale. No-op if not found (0-byte response). */
+  /** Fill targeted-read response for one record by node_id. now_ms used for age/stale. No-op if not found (0-byte response). */
   void update_targeted_read(uint32_t now_ms, domain::NodeTable& table, IBleTransport& transport) const;
   bool update_all(uint32_t now_ms,
                   const DeviceInfoModel& model,

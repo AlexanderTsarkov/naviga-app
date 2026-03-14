@@ -60,16 +60,16 @@ void BleTransportCore::set_targeted_read_response(const uint8_t* data, size_t le
   targeted_read_len_ = copy_len;
 }
 
-void BleTransportCore::set_targeted_read_request(uint16_t short_id) {
-  req_targeted_short_id_ = short_id;
+void BleTransportCore::set_targeted_read_request(uint64_t node_id) {
+  req_targeted_node_id_ = node_id;
   has_targeted_request_ = true;
 }
 
-bool BleTransportCore::get_targeted_read_request(uint16_t* short_id) const {
-  if (!has_targeted_request_ || !short_id) {
+bool BleTransportCore::get_targeted_read_request(uint64_t* node_id) const {
+  if (!has_targeted_request_ || !node_id) {
     return false;
   }
-  *short_id = req_targeted_short_id_;
+  *node_id = req_targeted_node_id_;
   return true;
 }
 

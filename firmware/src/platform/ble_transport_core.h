@@ -23,8 +23,8 @@ class BleTransportCore {
   bool get_node_table_request(uint16_t* snapshot_id, uint16_t* page_index) const;
 
   void set_targeted_read_response(const uint8_t* data, size_t len);
-  void set_targeted_read_request(uint16_t short_id);
-  bool get_targeted_read_request(uint16_t* short_id) const;
+  void set_targeted_read_request(uint64_t node_id);
+  bool get_targeted_read_request(uint64_t* node_id) const;
   const uint8_t* targeted_read_response_data() const;
   size_t targeted_read_response_len() const;
 
@@ -50,7 +50,7 @@ class BleTransportCore {
 
   std::array<uint8_t, kBleCanonRecordBytes> targeted_read_buf_{};
   size_t targeted_read_len_ = 0;
-  uint16_t req_targeted_short_id_ = 0;
+  uint64_t req_targeted_node_id_ = 0;
   bool has_targeted_request_ = false;
 };
 
