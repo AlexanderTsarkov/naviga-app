@@ -1,7 +1,7 @@
 # Current product state
 
-**Last updated:** 2026-03-12  
-**Iteration tag:** S03 execution (post–#416)  
+**Last updated:** 2026-03-14  
+**Iteration tag:** S04 planning (BLE canon-promotion and slicing prep)  
 **Scope:** Embedded-first (firmware → radio → domain → BLE bridge → mobile later).
 
 ---
@@ -67,6 +67,7 @@
 
 ## Next focus
 
+- **S04 (planning):** BLE WIP → canon review and promotion decision first; then implementation slicing; implementation work in later issues. Umbrella [#460](https://github.com/AlexanderTsarkov/naviga-app/issues/460); input artifact [ble_contract_s04_v0.md](wip/areas/mobile/ble_contract_s04_v0.md) (WIP, #361).
 - **Post–S03:** Docs cleanup and legacy migration [#278](https://github.com/AlexanderTsarkov/naviga-app/issues/278) (PR-1–PR-3 landed); planning track [#296](https://github.com/AlexanderTsarkov/naviga-app/issues/296) as needed.
 - Channel discovery / selection and AutoPower: post–V1-A ([#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175), [#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180)).
 
