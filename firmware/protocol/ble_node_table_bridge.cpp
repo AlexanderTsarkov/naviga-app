@@ -289,19 +289,39 @@ void BleNodeTableBridge::update_subscription_batch(uint32_t now_ms,
     if (pending_count_ > 0) {
       const uint32_t snapshot_time_ms = now_ms;
       std::array<uint8_t, BleTransportCore::kMaxSubscriptionBatchLen> buf{};
-      buf[0] = static_cast<uint8_t>(pending_count_);
+      std::array<uint64_t, kMaxBatchRecords> packed_ids{};
+      size_t packed_count = 0;
       size_t offset = 1;
-      for (size_t i = 0; i < pending_count_ && offset + kRecordBytesBle <= buf.size(); ++i) {
+      for (size_t i = 0; i < pending_count_ && packed_count < kMaxBatchRecords &&
+                          offset + kRecordBytesBle <= buf.size(); ++i) {
         domain::NodeEntry entry{};
         if (!table.find_entry_by_node_id(pending_ids_[i], &entry)) {
           continue;
         }
         pack_ble_record(entry, snapshot_time_ms, table, buf.data() + offset);
+        packed_ids[packed_count++] = pending_ids_[i];
         offset += kRecordBytesBle;
       }
-      const size_t payload_len = 1 + pending_count_ * kRecordBytesBle;
-      transport.set_subscription_update_payload(buf.data(), payload_len);
-      transport.send_subscription_update();
+      if (packed_count > 0) {
+        buf[0] = static_cast<uint8_t>(packed_count);
+        const size_t payload_len = 1 + packed_count * kRecordBytesBle;
+        transport.set_subscription_update_payload(buf.data(), payload_len);
+        transport.send_subscription_update();
+        size_t new_pending_count = 0;
+        for (size_t i = 0; i < pending_count_; ++i) {
+          bool was_packed = false;
+          for (size_t j = 0; j < packed_count; ++j) {
+            if (pending_ids_[i] == packed_ids[j]) {
+              was_packed = true;
+              break;
+            }
+          }
+          if (!was_packed) {
+            pending_ids_[new_pending_count++] = pending_ids_[i];
+          }
+        }
+        pending_count_ = new_pending_count;
+      }
     }
     prev_count_ = 0;
     table.for_each_used_entry([this](const domain::NodeEntry& e) {
@@ -311,13 +331,12 @@ void BleNodeTableBridge::update_subscription_batch(uint32_t now_ms,
         ++prev_count_;
       }
     });
-    pending_count_ = 0;
     last_emit_ms_ = now_ms;
     return;
   }
 
   table.for_each_used_entry([this, &table, now_ms](const domain::NodeEntry& e) {
-    if (pending_count_ >= kMaxBatchRecords) {
+    if (pending_count_ >= pending_ids_.size()) {
       return;
     }
     const uint32_t h = entry_hash(e);

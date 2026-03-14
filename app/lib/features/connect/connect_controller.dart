@@ -22,8 +22,10 @@ const String kNavigaStatusUuid = '6e4f0007-1b9a-4c3a-9a3b-000000000001';
 
 /// S04 #464: Targeted read — write 8 bytes node_id (little-endian), read one 72-byte canon record.
 const String kNavigaTargetedReadUuid = '6e4f000c-1b9a-4c3a-9a3b-000000000001';
+
 /// S04 #465: NodeTable subscription — notify with batched full records (1 byte count + N×72 bytes).
-const String kNavigaNodeTableSubscribeUuid = '6e4f0009-1b9a-4c3a-9a3b-000000000001';
+const String kNavigaNodeTableSubscribeUuid =
+    '6e4f0009-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaNamePrefix = 'Naviga';
 
 /// S04 Slice 1: Naviga manufacturer ID for BLE contract version in advertising.
@@ -64,7 +66,9 @@ class ConnectController extends StateNotifier<ConnectState> {
   static const _prefsLastDeviceKey = 'naviga.last_device_id';
 
   /// S04 #465: Register callback to apply incoming subscription updates (upserts). Call from NodesController.
-  void setSubscriptionUpdateCallback(void Function(List<NodeRecordV1> records)? callback) {
+  void setSubscriptionUpdateCallback(
+    void Function(List<NodeRecordV1> records)? callback,
+  ) {
     _subscriptionUpdateCallback = callback;
   }
 
@@ -530,7 +534,9 @@ class ConnectController extends StateNotifier<ConnectState> {
     try {
       await char.setNotifyValue(true);
       _nodeTableSubscribeSubscription?.cancel();
-      _nodeTableSubscribeSubscription = char.lastValueStream.listen((List<int> value) {
+      _nodeTableSubscribeSubscription = char.lastValueStream.listen((
+        List<int> value,
+      ) {
         final records = BleNodeTableParser.parseSubscriptionBatch(value);
         if (records.isNotEmpty && _subscriptionUpdateCallback != null) {
           _subscriptionUpdateCallback!(records);

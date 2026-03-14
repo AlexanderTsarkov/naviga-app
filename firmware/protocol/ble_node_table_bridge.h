@@ -73,7 +73,8 @@ class BleNodeTableBridge {
   };
   std::array<TrackedNode, kMaxTrackedNodes> prev_{};
   size_t prev_count_ = 0;
-  std::array<uint64_t, kMaxBatchRecords> pending_ids_{};
+  /** Pending changed node_ids (overflow retained for next batch). Emit cap is kMaxBatchRecords per notify. */
+  std::array<uint64_t, kMaxTrackedNodes> pending_ids_{};
   size_t pending_count_ = 0;
 };
 

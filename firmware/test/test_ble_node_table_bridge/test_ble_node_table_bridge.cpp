@@ -174,6 +174,57 @@ void test_subscription_batch_coalescing() {
   TEST_ASSERT_EQUAL_UINT64(0x2222222222222222ULL, read_u64_le(batch + 1));
 }
 
+/** S04 #465: Payload count and length reflect actual packed records only (no bogus trailing). */
+void test_subscription_batch_actual_packed_count() {
+  MockBleTransport transport;
+  BleNodeTableBridge bridge;
+  NodeTable table;
+  table.set_expected_interval_s(10);
+  table.init_self(0x1111111111111111ULL, 1000);
+  table.upsert_remote(0x2222222222222222ULL, true, 1000000, 2000000, 10, -65, 1, 1500);
+  table.upsert_remote(0x3333333333333333ULL, true, 2000000, 3000000, 5, -70, 2, 1600);
+
+  bridge.update_subscription_batch(1000, table, transport);
+  bridge.update_subscription_batch(1500, table, transport);
+  bridge.update_subscription_batch(3500, table, transport);
+
+  const size_t len = transport.subscription_update_len();
+  const uint8_t* batch = transport.subscription_update_data();
+  TEST_ASSERT_NOT_NULL(batch);
+  const uint8_t count = batch[0];
+  TEST_ASSERT_EQUAL_UINT8(2, count);
+  TEST_ASSERT_EQUAL(len, 1 + count * BleNodeTableBridge::kRecordBytesBle);
+}
+
+/** S04 #465: Overflow beyond batch cap is retained and emitted in next window. */
+void test_subscription_batch_overflow_retention() {
+  MockBleTransport transport;
+  BleNodeTableBridge bridge;
+  NodeTable table;
+  table.set_expected_interval_s(10);
+  table.init_self(0x1111111111111111ULL, 1000);
+  for (size_t i = 0; i < 7; ++i) {
+    table.upsert_remote(0x2000000000000000ULL + i, true,
+                        static_cast<int32_t>(1000000 + i), 2000000, 10, -65, 1,
+                        static_cast<uint32_t>(1500 + i));
+  }
+
+  bridge.update_subscription_batch(1000, table, transport);
+  bridge.update_subscription_batch(1500, table, transport);
+  bridge.update_subscription_batch(3500, table, transport);
+
+  const uint8_t* batch1 = transport.subscription_update_data();
+  TEST_ASSERT_NOT_NULL(batch1);
+  TEST_ASSERT_EQUAL_UINT8(5, batch1[0]);
+  TEST_ASSERT_EQUAL(1 + 5 * BleNodeTableBridge::kRecordBytesBle, transport.subscription_update_len());
+
+  bridge.update_subscription_batch(5500, table, transport);
+  const uint8_t* batch2 = transport.subscription_update_data();
+  TEST_ASSERT_NOT_NULL(batch2);
+  TEST_ASSERT_EQUAL_UINT8(2, batch2[0]);
+  TEST_ASSERT_EQUAL(1 + 2 * BleNodeTableBridge::kRecordBytesBle, transport.subscription_update_len());
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_device_info_payload);
@@ -181,5 +232,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_paging_overflow);
   RUN_TEST(test_stale_snapshot_fallback_freshness);
   RUN_TEST(test_subscription_batch_coalescing);
+  RUN_TEST(test_subscription_batch_actual_packed_count);
+  RUN_TEST(test_subscription_batch_overflow_retention);
   return UNITY_END();
 }

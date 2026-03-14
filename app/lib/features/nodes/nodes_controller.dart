@@ -20,8 +20,10 @@ final nodesControllerProvider =
     StateNotifierProvider<NodesController, NodesState>((ref) {
       final repository = ref.read(nodeTableRepositoryProvider);
       final connectController = ref.read(connectControllerProvider.notifier);
-      final controller = NodesController(repository,
-          connectController: connectController);
+      final controller = NodesController(
+        repository,
+        connectController: connectController,
+      );
       ref.listen<ConnectState>(connectControllerProvider, (previous, next) {
         unawaited(controller.handleConnectionChange(previous, next));
       });
@@ -35,13 +37,17 @@ final nodesControllerProvider =
     });
 
 class NodesController extends StateNotifier<NodesState> {
-  NodesController(this._repository,
-      {ConnectController? connectController, NodeTableCacheStore? cacheStore})
-    : _cacheStore = cacheStore ?? NodeTableCacheStore(),
-      _connectController = connectController,
-      super(NodesState.initial()) {
+  NodesController(
+    this._repository, {
+    ConnectController? connectController,
+    NodeTableCacheStore? cacheStore,
+  }) : _cacheStore = cacheStore ?? NodeTableCacheStore(),
+       _connectController = connectController,
+       super(NodesState.initial()) {
     nodeTableDebugRefreshOnConnect = refresh;
-    _connectController?.setSubscriptionUpdateCallback(_applySubscriptionUpdates);
+    _connectController?.setSubscriptionUpdateCallback(
+      _applySubscriptionUpdates,
+    );
   }
 
   final NodeTableRepository _repository;
@@ -61,12 +67,9 @@ class NodesController extends StateNotifier<NodesState> {
     final merged = byId.values.toList();
     final sorted = _sortRecords(merged);
     final self = _findSelf(sorted);
-    state = state.copyWith(
-      records: merged,
-      recordsSorted: sorted,
-      self: self,
-    );
+    state = state.copyWith(records: merged, recordsSorted: sorted, self: self);
   }
+
   String? _connectedDeviceId;
   String? _lastRestoredDeviceId;
 
