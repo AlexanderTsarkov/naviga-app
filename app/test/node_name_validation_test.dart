@@ -79,5 +79,40 @@ void main() {
       expect(ConnectController.validateAndTruncateNodeName('Node!'), null);
       expect(ConnectController.validateAndTruncateNodeName('Node😀'), null);
     });
+
+    test(
+      'truncateNodeNameToLimit: 24-byte boundary never leaves invalid UTF-8',
+      () {
+        // 11 Cyrillic (22 bytes) + € U+20AC (3 bytes) = 25 bytes; truncate at 24 must not split
+        const input = 'абвгдежзийк\u20AC';
+        expect(utf8.encode(input).length, 25);
+        final truncated = ConnectController.truncateNodeNameToLimit(input);
+        expect(utf8.encode(truncated).length, lessThanOrEqualTo(24));
+        expect(() => utf8.decode(utf8.encode(truncated)), returnsNormally);
+      },
+    );
+
+    test('validateAndTruncateNodeName: 11 Cyrillic + emoji never throws', () {
+      const input = 'абвгдежзийк😀';
+      expect(
+        () => ConnectController.validateAndTruncateNodeName(input),
+        returnsNormally,
+      );
+    });
+
+    test('validateAndTruncateNodeName: never throws for any input', () {
+      expect(
+        () => ConnectController.validateAndTruncateNodeName('Valid'),
+        returnsNormally,
+      );
+      expect(
+        () => ConnectController.validateAndTruncateNodeName('Нода!'),
+        returnsNormally,
+      );
+      expect(
+        () => ConnectController.validateAndTruncateNodeName(''),
+        returnsNormally,
+      );
+    });
   });
 }

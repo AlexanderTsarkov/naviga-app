@@ -568,7 +568,7 @@ class ConnectController extends StateNotifier<ConnectState> {
     await char.write(payload, withoutResponse: false);
   }
 
-  /// S04 #466: Truncate to max 12 code points and max 24 UTF-8 bytes without splitting multibyte characters. Returns trimmed string.
+  /// S04 #466: Truncate to max 12 code points and max 24 UTF-8 bytes without splitting multibyte characters. Never throws; returns empty string on invalid UTF-8.
   static String truncateNodeNameToLimit(String name) {
     final runes = name.runes.toList();
     if (runes.isEmpty) return '';
@@ -578,13 +578,26 @@ class ConnectController extends StateNotifier<ConnectState> {
     String s = String.fromCharCodes(runes.take(take));
     List<int> bytes = utf8.encode(s);
     if (bytes.length <= kNodeNameMaxBytes) return s;
-    // Truncate at UTF-8 code point boundary: drop trailing bytes that are continuation bytes (0x80–0xBF).
+    // Truncate at UTF-8 code point boundary: back up so we never leave a partial code point (continuation or incomplete start).
     int end = kNodeNameMaxBytes;
-    while (end > 0 && (bytes[end - 1] & 0xC0) == 0x80) {
-      end--;
+    while (end > 0) {
+      final b = bytes[end - 1];
+      if ((b & 0xC0) == 0x80) {
+        end--;
+        continue;
+      }
+      if (b >= 0xC0) {
+        end--;
+        continue;
+      }
+      break;
     }
     if (end == 0) return '';
-    return utf8.decode(bytes.sublist(0, end));
+    try {
+      return utf8.decode(bytes.sublist(0, end));
+    } on FormatException {
+      return '';
+    }
   }
 
   /// S04 #466: Allowed: Latin, Cyrillic, digits 0–9, symbols - _ # = @ +. Reject control, emoji, other.
@@ -613,13 +626,17 @@ class ConnectController extends StateNotifier<ConnectState> {
     return true;
   }
 
-  /// S04 #466: Validate and truncate for write. Returns null if invalid (disallowed chars); otherwise trimmed/truncated string.
+  /// S04 #466: Validate and truncate for write. Returns null if invalid (disallowed chars) or on any error; never throws.
   static String? validateAndTruncateNodeName(String name) {
-    final trimmed = name.trim();
-    if (trimmed.isEmpty) return '';
-    final truncated = truncateNodeNameToLimit(trimmed);
-    if (!isNodeNameAllowed(truncated)) return null;
-    return truncated;
+    try {
+      final trimmed = name.trim();
+      if (trimmed.isEmpty) return '';
+      final truncated = truncateNodeNameToLimit(trimmed);
+      if (!isNodeNameAllowed(truncated)) return null;
+      return truncated;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// S04 #465: Enable notify on NodeTable subscribe characteristic; only call after baseline load.
