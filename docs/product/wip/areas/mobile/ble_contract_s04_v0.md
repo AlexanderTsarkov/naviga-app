@@ -22,15 +22,15 @@ S03 stabilization is the gate for detailed BLE design. This WIP records product 
 
 ### 3.1 Discovery / advertising
 
-First BLE phase includes enough for app discovery and filtering: Naviga identity/service marker, display identity (NodeName + ShortID when NodeName is non-empty; ShortID only when NodeName is empty), compatibility/version marker as part of discovery/versioning, and BLE RSSI for app-side sorting/proximity.
+First BLE phase includes enough for app discovery and filtering: Naviga identity/service marker, BLE contract version marker (see §11), display identity (NodeName + ShortID when NodeName is non-empty; ShortID only when NodeName is empty), and BLE RSSI for app-side sorting/proximity.
 
 ### 3.2 NodeTable read contract
 
-App supports full snapshot on connect; paging is built in from day one; targeted read of a specific node/record exists. First version is not over-optimized.
+Initial state is reconstructed through explicit reads, including paged NodeTable reads. App supports full snapshot (paged), targeted read of a specific node/record, and baseline read; subscription is enabled only after baseline loading is complete.
 
 ### 3.3 NodeTable update contract
 
-App can subscribe to updates; updates are batched/coalesced, not necessarily one-by-one; app may explicitly request refresh for a specific record. Exact batching interval is an open question. Not every ticking field triggers updates (e.g. uptime-like fields do not by themselves trigger push).
+App can subscribe to updates after baseline is loaded; updates are batched/coalesced with a fixed 2-second window (post-baseline only). Update payload is full changed record; no snapshot tokens or revision fences in first phase. Reconnect is treated as fresh connect (baseline again, then resubscribe); no missed-update replay or delta recovery in first phase.
 
 ### 3.4 Authoritative node name contract
 
@@ -82,21 +82,23 @@ Not a blind RAM dump; not aggressive early pruning. Broad product-facing contrac
 
 ## 7. NodeTable read contract
 
-- App supports **full snapshot on connect**.
-- **Paging** is built in from day one.
-- **Targeted read** of a specific node/record exists.
+- **Lifecycle:** Connect → baseline read / initial explicit reads → paged NodeTable snapshot read → only then enable subscription.
+- Initial state is reconstructed through **explicit reads**, including paged NodeTable reads.
+- **Subscription is enabled only after baseline loading is complete.**
+- App supports **full snapshot** (paged), **targeted read** of a specific node/record, and baseline read.
 - Do not over-optimize the first version.
 
 ---
 
 ## 8. NodeTable update contract
 
-- App can **subscribe to updates**.
-- Updates are **batched/coalesced**, not necessarily pushed one-by-one.
-- App may **explicitly request refresh** for a specific record.
-- **Update model:** When a record changes and is delivered over the BLE update/subscription path, the node sends the **full changed record**. First phase does **not** use changed-field masks or partial field delta encoding. Targeted read remains available as a separate operation. Rationale: BLE is not the constrained LoRa channel; simplicity and consistency are preferred over premature optimization.
-- Exact batching interval remains an **open question**.
+- App can **subscribe to updates** only after baseline loading is complete.
+- Updates are **batched/coalesced** rather than pushed immediately one-by-one. First-phase batching uses a **fixed 2-second coalescing window**. Within one window, multiple changes across records are accumulated and delivered together; if the same record changes multiple times within the same window, only the **latest full state** for that record is included. The batching window applies to **post-baseline updates**, not to initial state acquisition.
+- App may **explicitly request refresh** for a specific record (targeted read remains a separate operation).
+- **Update model:** When a record changes and is delivered over the BLE update/subscription path, the node sends the **full changed record**. First phase does **not** use changed-field masks or partial field delta encoding. Rationale: BLE is not the constrained LoRa channel; simplicity and consistency are preferred over premature optimization.
 - Not every ticking field triggers updates (e.g. uptime-like fields do not by themselves trigger push).
+- **First phase does not require** snapshot tokens, revision markers, or additional consistency fences for baseline reconstruction. Any changes that occur during baseline loading are expected to arrive shortly afterward through the normal batched subscription update flow.
+- **Reconnect:** If BLE connection is lost and later re-established, the app treats the new connection as a **fresh session**. It performs baseline reads again, including paged NodeTable snapshot reads, and only then re-enables subscription for subsequent batched updates. First phase does **not** require missed-update replay or delta recovery.
 
 ---
 
@@ -129,21 +131,23 @@ Contract: list / read / select / write / create / delete. First mobile implement
 
 ## 11. Versioning / compatibility
 
-Discovery must include **Naviga** identity/service marker and a **BLE contract version marker** (see §6). First-phase compatibility behavior:
+BLE compatibility is determined by the **dedicated BLE contract version**, not by firmware version and not by mobile app release version. Discovery must include **Naviga** identity/service marker and a **BLE contract version marker** (see §6). The BLE contract version uses **major.minor** format. **Firmware version**, **mobile app version**, and **BLE contract version** evolve independently.
 
-- **Compatible** (app and node BLE contract versions match): normal connect allowed.
-- **Incompatible newer node / older app** (node has newer BLE contract version than app supports): node remains **visible** in the app list; app marks it **incompatible**; normal connect and normal data workflow are **not allowed**; user should be directed to **update the app**.
-- **Incompatible older node / newer app** (node has older BLE contract version than app supports): node remains **visible** in the app list; app marks it **incompatible**; normal connect and normal data workflow are **not allowed**; intended direction is **firmware update for the node**. Firmware update flow is not implemented yet; this is the stated future path.
+**First-phase compatibility rule:** Normal connect is allowed **only on exact BLE contract version match** (both major and minor equal).
 
-**Out of scope / open for first phase:** exact compatibility matrix math; diagnostic/read-only fallback behavior; exact firmware update transport/OTA design.
+**Version bump discipline:** Firmware version bumps on firmware releases; app version bumps on app releases; BLE contract version bumps **only** when BLE-visible contract semantics change. If BLE-visible contract semantics do not change, BLE contract version stays unchanged even if firmware or app versions advance.
+
+**When versions do not match (any mismatch):** Node remains **visible** in discovery; app marks it **incompatible**; normal connect and normal data workflow are **not allowed**. Direction: **newer node / older app** → direct user to **update the app**; **older node / newer app** → intended direction is **firmware update for the node** (firmware update flow not implemented yet; stated future path).
+
+**Out of scope for first phase:** Exact firmware update transport/OTA design; diagnostic/read-only fallback behavior for incompatible versions (optional future).
 
 ---
 
 ## 12. Open questions
 
-- Exact **batching interval** for NodeTable updates.
-- Final **GATT/UUID** layout (out of scope for this WIP; to be defined in a later design step).
-- Final **byte-level payload format** (out of scope for this WIP).
+- Final **GATT/UUID** layout (to be defined in a later design step).
+- Final **byte-level payload format** (to be defined in a later design step).
+- Optional future: limited **diagnostic/read-only fallback** for incompatible BLE contract versions.
 
 ---
 
@@ -165,7 +169,9 @@ Promotion to canon becomes appropriate when:
 
 - Contract blocks (discovery, NodeTable read/update, node name, profiles) are agreed.
 - Field-set rule is agreed.
-- Open questions are explicit.
+- Lifecycle is explicit: baseline read first, then subscribe; reconnect behaves as fresh connect.
+- First-phase compatibility rule (exact BLE contract version match) is explicit.
+- Remaining open questions are limited to later design layers (GATT/UUID, byte format, optional fallback), not unresolved product behavior.
 - Implementation tasks can be sliced without requiring new product decisions.
 
 Until then, this document remains WIP and is the working design artifact for the #361 track.
