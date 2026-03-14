@@ -5,6 +5,10 @@
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
+#include <BLEAdvertising.h>
+
+#include <cstring>
+#include <string>
 
 namespace naviga {
 
@@ -14,6 +18,11 @@ constexpr char kServiceUuid[] = "6e4f0001-1b9a-4c3a-9a3b-000000000001";
 constexpr char kDeviceInfoUuid[] = "6e4f0002-1b9a-4c3a-9a3b-000000000001";
 constexpr char kNodeTableSnapshotUuid[] = "6e4f0003-1b9a-4c3a-9a3b-000000000001";
 constexpr char kStatusUuid[] = "6e4f0007-1b9a-4c3a-9a3b-000000000001";
+constexpr char kNodeNameUuid[] = "6e4f0008-1b9a-4c3a-9a3b-000000000001";
+constexpr char kNodeTableSubscribeUuid[] = "6e4f0009-1b9a-4c3a-9a3b-000000000001";
+constexpr char kProfilesListUuid[] = "6e4f000a-1b9a-4c3a-9a3b-000000000001";
+constexpr char kProfileReadUuid[] = "6e4f000b-1b9a-4c3a-9a3b-000000000001";
+constexpr size_t kMaxDisplayIdentityLen = 32;
 
 class NavigaServerCallbacks : public BLEServerCallbacks {
  public:
@@ -105,6 +114,25 @@ class StatusCallbacks : public BLECharacteristicCallbacks {
   BleTransportCore* core_ = nullptr;
 };
 
+class StubReadCallbacks : public BLECharacteristicCallbacks {
+ public:
+  void onRead(BLECharacteristic* characteristic) override {
+    if (characteristic) {
+      characteristic->setValue("");
+    }
+  }
+};
+
+class StubReadWriteCallbacks : public BLECharacteristicCallbacks {
+ public:
+  void onRead(BLECharacteristic* characteristic) override {
+    if (characteristic) {
+      characteristic->setValue("");
+    }
+  }
+  void onWrite(BLECharacteristic* /*characteristic*/) override {}
+};
+
 } // namespace
 
 BleEsp32Transport::BleEsp32Transport() = default;
@@ -129,11 +157,63 @@ void BleEsp32Transport::init() {
   status_char_ = service_->createCharacteristic(kStatusUuid, BLECharacteristic::PROPERTY_READ);
   status_char_->setCallbacks(new StatusCallbacks(&core_));
 
+  node_name_char_ = service_->createCharacteristic(
+      kNodeNameUuid,
+      BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
+  node_name_char_->setCallbacks(new StubReadWriteCallbacks());
+
+  node_table_subscribe_char_ = service_->createCharacteristic(
+      kNodeTableSubscribeUuid,
+      BLECharacteristic::PROPERTY_NOTIFY);
+  node_table_subscribe_char_->setCallbacks(new StubReadCallbacks());
+
+  profiles_list_char_ = service_->createCharacteristic(kProfilesListUuid, BLECharacteristic::PROPERTY_READ);
+  profiles_list_char_->setCallbacks(new StubReadCallbacks());
+
+  profile_read_char_ = service_->createCharacteristic(kProfileReadUuid, BLECharacteristic::PROPERTY_READ);
+  profile_read_char_->setCallbacks(new StubReadCallbacks());
+
   service_->start();
 
   advertising_ = BLEDevice::getAdvertising();
   advertising_->addServiceUUID(kServiceUuid);
   advertising_->setScanResponse(true);
+  BLEAdvertisementData scan_resp;
+  scan_resp.setName("Naviga");
+  const uint8_t manu[] = {
+      static_cast<uint8_t>(kBleNavigaManufacturerId & 0xFF),
+      static_cast<uint8_t>(kBleNavigaManufacturerId >> 8),
+      kBleContractVersionMajor,
+      kBleContractVersionMinor
+  };
+  scan_resp.setManufacturerData(std::string(reinterpret_cast<const char*>(manu), sizeof(manu)));
+  advertising_->setScanResponseData(scan_resp);
+  advertising_->start();
+}
+
+void BleEsp32Transport::set_advertising_content(const char* display_identity,
+                                                uint8_t version_major,
+                                                uint8_t version_minor) {
+  if (!advertising_ || !display_identity) {
+    return;
+  }
+  char name_buf[kMaxDisplayIdentityLen];
+  const size_t len = std::strlen(display_identity);
+  const size_t copy_len = std::min(len, kMaxDisplayIdentityLen - 1);
+  std::memcpy(name_buf, display_identity, copy_len);
+  name_buf[copy_len] = '\0';
+
+  advertising_->stop();
+  BLEAdvertisementData scan_resp;
+  scan_resp.setName(std::string(name_buf));
+  const uint8_t manu[] = {
+      static_cast<uint8_t>(kBleNavigaManufacturerId & 0xFF),
+      static_cast<uint8_t>(kBleNavigaManufacturerId >> 8),
+      version_major,
+      version_minor
+  };
+  scan_resp.setManufacturerData(std::string(reinterpret_cast<const char*>(manu), sizeof(manu)));
+  advertising_->setScanResponseData(scan_resp);
   advertising_->start();
 }
 
@@ -170,6 +250,10 @@ namespace naviga {
 BleEsp32Transport::BleEsp32Transport() = default;
 
 void BleEsp32Transport::init() {}
+
+void BleEsp32Transport::set_advertising_content(const char* /*display_identity*/,
+                                                 uint8_t /*version_major*/,
+                                                 uint8_t /*version_minor*/) {}
 
 void BleEsp32Transport::set_device_info(const uint8_t* data, size_t len) {
   core_.set_device_info(data, len);

@@ -20,8 +20,11 @@ const String kNavigaNodeTableSnapshotUuid =
     '6e4f0003-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaStatusUuid = '6e4f0007-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaNamePrefix = 'Naviga';
-const int? kNavigaManufacturerId =
-    null; // TODO: set when manufacturer id is known
+/// S04 Slice 1: Naviga manufacturer ID for BLE contract version in advertising.
+const int kNavigaManufacturerId = 0x6E4F;
+/// S04 Slice 1: Expected BLE contract version (exact match required for normal connect).
+const int kBLEContractVersionMajor = 1;
+const int kBLEContractVersionMinor = 0;
 const bool kDebugFetchNodeTableOnConnect = false;
 
 final connectControllerProvider =
@@ -163,6 +166,15 @@ class ConnectController extends StateNotifier<ConnectState> {
   Future<void> connectToDevice(NavigaScanDevice device) async {
     if (state.connectionStatus == ConnectionStatus.connecting ||
         state.connectionStatus == ConnectionStatus.disconnecting) {
+      return;
+    }
+
+    if (!_isBleContractVersionCompatible(device)) {
+      state = state.copyWith(
+        lastError:
+            'Incompatible BLE version (update app or firmware). '
+            'Expected $kBLEContractVersionMajor.$kBLEContractVersionMinor.',
+      );
       return;
     }
 
@@ -519,17 +531,39 @@ class ConnectController extends StateNotifier<ConnectState> {
 
       final id = result.device.remoteId.toString();
       final name = _deviceName(result);
+      final version = _parseBleContractVersion(result);
       updated[id] = NavigaScanDevice(
         id: id,
         name: name,
         rssi: result.rssi,
         lastSeen: DateTime.now(),
+        bleContractVersionMajor: version?.$1,
+        bleContractVersionMinor: version?.$2,
       );
     }
 
     if (updated.isNotEmpty) {
       state = state.copyWith(devices: updated);
     }
+  }
+
+  /// Parses BLE contract version from manufacturer data (S04 Slice 1).
+  /// Returns (major, minor) if kNavigaManufacturerId data has at least 2 bytes; else null.
+  (int, int)? _parseBleContractVersion(ScanResult result) {
+    final data = result.advertisementData.manufacturerData[kNavigaManufacturerId];
+    if (data == null || data.length < 4) {
+      return null;
+    }
+    return (data[2] & 0xFF, data[3] & 0xFF);
+  }
+
+  bool _isBleContractVersionCompatible(NavigaScanDevice device) {
+    final major = device.bleContractVersionMajor;
+    final minor = device.bleContractVersionMinor;
+    if (major == null || minor == null) {
+      return false;
+    }
+    return major == kBLEContractVersionMajor && minor == kBLEContractVersionMinor;
   }
 
   bool _isNavigaDevice(ScanResult result) {
@@ -540,8 +574,7 @@ class ConnectController extends StateNotifier<ConnectState> {
       return true;
     }
 
-    if (kNavigaManufacturerId != null &&
-        adv.manufacturerData.containsKey(kNavigaManufacturerId)) {
+    if (adv.manufacturerData.containsKey(kNavigaManufacturerId)) {
       return true;
     }
 
@@ -701,12 +734,21 @@ class NavigaScanDevice {
     required this.name,
     required this.rssi,
     required this.lastSeen,
+    this.bleContractVersionMajor,
+    this.bleContractVersionMinor,
   });
 
   final String id;
   final String name;
   final int rssi;
   final DateTime lastSeen;
+  /// S04 Slice 1: BLE contract version from advertising (null if not present).
+  final int? bleContractVersionMajor;
+  final int? bleContractVersionMinor;
+
+  bool get isBleContractVersionCompatible =>
+      bleContractVersionMajor == kBLEContractVersionMajor &&
+      bleContractVersionMinor == kBLEContractVersionMinor;
 }
 
 class BleParseResult<T> {

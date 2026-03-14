@@ -282,7 +282,11 @@ class _DeviceList extends StatelessWidget {
               vertical: 4,
             ),
             title: Text('${device.name} • ID:${_shortId(device.id)}'),
-            subtitle: Text('RSSI ${device.rssi} dBm • ${lastSeenSeconds}s ago'),
+            subtitle: Text(
+              device.isBleContractVersionCompatible
+                  ? 'RSSI ${device.rssi} dBm • ${lastSeenSeconds}s ago'
+                  : 'Incompatible BLE version (update app or firmware) • RSSI ${device.rssi} dBm',
+            ),
             onTap: () => _handleDeviceTap(context, device),
             trailing: _trailingIcon(device),
           ),
