@@ -97,14 +97,14 @@ void OledStatus::render(const OledStatusData& data) {
   display_.print(" | Fix:");
   display_.print(safe_text(data.fix_state));
 
-  // Line 3: MI:<s> | MD:<m> | MS:<s>
+  // Line 3: I/D/S (interval s, distance m, silence s). S = max_silence_10s * 10 for display.
   display_.setCursor(0, 26);
-  display_.print("MI:");
+  display_.print("I:");
   display_.print(static_cast<unsigned>(data.min_interval_sec));
-  display_.print(" | MD:");
+  display_.print(" | D:");
   display_.print(static_cast<unsigned>(data.min_distance_m));
-  display_.print(" | MS:");
-  display_.print(static_cast<unsigned>(data.max_silence_10s));
+  display_.print(" | S:");
+  display_.print(static_cast<unsigned>(data.max_silence_10s) * 10U);
 
   // Line 4: PosTx:<n> | StTx:<n> — this node's sent position/status packets (#452: aggregate, not per-peer).
   display_.setCursor(0, 36);
