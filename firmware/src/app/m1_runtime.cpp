@@ -429,7 +429,9 @@ void M1Runtime::update_ble(uint32_t now_ms) {
     return;
   }
   last_ble_update_ms_ = now_ms;
+  // BLE request handling (snapshot + targeted read) runs here, not in GATT callback context.
   ble_bridge_.update_all(now_ms, device_info_, node_table_, ble_transport_);
+  ble_bridge_.update_targeted_read(now_ms, node_table_, ble_transport_);
   ble_status_bridge_.update_status(now_ms, gnss_snapshot_, ble_transport_);
 
   char node_name_buf[domain::kNodeTableNodeNameMaxLen];

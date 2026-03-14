@@ -93,7 +93,7 @@ class NodeTableSnapshotCallbacks : public BLECharacteristicCallbacks {
     const uint16_t page_index =
         static_cast<uint16_t>(bytes[2] | (static_cast<uint16_t>(bytes[3]) << 8));
     transport_->core_for_callbacks()->set_node_table_request(snapshot_id, page_index);
-    transport_->handle_node_table_write(snapshot_id, page_index);
+    // Deferred: runtime loop processes pending request (no NodeTable access from callback).
   }
 
  private:
@@ -127,7 +127,7 @@ class TargetedReadCallbacks : public BLECharacteristicCallbacks {
       node_id |= static_cast<uint64_t>(bytes[i]) << (8 * i);
     }
     transport_->core_for_callbacks()->set_targeted_read_request(node_id);
-    transport_->handle_targeted_read_write(node_id);
+    // Deferred: runtime loop processes pending request (no NodeTable access from callback).
   }
 
  private:

@@ -20,7 +20,7 @@ constexpr uint8_t kBleContractVersionMinor = 0;
 /** Naviga manufacturer ID for BLE advertising (first-phase; reversible). */
 constexpr uint16_t kBleNavigaManufacturerId = 0x6E4F;
 
-/** S04 #464: Called on GATT write so baseline/targeted response is ready for read. */
+/** S04 #464: Optional handler; BLE callbacks only store request state; runtime loop processes. */
 class IBleRequestHandler {
  public:
   virtual ~IBleRequestHandler() = default;
@@ -53,7 +53,7 @@ class BleEsp32Transport : public IBleTransport {
 
   /** For GATT callbacks (same TU) to read/write core buffer. */
   BleTransportCore* core_for_callbacks() { return &core_; }
-  /** S04 #464: Invoked from GATT onWrite so response is ready for next read. */
+  /** Not used from BLE callback; request handling deferred to runtime loop. */
   void handle_node_table_write(uint16_t snapshot_id, uint16_t page_index);
   void handle_targeted_read_write(uint64_t node_id);
 
