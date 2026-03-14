@@ -48,6 +48,8 @@ class BleEsp32Transport : public IBleTransport {
   bool get_targeted_read_request(uint64_t* node_id) const override;
   const uint8_t* targeted_read_response_data() const override;
   size_t targeted_read_response_len() const override;
+  void set_subscription_update_payload(const uint8_t* data, size_t len) override;
+  void send_subscription_update() override;
   bool connected() const;
   void set_connected(bool connected);
 

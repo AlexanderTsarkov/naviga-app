@@ -212,4 +212,37 @@ void main() {
     expect(result.data, isNull);
     expect(result.warning, contains('invalid'));
   });
+
+  group('parseSubscriptionBatch (S04 #465)', () {
+    test('returns empty list for empty payload', () {
+      expect(BleNodeTableParser.parseSubscriptionBatch([]), isEmpty);
+    });
+
+    test('returns empty list for short payload', () {
+      expect(BleNodeTableParser.parseSubscriptionBatch([1]), isEmpty);
+    });
+
+    test('parses batch with one 72-byte record', () {
+      final record = _buildRecordFormat2(
+        nodeId: 0x0102030405060708,
+        shortId: 0xBEEF,
+        flags1: 0x05,
+        lastSeenAgeS: 42,
+        latE7: 123456789,
+        lonE7: -123456789,
+        posAgeS: 7,
+        lastRxRssi: -72,
+        snrLast: -5,
+        nodeName: 'Sub',
+      );
+      final batch = Uint8List.fromList([1, ...record]);
+      final records = BleNodeTableParser.parseSubscriptionBatch(batch);
+      expect(records.length, 1);
+      expect(records.first.nodeId, 0x0102030405060708);
+      expect(records.first.shortId, 0xBEEF);
+      expect(records.first.posValid, isTrue);
+      expect(records.first.lastSeenAgeS, 42);
+      expect(records.first.nodeName, 'Sub');
+    });
+  });
 }

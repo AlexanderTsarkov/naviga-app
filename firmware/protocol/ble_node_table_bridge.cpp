@@ -1,5 +1,7 @@
 #include "ble_node_table_bridge.h"
 
+#include "platform/ble_transport_core.h"
+
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -11,6 +13,18 @@ namespace {
 
 constexpr size_t kMaxDeviceInfoLen = 256;
 constexpr size_t kPageHeaderBytes = 10;
+
+/** Simple hash for change detection; not cryptographic. */
+uint32_t entry_hash(const domain::NodeEntry& e) {
+  uint32_t h = static_cast<uint32_t>(e.node_id) ^ static_cast<uint32_t>(e.node_id >> 32);
+  h ^= static_cast<uint32_t>(e.short_id) << 8;
+  h ^= static_cast<uint32_t>(e.lat_e7);
+  h ^= static_cast<uint32_t>(e.lon_e7) * 31u;
+  h ^= e.pos_age_s * 7u;
+  h ^= e.last_seen_ms;
+  h ^= static_cast<uint8_t>(e.last_rx_rssi) << 16;
+  return h;
+}
 
 void write_u16_le(uint8_t* out, uint16_t value) {
   out[0] = static_cast<uint8_t>(value & 0xFF);
@@ -262,6 +276,70 @@ bool BleNodeTableBridge::update_all(uint32_t now_ms,
   const bool ok_info = update_device_info(model, transport);
   const bool ok_table = update_node_table(now_ms, table, transport);
   return ok_info && ok_table;
+}
+
+void BleNodeTableBridge::update_subscription_batch(uint32_t now_ms,
+                                                   domain::NodeTable& table,
+                                                   IBleTransport& transport) {
+  const bool window_elapsed =
+      (last_emit_ms_ != 0 && (now_ms - last_emit_ms_) >= kCoalescingWindowMs) ||
+      (last_emit_ms_ == 0);
+
+  if (window_elapsed) {
+    if (pending_count_ > 0) {
+      const uint32_t snapshot_time_ms = now_ms;
+      std::array<uint8_t, BleTransportCore::kMaxSubscriptionBatchLen> buf{};
+      buf[0] = static_cast<uint8_t>(pending_count_);
+      size_t offset = 1;
+      for (size_t i = 0; i < pending_count_ && offset + kRecordBytesBle <= buf.size(); ++i) {
+        domain::NodeEntry entry{};
+        if (!table.find_entry_by_node_id(pending_ids_[i], &entry)) {
+          continue;
+        }
+        pack_ble_record(entry, snapshot_time_ms, table, buf.data() + offset);
+        offset += kRecordBytesBle;
+      }
+      const size_t payload_len = 1 + pending_count_ * kRecordBytesBle;
+      transport.set_subscription_update_payload(buf.data(), payload_len);
+      transport.send_subscription_update();
+    }
+    prev_count_ = 0;
+    table.for_each_used_entry([this](const domain::NodeEntry& e) {
+      if (prev_count_ < prev_.size()) {
+        prev_[prev_count_].node_id = e.node_id;
+        prev_[prev_count_].hash = entry_hash(e);
+        ++prev_count_;
+      }
+    });
+    pending_count_ = 0;
+    last_emit_ms_ = now_ms;
+    return;
+  }
+
+  table.for_each_used_entry([this, &table, now_ms](const domain::NodeEntry& e) {
+    if (pending_count_ >= kMaxBatchRecords) {
+      return;
+    }
+    const uint32_t h = entry_hash(e);
+    bool found_prev = false;
+    bool changed = true;
+    for (size_t i = 0; i < prev_count_; ++i) {
+      if (prev_[i].node_id == e.node_id) {
+        found_prev = true;
+        changed = (prev_[i].hash != h);
+        break;
+      }
+    }
+    if (!changed) {
+      return;
+    }
+    for (size_t i = 0; i < pending_count_; ++i) {
+      if (pending_ids_[i] == e.node_id) {
+        return;
+      }
+    }
+    pending_ids_[pending_count_++] = e.node_id;
+  });
 }
 
 } // namespace protocol

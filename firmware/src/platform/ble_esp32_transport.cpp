@@ -307,6 +307,20 @@ void BleEsp32Transport::handle_targeted_read_write(uint64_t node_id) {
   }
 }
 
+void BleEsp32Transport::set_subscription_update_payload(const uint8_t* data, size_t len) {
+  core_.set_subscription_update_payload(data, len);
+}
+
+void BleEsp32Transport::send_subscription_update() {
+  if (!connected_ || !node_table_subscribe_char_ || core_.subscription_update_len() == 0) {
+    return;
+  }
+  node_table_subscribe_char_->setValue(
+      const_cast<uint8_t*>(core_.subscription_update_data()),
+      core_.subscription_update_len());
+  node_table_subscribe_char_->notify();
+}
+
 bool BleEsp32Transport::connected() const {
   return connected_;
 }
@@ -368,6 +382,12 @@ size_t BleEsp32Transport::targeted_read_response_len() const {
 void BleEsp32Transport::handle_node_table_write(uint16_t /*snapshot_id*/, uint16_t /*page_index*/) {}
 
 void BleEsp32Transport::handle_targeted_read_write(uint64_t /*node_id*/) {}
+
+void BleEsp32Transport::set_subscription_update_payload(const uint8_t* data, size_t len) {
+  core_.set_subscription_update_payload(data, len);
+}
+
+void BleEsp32Transport::send_subscription_update() {}
 
 bool BleEsp32Transport::connected() const {
   return connected_;

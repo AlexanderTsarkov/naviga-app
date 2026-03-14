@@ -22,6 +22,8 @@ const String kNavigaStatusUuid = '6e4f0007-1b9a-4c3a-9a3b-000000000001';
 
 /// S04 #464: Targeted read — write 8 bytes node_id (little-endian), read one 72-byte canon record.
 const String kNavigaTargetedReadUuid = '6e4f000c-1b9a-4c3a-9a3b-000000000001';
+/// S04 #465: NodeTable subscription — notify with batched full records (1 byte count + N×72 bytes).
+const String kNavigaNodeTableSubscribeUuid = '6e4f0009-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaNamePrefix = 'Naviga';
 
 /// S04 Slice 1: Naviga manufacturer ID for BLE contract version in advertising.
@@ -52,9 +54,19 @@ class ConnectController extends StateNotifier<ConnectState> {
   BluetoothCharacteristic? _deviceInfoCharacteristic;
   BluetoothCharacteristic? _nodeTableSnapshotCharacteristic;
   BluetoothCharacteristic? _statusCharacteristic;
+  BluetoothCharacteristic? _nodeTableSubscribeCharacteristic;
+  StreamSubscription<List<int>>? _nodeTableSubscribeSubscription;
   int? _lastNodeTableSnapshotId;
 
+  /// S04 #465: Called when a batched subscription update arrives; set by NodesController.
+  void Function(List<NodeRecordV1> records)? _subscriptionUpdateCallback;
+
   static const _prefsLastDeviceKey = 'naviga.last_device_id';
+
+  /// S04 #465: Register callback to apply incoming subscription updates (upserts). Call from NodesController.
+  void setSubscriptionUpdateCallback(void Function(List<NodeRecordV1> records)? callback) {
+    _subscriptionUpdateCallback = callback;
+  }
 
   Future<void> _init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -290,6 +302,10 @@ class ConnectController extends StateNotifier<ConnectState> {
         navigaService,
         Guid(kNavigaStatusUuid),
       );
+      _nodeTableSubscribeCharacteristic = _findCharacteristic(
+        navigaService,
+        Guid(kNavigaNodeTableSubscribeUuid),
+      );
 
       if (_deviceInfoCharacteristic == null) {
         state = state.copyWith(
@@ -310,6 +326,8 @@ class ConnectController extends StateNotifier<ConnectState> {
       if (nodeTableDebugRefreshOnConnect != null) {
         try {
           await nodeTableDebugRefreshOnConnect!();
+          // S04 #465: Subscribe only after baseline load completes (canon: baseline first, then subscribe).
+          await _startNodeTableSubscription();
         } catch (error) {
           logInfo('NodeTable: baseline refresh failed: $error');
           // Non-fatal: connection stays valid; nodes list may be empty until retry.
@@ -479,6 +497,9 @@ class ConnectController extends StateNotifier<ConnectState> {
   }
 
   Future<void> _teardownGatt({required bool clearState}) async {
+    await _nodeTableSubscribeSubscription?.cancel();
+    _nodeTableSubscribeSubscription = null;
+    _nodeTableSubscribeCharacteristic = null;
     _deviceInfoCharacteristic = null;
     _nodeTableSnapshotCharacteristic = null;
     _statusCharacteristic = null;
@@ -499,6 +520,26 @@ class ConnectController extends StateNotifier<ConnectState> {
   }
 
   int? get lastNodeTableSnapshotId => _lastNodeTableSnapshotId;
+
+  /// S04 #465: Enable notify on NodeTable subscribe characteristic; only call after baseline load.
+  Future<void> _startNodeTableSubscription() async {
+    final char = _nodeTableSubscribeCharacteristic;
+    if (char == null || !char.properties.notify) {
+      return;
+    }
+    try {
+      await char.setNotifyValue(true);
+      _nodeTableSubscribeSubscription?.cancel();
+      _nodeTableSubscribeSubscription = char.lastValueStream.listen((List<int> value) {
+        final records = BleNodeTableParser.parseSubscriptionBatch(value);
+        if (records.isNotEmpty && _subscriptionUpdateCallback != null) {
+          _subscriptionUpdateCallback!(records);
+        }
+      });
+    } catch (e) {
+      logInfo('NodeTable: subscription enable failed: $e');
+    }
+  }
 
   Future<List<NodeRecordV1>> fetchNodeTableSnapshot() async {
     if (_nodeTableSnapshotCharacteristic == null) {
@@ -1100,6 +1141,89 @@ class BleNodeTableParser {
     return BleParseResult(
       data: null,
       warning: 'Unknown NodeRecord format_ver=$recordFormatVer',
+    );
+  }
+
+  /// S04 #465: Parse subscription batch (1 byte count + N×72-byte canon records). Returns empty list on error.
+  static List<NodeRecordV1> parseSubscriptionBatch(List<int> data) {
+    if (data.isEmpty) return [];
+    final count = data[0].clamp(0, 5);
+    if (1 + count * kNodeRecordBytesBleCanon > data.length) return [];
+    final records = <NodeRecordV1>[];
+    for (var i = 0; i < count; i++) {
+      final offset = 1 + i * kNodeRecordBytesBleCanon;
+      final record = _parseOneRecordFormat2(data, offset);
+      if (record != null) records.add(record);
+    }
+    return records;
+  }
+
+  static NodeRecordV1? _parseOneRecordFormat2(List<int> data, int base) {
+    if (base + kNodeRecordBytesBleCanon > data.length) return null;
+    final nodeId = _readU64Le(data, base + 0);
+    final shortId = _readU16Le(data, base + 8);
+    final flags1 = data[base + 10];
+    final lastSeenAgeS = _readU16Le(data, base + 11);
+    final latE7 = _toSigned32(_readU32Le(data, base + 13));
+    final lonE7 = _toSigned32(_readU32Le(data, base + 17));
+    final posAgeS = _readU16Le(data, base + 21);
+    final flags2 = data[base + 23];
+    final posFlags = data[base + 24];
+    final sats = data[base + 25];
+    final flags3 = data[base + 26];
+    final batteryPercent = data[base + 27];
+    final uptimeSec = _readU32Le(data, base + 28);
+    final maxSilence10s = data[base + 32];
+    final hwProfileId = _readU16Le(data, base + 33);
+    final fwVersionId = _readU16Le(data, base + 35);
+    final lastRxRssi = _toSigned8(data[base + 37]);
+    final snrLast = _toSigned8(data[base + 38]);
+    final nameLen = data[base + 39].clamp(0, 32);
+    final nodeName = nameLen > 0
+        ? String.fromCharCodes(data.sublist(base + 40, base + 40 + nameLen))
+        : '';
+
+    final isSelf = (flags1 & 0x01) != 0;
+    final shortIdCollision = (flags1 & 0x02) != 0;
+    final posValid = (flags1 & 0x04) != 0;
+    final isStale = (flags1 & 0x08) != 0;
+    final hasPosFlags = (flags2 & 0x01) != 0;
+    final hasSats = (flags2 & 0x02) != 0;
+    final hasBattery = (flags3 & 0x01) != 0;
+    final hasUptime = (flags3 & 0x02) != 0;
+    final hasMaxSilence = (flags3 & 0x04) != 0;
+    final hasHwProfile = (flags3 & 0x08) != 0;
+    final hasFwVersion = (flags3 & 0x10) != 0;
+
+    return NodeRecordV1(
+      nodeId: nodeId,
+      shortId: shortId,
+      isSelf: isSelf,
+      posValid: posValid,
+      isStale: isStale,
+      shortIdCollision: shortIdCollision,
+      lastSeenAgeS: lastSeenAgeS,
+      latE7: latE7,
+      lonE7: lonE7,
+      posAgeS: posAgeS,
+      lastRxRssi: lastRxRssi,
+      lastSeq: 0,
+      nodeName: nodeName,
+      snrLast: snrLast,
+      hasPosFlags: hasPosFlags,
+      posFlags: posFlags,
+      hasSats: hasSats,
+      sats: sats,
+      hasBattery: hasBattery,
+      batteryPercent: batteryPercent,
+      hasUptime: hasUptime,
+      uptimeSec: uptimeSec,
+      hasMaxSilence: hasMaxSilence,
+      maxSilence10s: maxSilence10s,
+      hasHwProfile: hasHwProfile,
+      hwProfileId: hwProfileId,
+      hasFwVersion: hasFwVersion,
+      fwVersionId: fwVersionId,
     );
   }
 

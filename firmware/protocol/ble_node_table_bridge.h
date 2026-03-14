@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 
@@ -53,6 +54,27 @@ class BleNodeTableBridge {
                   const DeviceInfoModel& model,
                   domain::NodeTable& table,
                   IBleTransport& transport) const;
+
+  /** S04 #465: 2s coalescing; build batch of full changed records (max kMaxBatchRecords); call from runtime only. */
+  void update_subscription_batch(uint32_t now_ms,
+                                 domain::NodeTable& table,
+                                 IBleTransport& transport);
+
+  static constexpr uint32_t kCoalescingWindowMs = 2000U;
+  /** Cap per notify to stay under typical BLE MTU (1 + 5*72 = 361 bytes). */
+  static constexpr size_t kMaxBatchRecords = 5;
+
+ private:
+  uint32_t last_emit_ms_ = 0;
+  static constexpr size_t kMaxTrackedNodes = domain::NodeTable::kMaxNodes;
+  struct TrackedNode {
+    uint64_t node_id = 0;
+    uint32_t hash = 0;
+  };
+  std::array<TrackedNode, kMaxTrackedNodes> prev_{};
+  size_t prev_count_ = 0;
+  std::array<uint64_t, kMaxBatchRecords> pending_ids_{};
+  size_t pending_count_ = 0;
 };
 
 } // namespace protocol

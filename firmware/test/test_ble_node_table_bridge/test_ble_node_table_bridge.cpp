@@ -150,11 +150,36 @@ void test_stale_snapshot_fallback_freshness() {
   TEST_ASSERT_EQUAL_UINT32(1, record_count);
 }
 
+/** S04 #465: 2s coalescing; first call refreshes prev (self only), add remote, next window emits one record. */
+void test_subscription_batch_coalescing() {
+  MockBleTransport transport;
+  BleNodeTableBridge bridge;
+  NodeTable table;
+  table.set_expected_interval_s(10);
+  const uint64_t self_id = 0x1111111111111111ULL;
+  table.init_self(self_id, 1000);
+
+  bridge.update_subscription_batch(1000, table, transport);
+  TEST_ASSERT_EQUAL(0, transport.subscription_update_len());
+
+  table.upsert_remote(0x2222222222222222ULL, true, 1000000, 2000000, 10, -65, 1, 1500);
+  bridge.update_subscription_batch(1500, table, transport);
+  TEST_ASSERT_EQUAL(0, transport.subscription_update_len());
+
+  bridge.update_subscription_batch(3500, table, transport);
+  TEST_ASSERT_TRUE(transport.subscription_update_len() >= 1 + BleNodeTableBridge::kRecordBytesBle);
+  const uint8_t* batch = transport.subscription_update_data();
+  TEST_ASSERT_NOT_NULL(batch);
+  TEST_ASSERT_EQUAL_UINT8(1, batch[0]);
+  TEST_ASSERT_EQUAL_UINT64(0x2222222222222222ULL, read_u64_le(batch + 1));
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_device_info_payload);
   RUN_TEST(test_snapshot_header_and_record);
   RUN_TEST(test_paging_overflow);
   RUN_TEST(test_stale_snapshot_fallback_freshness);
+  RUN_TEST(test_subscription_batch_coalescing);
   return UNITY_END();
 }
