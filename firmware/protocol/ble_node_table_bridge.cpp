@@ -1,5 +1,7 @@
 #include "ble_node_table_bridge.h"
 
+#include "platform/ble_transport_core.h"
+
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -11,6 +13,16 @@ namespace {
 
 constexpr size_t kMaxDeviceInfoLen = 256;
 constexpr size_t kPageHeaderBytes = 10;
+
+/** Hash of 72-byte canonical BLE record for change detection; 1:1 with pack_ble_record output. */
+uint32_t hash_bytes(const uint8_t* data, size_t len) {
+  uint32_t h = 2166136261u;
+  for (size_t i = 0; i < len; ++i) {
+    h ^= static_cast<uint32_t>(data[i]);
+    h *= 16777619u;
+  }
+  return h;
+}
 
 void write_u16_le(uint8_t* out, uint16_t value) {
   out[0] = static_cast<uint8_t>(value & 0xFF);
@@ -84,6 +96,18 @@ size_t pack_ble_record(const domain::NodeEntry& e,
     std::memset(out + 40 + name_len, 0, domain::kNodeTableNodeNameMaxLen - name_len);
   }
   return BleNodeTableBridge::kRecordBytesBle;
+}
+
+/** Canonical change hash: hash of the exact 72-byte record we would send. Use reference_time for age/stale so ticking alone does not trigger. */
+uint32_t entry_hash_canon(const domain::NodeEntry& e,
+                          uint32_t reference_time_ms,
+                          const domain::NodeTable& table,
+                          uint8_t* pack_buf) {
+  if (!pack_buf) {
+    return 0;
+  }
+  pack_ble_record(e, reference_time_ms, table, pack_buf);
+  return hash_bytes(pack_buf, BleNodeTableBridge::kRecordBytesBle);
 }
 
 void write_u32_le(uint8_t* out, uint32_t value) {
@@ -262,6 +286,109 @@ bool BleNodeTableBridge::update_all(uint32_t now_ms,
   const bool ok_info = update_device_info(model, transport);
   const bool ok_table = update_node_table(now_ms, table, transport);
   return ok_info && ok_table;
+}
+
+void BleNodeTableBridge::update_subscription_batch(uint32_t now_ms,
+                                                   domain::NodeTable& table,
+                                                   IBleTransport& transport) {
+  const bool window_elapsed =
+      (last_emit_ms_ != 0 && (now_ms - last_emit_ms_) >= kCoalescingWindowMs) ||
+      (last_emit_ms_ == 0);
+
+  if (window_elapsed) {
+    if (pending_count_ > 0) {
+      const uint32_t snapshot_time_ms = now_ms;
+      std::array<uint8_t, BleTransportCore::kMaxSubscriptionBatchLen> buf{};
+      std::array<uint64_t, kMaxBatchRecords> packed_ids{};
+      size_t packed_count = 0;
+      std::array<uint64_t, kMaxTrackedNodes> missing_ids{};
+      size_t missing_count = 0;
+      size_t offset = 1;
+      for (size_t i = 0; i < pending_count_ && offset + kRecordBytesBle <= buf.size(); ++i) {
+        domain::NodeEntry entry{};
+        if (!table.find_entry_by_node_id(pending_ids_[i], &entry)) {
+          if (missing_count < missing_ids.size()) {
+            missing_ids[missing_count++] = pending_ids_[i];
+          }
+          continue;
+        }
+        if (packed_count < kMaxBatchRecords) {
+          pack_ble_record(entry, snapshot_time_ms, table, buf.data() + offset);
+          packed_ids[packed_count++] = pending_ids_[i];
+          offset += kRecordBytesBle;
+        }
+      }
+      if (packed_count > 0) {
+        buf[0] = static_cast<uint8_t>(packed_count);
+        const size_t payload_len = 1 + packed_count * kRecordBytesBle;
+        transport.set_subscription_update_payload(buf.data(), payload_len);
+        transport.send_subscription_update();
+      }
+      size_t new_pending_count = 0;
+      for (size_t i = 0; i < pending_count_; ++i) {
+        const uint64_t id = pending_ids_[i];
+        bool remove = false;
+        for (size_t j = 0; j < packed_count; ++j) {
+          if (id == packed_ids[j]) {
+            remove = true;
+            break;
+          }
+        }
+        if (!remove) {
+          for (size_t j = 0; j < missing_count; ++j) {
+            if (id == missing_ids[j]) {
+              remove = true;
+              break;
+            }
+          }
+        }
+        if (!remove) {
+          pending_ids_[new_pending_count++] = id;
+        }
+      }
+      pending_count_ = new_pending_count;
+    }
+    prev_count_ = 0;
+    std::array<uint8_t, kRecordBytesBle> pack_buf{};
+    table.for_each_used_entry([this, &table, now_ms, &pack_buf](const domain::NodeEntry& e) {
+      if (prev_count_ < prev_.size()) {
+        prev_[prev_count_].node_id = e.node_id;
+        prev_[prev_count_].hash =
+            entry_hash_canon(e, now_ms, table, pack_buf.data());
+        ++prev_count_;
+      }
+    });
+    last_emit_ms_ = now_ms;
+    return;
+  }
+
+  const uint32_t ref_time = (last_emit_ms_ != 0) ? last_emit_ms_ : now_ms;
+  std::array<uint8_t, kRecordBytesBle> pack_buf{};
+  table.for_each_used_entry([this, &table, ref_time, now_ms, &pack_buf](
+                                const domain::NodeEntry& e) {
+    if (pending_count_ >= pending_ids_.size()) {
+      return;
+    }
+    const uint32_t h = entry_hash_canon(e, ref_time, table, pack_buf.data());
+    bool found_prev = false;
+    bool changed = true;
+    for (size_t i = 0; i < prev_count_; ++i) {
+      if (prev_[i].node_id == e.node_id) {
+        found_prev = true;
+        changed = (prev_[i].hash != h);
+        break;
+      }
+    }
+    if (!changed) {
+      return;
+    }
+    for (size_t i = 0; i < pending_count_; ++i) {
+      if (pending_ids_[i] == e.node_id) {
+        return;
+      }
+    }
+    pending_ids_[pending_count_++] = e.node_id;
+  });
 }
 
 } // namespace protocol

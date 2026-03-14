@@ -97,4 +97,20 @@ size_t BleTransportCore::status_len() const {
   return status_len_;
 }
 
+void BleTransportCore::set_subscription_update_payload(const uint8_t* data, size_t len) {
+  const size_t copy_len = std::min(len, subscription_update_buf_.size());
+  if (data && copy_len > 0) {
+    std::memcpy(subscription_update_buf_.data(), data, copy_len);
+  }
+  subscription_update_len_ = copy_len;
+}
+
+const uint8_t* BleTransportCore::subscription_update_data() const {
+  return subscription_update_buf_.data();
+}
+
+size_t BleTransportCore::subscription_update_len() const {
+  return subscription_update_len_;
+}
+
 } // namespace naviga

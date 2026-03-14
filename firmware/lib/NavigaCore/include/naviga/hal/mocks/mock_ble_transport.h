@@ -18,6 +18,11 @@ class MockBleTransport : public IBleTransport {
   bool get_targeted_read_request(uint64_t* node_id) const override;
   const uint8_t* targeted_read_response_data() const override;
   size_t targeted_read_response_len() const override;
+  void set_subscription_update_payload(const uint8_t* data, size_t len) override;
+  void send_subscription_update() override;
+
+  const uint8_t* subscription_update_data() const { return subscription_update_buf_; }
+  size_t subscription_update_len() const { return subscription_update_len_; }
 
   size_t device_info_len() const;
   const uint8_t* device_info() const;
@@ -41,6 +46,10 @@ class MockBleTransport : public IBleTransport {
   size_t targeted_read_len_ = 0;
   uint64_t req_targeted_node_id_ = 0;
   bool has_targeted_request_ = false;
+
+  static constexpr size_t kMaxSubscriptionBatchLen = 1 + 5 * 72;  // 1 + 5*72
+  uint8_t subscription_update_buf_[kMaxSubscriptionBatchLen] = {0};
+  size_t subscription_update_len_ = 0;
 };
 
 } // namespace naviga

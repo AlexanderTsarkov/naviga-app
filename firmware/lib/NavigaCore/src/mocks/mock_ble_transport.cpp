@@ -67,6 +67,16 @@ size_t MockBleTransport::targeted_read_response_len() const {
   return targeted_read_len_;
 }
 
+void MockBleTransport::set_subscription_update_payload(const uint8_t* data, size_t len) {
+  const size_t copy_len = std::min(len, sizeof(subscription_update_buf_));
+  if (data && copy_len > 0) {
+    std::memcpy(subscription_update_buf_, data, copy_len);
+  }
+  subscription_update_len_ = copy_len;
+}
+
+void MockBleTransport::send_subscription_update() {}
+
 size_t MockBleTransport::device_info_len() const {
   return device_info_len_;
 }

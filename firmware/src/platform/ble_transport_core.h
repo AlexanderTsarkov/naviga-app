@@ -36,6 +36,14 @@ class BleTransportCore {
   const uint8_t* status_data() const;
   size_t status_len() const;
 
+  /** S04 #465: Subscription batch = 1 byte count + N × 72-byte records. Max N = kMaxSubscriptionBatchRecords. */
+  static constexpr size_t kMaxSubscriptionBatchRecords = 5;
+  static constexpr size_t kMaxSubscriptionBatchLen = 1 + kMaxSubscriptionBatchRecords * kBleCanonRecordBytes;
+
+  void set_subscription_update_payload(const uint8_t* data, size_t len);
+  const uint8_t* subscription_update_data() const;
+  size_t subscription_update_len() const;
+
  private:
   std::array<uint8_t, kMaxDeviceInfoLen> device_info_{};
   size_t device_info_len_ = 0;
@@ -52,6 +60,9 @@ class BleTransportCore {
   size_t targeted_read_len_ = 0;
   uint64_t req_targeted_node_id_ = 0;
   bool has_targeted_request_ = false;
+
+  std::array<uint8_t, kMaxSubscriptionBatchLen> subscription_update_buf_{};
+  size_t subscription_update_len_ = 0;
 };
 
 } // namespace naviga

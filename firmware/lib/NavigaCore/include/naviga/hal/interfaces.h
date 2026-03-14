@@ -67,6 +67,9 @@ class IBleTransport {
   virtual bool get_targeted_read_request(uint64_t* node_id) const = 0;
   virtual const uint8_t* targeted_read_response_data() const = 0;
   virtual size_t targeted_read_response_len() const = 0;
+  /** S04 #465: Subscription batch payload (1 byte count + N × 72-byte records). Set then send. */
+  virtual void set_subscription_update_payload(const uint8_t* data, size_t len) = 0;
+  virtual void send_subscription_update() = 0;
 };
 
 class IGnss {
