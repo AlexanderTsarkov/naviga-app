@@ -83,9 +83,10 @@ void test_snapshot_header_and_record() {
   TEST_ASSERT_EQUAL_UINT16(0, page_index);
   TEST_ASSERT_EQUAL_UINT8(10, page_size);
   TEST_ASSERT_EQUAL_UINT16(1, page_count);
-  TEST_ASSERT_EQUAL_UINT8(1, record_format);
+  TEST_ASSERT_EQUAL_UINT8(2, record_format);
 
   const uint8_t* record = page + 10;
+  TEST_ASSERT_TRUE(len >= 10 + BleNodeTableBridge::kRecordBytesBle);
   TEST_ASSERT_EQUAL_UINT64(self_id, read_u64_le(record));
 }
 
@@ -111,14 +112,14 @@ void test_paging_overflow() {
   TEST_ASSERT_EQUAL_UINT16(2, page_count);
 
   const size_t len0 = transport.node_table_len();
-  const size_t records0 = (len0 - 10) / NodeTable::kRecordBytes;
+  const size_t records0 = (len0 - 10) / BleNodeTableBridge::kRecordBytesBle;
   TEST_ASSERT_EQUAL_UINT32(10, records0);
 
   const uint16_t snapshot_id = read_u16_le(page0);
   transport.set_node_table_request(snapshot_id, 1);
   TEST_ASSERT_TRUE(bridge.update_node_table(5000, table, transport));
   const size_t len1 = transport.node_table_len();
-  const size_t records1 = (len1 - 10) / NodeTable::kRecordBytes;
+  const size_t records1 = (len1 - 10) / BleNodeTableBridge::kRecordBytesBle;
   TEST_ASSERT_EQUAL_UINT32(2, records1);
 }
 

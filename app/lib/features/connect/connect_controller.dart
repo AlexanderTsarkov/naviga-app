@@ -304,12 +304,11 @@ class ConnectController extends StateNotifier<ConnectState> {
       logInfo(
         'DBG nodeTableDebugRefreshOnConnect=${nodeTableDebugRefreshOnConnect != null}',
       );
-      if (kDebugFetchNodeTableOnConnect &&
-          nodeTableDebugRefreshOnConnect != null) {
+      if (nodeTableDebugRefreshOnConnect != null) {
         try {
           await nodeTableDebugRefreshOnConnect!();
         } catch (error) {
-          logInfo('NodeTable: debug refresh failed: $error');
+          logInfo('NodeTable: baseline refresh failed: $error');
         }
       }
     } catch (error) {
@@ -946,6 +945,7 @@ class NodeTableSnapshotHeader {
   final int recordFormatVer;
 }
 
+/// S04 #464: Canon BLE record (format ver 2). lastSeq excluded from BLE; use 0 when from BLE.
 class NodeRecordV1 {
   const NodeRecordV1({
     required this.nodeId,
@@ -960,6 +960,23 @@ class NodeRecordV1 {
     required this.posAgeS,
     required this.lastRxRssi,
     required this.lastSeq,
+    this.nodeName = '',
+    this.snrLast,
+    this.isStale = false,
+    this.hasPosFlags = false,
+    this.posFlags = 0,
+    this.hasSats = false,
+    this.sats = 0,
+    this.hasBattery = false,
+    this.batteryPercent = 0xff,
+    this.hasUptime = false,
+    this.uptimeSec = 0xffffffff,
+    this.hasMaxSilence = false,
+    this.maxSilence10s = 0,
+    this.hasHwProfile = false,
+    this.hwProfileId = 0xffff,
+    this.hasFwVersion = false,
+    this.fwVersionId = 0xffff,
   });
 
   final int nodeId;
@@ -973,7 +990,26 @@ class NodeRecordV1 {
   final int lonE7;
   final int posAgeS;
   final int lastRxRssi;
+
+  /// Excluded from BLE export per canon; 0 when record is from BLE.
   final int lastSeq;
+  final String nodeName;
+  final int? snrLast;
+  final bool isStale;
+  final bool hasPosFlags;
+  final int posFlags;
+  final bool hasSats;
+  final int sats;
+  final bool hasBattery;
+  final int batteryPercent;
+  final bool hasUptime;
+  final int uptimeSec;
+  final bool hasMaxSilence;
+  final int maxSilence10s;
+  final bool hasHwProfile;
+  final int hwProfileId;
+  final bool hasFwVersion;
+  final int fwVersionId;
 }
 
 class NodeTableSnapshotPage {
@@ -983,6 +1019,9 @@ class NodeTableSnapshotPage {
   final List<NodeRecordV1> records;
 }
 
+/// S04 #464: Canon BLE record size (format ver 2).
+const int kNodeRecordBytesBleCanon = 72;
+
 class BleNodeTableParser {
   static BleParseResult<NodeTableSnapshotPage> parsePage(List<int> data) {
     if (data.length < 10) {
@@ -991,14 +1030,6 @@ class BleNodeTableParser {
         warning: 'NodeTableSnapshot payload too short',
       );
     }
-    final recordsBytes = data.length - 10;
-    if (recordsBytes % 26 != 0) {
-      return BleParseResult(
-        data: null,
-        warning: 'NodeTableSnapshot payload size invalid (${data.length})',
-      );
-    }
-
     final reader = BleByteReader(data);
     final snapshotId = reader.readU16Le();
     final totalNodes = reader.readU16Le();
@@ -1018,48 +1049,79 @@ class BleNodeTableParser {
         warning: 'NodeTableSnapshot header malformed',
       );
     }
-    if (recordFormatVer != 1) {
-      return BleParseResult(
-        data: null,
-        warning: 'Unknown NodeRecord format_ver=$recordFormatVer',
-      );
-    }
-
-    final recordCount = recordsBytes ~/ 26;
-    final records = <NodeRecordV1>[];
-    for (var i = 0; i < recordCount; i++) {
-      final nodeId = reader.readU64Le();
-      final shortId = reader.readU16Le();
-      final flags = reader.readU8();
-      final lastSeenAgeS = reader.readU16Le();
-      final latRaw = reader.readU32Le();
-      final lonRaw = reader.readU32Le();
-      final posAgeS = reader.readU16Le();
-      final lastRxRssiRaw = reader.readU8();
-      final lastSeq = reader.readU16Le();
-      if (reader.hasErrors ||
-          nodeId == null ||
-          shortId == null ||
-          flags == null ||
-          lastSeenAgeS == null ||
-          latRaw == null ||
-          lonRaw == null ||
-          posAgeS == null ||
-          lastRxRssiRaw == null ||
-          lastSeq == null) {
-        return const BleParseResult(
+    final recordsBytes = data.length - 10;
+    if (recordFormatVer == 2) {
+      if (recordsBytes % kNodeRecordBytesBleCanon != 0) {
+        return BleParseResult(
           data: null,
-          warning: 'NodeTableSnapshot record malformed',
+          warning:
+              'NodeTableSnapshot format 2 payload size invalid (${data.length})',
         );
       }
+      return _parsePageFormat2(
+        data: data,
+        offset: 10,
+        snapshotId: snapshotId,
+        totalNodes: totalNodes,
+        pageIndex: pageIndex,
+        pageSize: pageSize,
+        pageCount: pageCount,
+      );
+    }
+    return BleParseResult(
+      data: null,
+      warning: 'Unknown NodeRecord format_ver=$recordFormatVer',
+    );
+  }
 
-      final isSelf = (flags & 0x01) != 0;
-      final posValid = (flags & 0x02) != 0;
-      final isGrey = (flags & 0x04) != 0;
-      final shortIdCollision = (flags & 0x08) != 0;
-      final latE7 = _toSigned32(latRaw);
-      final lonE7 = _toSigned32(lonRaw);
-      final lastRxRssi = _toSigned8(lastRxRssiRaw);
+  static BleParseResult<NodeTableSnapshotPage> _parsePageFormat2({
+    required List<int> data,
+    required int offset,
+    required int snapshotId,
+    required int totalNodes,
+    required int pageIndex,
+    required int pageSize,
+    required int pageCount,
+  }) {
+    final records = <NodeRecordV1>[];
+    final recordCount = (data.length - offset) ~/ kNodeRecordBytesBleCanon;
+    for (var i = 0; i < recordCount; i++) {
+      final base = offset + i * kNodeRecordBytesBleCanon;
+      if (base + kNodeRecordBytesBleCanon > data.length) break;
+      final nodeId = _readU64Le(data, base + 0);
+      final shortId = _readU16Le(data, base + 8);
+      final flags1 = data[base + 10];
+      final lastSeenAgeS = _readU16Le(data, base + 11);
+      final latE7 = _toSigned32(_readU32Le(data, base + 13));
+      final lonE7 = _toSigned32(_readU32Le(data, base + 17));
+      final posAgeS = _readU16Le(data, base + 21);
+      final flags2 = data[base + 23];
+      final posFlags = data[base + 24];
+      final sats = data[base + 25];
+      final flags3 = data[base + 26];
+      final batteryPercent = data[base + 27];
+      final uptimeSec = _readU32Le(data, base + 28);
+      final maxSilence10s = data[base + 32];
+      final hwProfileId = _readU16Le(data, base + 33);
+      final fwVersionId = _readU16Le(data, base + 35);
+      final lastRxRssi = _toSigned8(data[base + 37]);
+      final snrLast = _toSigned8(data[base + 38]);
+      final nameLen = data[base + 39].clamp(0, 32);
+      final nodeName = nameLen > 0
+          ? String.fromCharCodes(data.sublist(base + 40, base + 40 + nameLen))
+          : '';
+
+      final isSelf = (flags1 & 0x01) != 0;
+      final shortIdCollision = (flags1 & 0x02) != 0;
+      final posValid = (flags1 & 0x04) != 0;
+      final isStale = (flags1 & 0x08) != 0;
+      final hasPosFlags = (flags2 & 0x01) != 0;
+      final hasSats = (flags2 & 0x02) != 0;
+      final hasBattery = (flags3 & 0x01) != 0;
+      final hasUptime = (flags3 & 0x02) != 0;
+      final hasMaxSilence = (flags3 & 0x04) != 0;
+      final hasHwProfile = (flags3 & 0x08) != 0;
+      final hasFwVersion = (flags3 & 0x10) != 0;
 
       records.add(
         NodeRecordV1(
@@ -1067,18 +1129,34 @@ class BleNodeTableParser {
           shortId: shortId,
           isSelf: isSelf,
           posValid: posValid,
-          isGrey: isGrey,
+          isGrey: isStale,
           shortIdCollision: shortIdCollision,
           lastSeenAgeS: lastSeenAgeS,
           latE7: latE7,
           lonE7: lonE7,
           posAgeS: posAgeS,
           lastRxRssi: lastRxRssi,
-          lastSeq: lastSeq,
+          lastSeq: 0,
+          nodeName: nodeName,
+          snrLast: snrLast,
+          isStale: isStale,
+          hasPosFlags: hasPosFlags,
+          posFlags: posFlags,
+          hasSats: hasSats,
+          sats: sats,
+          hasBattery: hasBattery,
+          batteryPercent: batteryPercent,
+          hasUptime: hasUptime,
+          uptimeSec: uptimeSec,
+          hasMaxSilence: hasMaxSilence,
+          maxSilence10s: maxSilence10s,
+          hasHwProfile: hasHwProfile,
+          hwProfileId: hwProfileId,
+          hasFwVersion: hasFwVersion,
+          fwVersionId: fwVersionId,
         ),
       );
     }
-
     return BleParseResult(
       data: NodeTableSnapshotPage(
         header: NodeTableSnapshotHeader(
@@ -1087,11 +1165,26 @@ class BleNodeTableParser {
           pageIndex: pageIndex,
           pageSize: pageSize,
           pageCount: pageCount,
-          recordFormatVer: recordFormatVer,
+          recordFormatVer: 2,
         ),
         records: records,
       ),
     );
+  }
+
+  static int _readU16Le(List<int> d, int i) =>
+      (d[i] & 0xFF) | ((d[i + 1] & 0xFF) << 8);
+  static int _readU32Le(List<int> d, int i) =>
+      (d[i] & 0xFF) |
+      ((d[i + 1] & 0xFF) << 8) |
+      ((d[i + 2] & 0xFF) << 16) |
+      ((d[i + 3] & 0xFF) << 24);
+  static int _readU64Le(List<int> d, int i) {
+    var v = 0;
+    for (var j = 0; j < 8; j++) {
+      v |= (d[i + j] & 0xFF) << (j * 8);
+    }
+    return v;
   }
 
   static int _toSigned32(int value) {

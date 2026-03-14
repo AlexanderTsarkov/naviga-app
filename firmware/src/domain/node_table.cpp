@@ -548,6 +548,49 @@ size_t NodeTable::get_snapshot_page(uint16_t snapshot_id,
   return offset;
 }
 
+uint32_t NodeTable::get_snapshot_time_ms(uint16_t snapshot_id) const {
+  if (snapshot_id != snapshot_id_) {
+    return 0;
+  }
+  return snapshot_time_ms_;
+}
+
+size_t NodeTable::get_snapshot_page_entries(uint16_t snapshot_id,
+                                           size_t page_index,
+                                           size_t page_size,
+                                           NodeEntry* out,
+                                           size_t max_count) const {
+  if (snapshot_id != snapshot_id_ || !out || max_count == 0 || page_size == 0) {
+    return 0;
+  }
+  const size_t start = page_index * page_size;
+  if (start >= snapshot_count_) {
+    return 0;
+  }
+  size_t remaining = snapshot_count_ - start;
+  size_t n = remaining < page_size ? remaining : page_size;
+  if (n > max_count) {
+    n = max_count;
+  }
+  for (size_t i = 0; i < n; ++i) {
+    out[i] = entries_[snapshot_indices_[start + i]];
+  }
+  return n;
+}
+
+bool NodeTable::find_entry_by_short_id(uint16_t short_id, NodeEntry* out) const {
+  if (!out) {
+    return false;
+  }
+  for (size_t i = 0; i < entries_.size(); ++i) {
+    if (entries_[i].in_use && entries_[i].short_id == short_id) {
+      *out = entries_[i];
+      return true;
+    }
+  }
+  return false;
+}
+
 void NodeTable::for_each_used_entry(std::function<void(const NodeEntry&)> fn) const {
   for (size_t i = 0; i < entries_.size(); ++i) {
     if (entries_[i].in_use) {

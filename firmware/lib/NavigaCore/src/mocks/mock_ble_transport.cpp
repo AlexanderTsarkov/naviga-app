@@ -38,6 +38,35 @@ bool MockBleTransport::get_node_table_request(uint16_t* snapshot_id, uint16_t* p
   return true;
 }
 
+void MockBleTransport::set_targeted_read_response(const uint8_t* data, size_t len) {
+  const size_t copy_len = std::min(len, sizeof(targeted_read_buf_));
+  if (data && copy_len > 0) {
+    std::memcpy(targeted_read_buf_, data, copy_len);
+  }
+  targeted_read_len_ = copy_len;
+}
+
+void MockBleTransport::set_targeted_read_request(uint16_t short_id) {
+  req_targeted_short_id_ = short_id;
+  has_targeted_request_ = true;
+}
+
+bool MockBleTransport::get_targeted_read_request(uint16_t* short_id) const {
+  if (!has_targeted_request_ || !short_id) {
+    return false;
+  }
+  *short_id = req_targeted_short_id_;
+  return true;
+}
+
+const uint8_t* MockBleTransport::targeted_read_response_data() const {
+  return targeted_read_buf_;
+}
+
+size_t MockBleTransport::targeted_read_response_len() const {
+  return targeted_read_len_;
+}
+
 size_t MockBleTransport::device_info_len() const {
   return device_info_len_;
 }

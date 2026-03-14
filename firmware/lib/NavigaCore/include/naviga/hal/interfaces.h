@@ -62,6 +62,11 @@ class IBleTransport {
   virtual void set_node_table_response(const uint8_t* data, size_t len) = 0;
   virtual void set_status(const uint8_t* data, size_t len) = 0;
   virtual bool get_node_table_request(uint16_t* snapshot_id, uint16_t* page_index) const = 0;
+  virtual void set_targeted_read_response(const uint8_t* data, size_t len) = 0;
+  virtual void set_targeted_read_request(uint16_t short_id) = 0;
+  virtual bool get_targeted_read_request(uint16_t* short_id) const = 0;
+  virtual const uint8_t* targeted_read_response_data() const = 0;
+  virtual size_t targeted_read_response_len() const = 0;
 };
 
 class IGnss {

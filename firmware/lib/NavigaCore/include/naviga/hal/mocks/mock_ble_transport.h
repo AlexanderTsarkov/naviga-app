@@ -13,6 +13,11 @@ class MockBleTransport : public IBleTransport {
   void set_node_table_response(const uint8_t* data, size_t len) override;
   void set_status(const uint8_t* data, size_t len) override;
   bool get_node_table_request(uint16_t* snapshot_id, uint16_t* page_index) const override;
+  void set_targeted_read_response(const uint8_t* data, size_t len) override;
+  void set_targeted_read_request(uint16_t short_id) override;
+  bool get_targeted_read_request(uint16_t* short_id) const override;
+  const uint8_t* targeted_read_response_data() const override;
+  size_t targeted_read_response_len() const override;
 
   size_t device_info_len() const;
   const uint8_t* device_info() const;
@@ -24,13 +29,18 @@ class MockBleTransport : public IBleTransport {
   uint8_t device_info_[256] = {0};
   size_t device_info_len_ = 0;
 
-  uint8_t node_table_buf_[320] = {0};
+  uint8_t node_table_buf_[768] = {0};
   size_t node_table_len_ = 0;
   uint8_t status_buf_[64] = {0};
   size_t status_len_ = 0;
   uint16_t req_snapshot_id_ = 0;
   uint16_t req_page_index_ = 0;
   bool has_request_ = false;
+
+  uint8_t targeted_read_buf_[72] = {0};
+  size_t targeted_read_len_ = 0;
+  uint16_t req_targeted_short_id_ = 0;
+  bool has_targeted_request_ = false;
 };
 
 } // namespace naviga

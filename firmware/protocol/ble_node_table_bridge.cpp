@@ -17,6 +17,75 @@ void write_u16_le(uint8_t* out, uint16_t value) {
   out[1] = static_cast<uint8_t>((value >> 8) & 0xFF);
 }
 
+void write_u32_le_at(uint8_t* out, size_t offset, uint32_t value) {
+  out[offset + 0] = static_cast<uint8_t>(value & 0xFF);
+  out[offset + 1] = static_cast<uint8_t>((value >> 8) & 0xFF);
+  out[offset + 2] = static_cast<uint8_t>((value >> 16) & 0xFF);
+  out[offset + 3] = static_cast<uint8_t>((value >> 24) & 0xFF);
+}
+
+void write_u64_le_at(uint8_t* out, size_t offset, uint64_t value) {
+  for (int i = 0; i < 8; ++i) {
+    out[offset + i] = static_cast<uint8_t>((value >> (8 * i)) & 0xFF);
+  }
+}
+
+/** S04 #464: Pack one NodeEntry to canon BLE record (72 bytes). Excludes last_seq, last_seen_ms, etc. */
+size_t pack_ble_record(const domain::NodeEntry& e,
+                       uint32_t snapshot_time_ms,
+                       const domain::NodeTable& table,
+                       uint8_t* out) {
+  if (!out) {
+    return 0;
+  }
+  const uint32_t age_ms =
+      snapshot_time_ms >= e.last_seen_ms ? (snapshot_time_ms - e.last_seen_ms) : 0;
+  const uint32_t age_s32 = age_ms / 1000;
+  const uint16_t age_s = age_s32 > 65535u ? 65535 : static_cast<uint16_t>(age_s32);
+  const bool is_stale = table.is_stale(e, snapshot_time_ms);
+
+  write_u64_le_at(out, 0, e.node_id);
+  write_u16_le(out + 8, e.short_id);
+  uint8_t flags1 = 0;
+  if (e.is_self) flags1 |= 0x01;
+  if (e.short_id_collision) flags1 |= 0x02;
+  if (e.pos_valid) flags1 |= 0x04;
+  if (is_stale) flags1 |= 0x08;
+  out[10] = flags1;
+  write_u16_le(out + 11, age_s);
+  write_u32_le_at(out, 13, static_cast<uint32_t>(e.pos_valid ? e.lat_e7 : 0));
+  write_u32_le_at(out, 17, static_cast<uint32_t>(e.pos_valid ? e.lon_e7 : 0));
+  write_u16_le(out + 21, e.pos_valid ? e.pos_age_s : 0);
+  uint8_t flags2 = 0;
+  if (e.has_pos_flags) flags2 |= 0x01;
+  if (e.has_sats) flags2 |= 0x02;
+  out[23] = flags2;
+  out[24] = e.pos_flags;
+  out[25] = e.sats;
+  uint8_t flags3 = 0;
+  if (e.has_battery) flags3 |= 0x01;
+  if (e.has_uptime) flags3 |= 0x02;
+  if (e.has_max_silence) flags3 |= 0x04;
+  if (e.has_hw_profile) flags3 |= 0x08;
+  if (e.has_fw_version) flags3 |= 0x10;
+  out[26] = flags3;
+  out[27] = e.battery_percent;
+  write_u32_le_at(out, 28, e.uptime_sec);
+  out[32] = e.max_silence_10s;
+  write_u16_le(out + 33, e.hw_profile_id);
+  write_u16_le(out + 35, e.fw_version_id);
+  out[37] = static_cast<uint8_t>(e.last_rx_rssi);
+  out[38] = static_cast<uint8_t>(e.snr_last);
+  const size_t name_len =
+      std::min(strnlen(e.node_name, domain::kNodeTableNodeNameMaxLen), domain::kNodeTableNodeNameMaxLen);
+  out[39] = static_cast<uint8_t>(name_len);
+  std::memcpy(out + 40, e.node_name, name_len);
+  if (name_len < domain::kNodeTableNodeNameMaxLen) {
+    std::memset(out + 40 + name_len, 0, domain::kNodeTableNodeNameMaxLen - name_len);
+  }
+  return BleNodeTableBridge::kRecordBytesBle;
+}
+
 void write_u32_le(uint8_t* out, uint32_t value) {
   out[0] = static_cast<uint8_t>(value & 0xFF);
   out[1] = static_cast<uint8_t>((value >> 8) & 0xFF);
@@ -131,27 +200,23 @@ bool BleNodeTableBridge::update_node_table(uint32_t now_ms,
     snapshot_reset = true;
   }
 
-  std::array<uint8_t, kPageHeaderBytes + domain::NodeTable::kRecordBytes * kPageSize> buffer{};
-  size_t record_bytes = 0;
+  const uint32_t snapshot_time_ms = table.get_snapshot_time_ms(snapshot_id);
+  std::array<domain::NodeEntry, kPageSize> entries{};
+  size_t n_entries = 0;
   if (total_nodes > 0 && page_index < page_count) {
-    record_bytes = table.get_snapshot_page(snapshot_id,
-                                           page_index,
-                                           kPageSize,
-                                           buffer.data() + kPageHeaderBytes,
-                                           buffer.size() - kPageHeaderBytes);
-    if (record_bytes == 0 && !snapshot_reset) {
+    n_entries = table.get_snapshot_page_entries(
+        snapshot_id, page_index, kPageSize, entries.data(), entries.size());
+    if (n_entries == 0 && !snapshot_reset) {
       snapshot_id = table.create_snapshot(now_ms);
       total_nodes = table.size();
       page_count = total_nodes == 0 ? 0 : (total_nodes + kPageSize - 1) / kPageSize;
       page_index = 0;
-      record_bytes = table.get_snapshot_page(snapshot_id,
-                                             page_index,
-                                             kPageSize,
-                                             buffer.data() + kPageHeaderBytes,
-                                             buffer.size() - kPageHeaderBytes);
+      n_entries = table.get_snapshot_page_entries(
+          snapshot_id, 0, kPageSize, entries.data(), entries.size());
     }
   }
 
+  std::array<uint8_t, kPageHeaderBytes + kRecordBytesBle * kPageSize> buffer{};
   write_u16_le(buffer.data(), snapshot_id);
   write_u16_le(buffer.data() + 2, static_cast<uint16_t>(total_nodes));
   write_u16_le(buffer.data() + 4, static_cast<uint16_t>(page_index));
@@ -159,9 +224,34 @@ bool BleNodeTableBridge::update_node_table(uint32_t now_ms,
   write_u16_le(buffer.data() + 7, static_cast<uint16_t>(page_count));
   buffer[9] = kRecordFormatVer;
 
+  size_t record_bytes = 0;
+  for (size_t i = 0; i < n_entries; ++i) {
+    pack_ble_record(entries[i], snapshot_time_ms, table,
+                   buffer.data() + kPageHeaderBytes + i * kRecordBytesBle);
+    record_bytes += kRecordBytesBle;
+  }
+
   const size_t payload_len = kPageHeaderBytes + record_bytes;
   transport.set_node_table_response(buffer.data(), payload_len);
   return true;
+}
+
+void BleNodeTableBridge::update_targeted_read(uint32_t now_ms,
+                                              domain::NodeTable& table,
+                                              IBleTransport& transport) const {
+  uint16_t short_id = 0;
+  if (!transport.get_targeted_read_request(&short_id)) {
+    transport.set_targeted_read_response(nullptr, 0);
+    return;
+  }
+  domain::NodeEntry entry{};
+  if (!table.find_entry_by_short_id(short_id, &entry)) {
+    transport.set_targeted_read_response(nullptr, 0);
+    return;
+  }
+  std::array<uint8_t, kRecordBytesBle> buf{};
+  pack_ble_record(entry, now_ms, table, buf.data());
+  transport.set_targeted_read_response(buf.data(), kRecordBytesBle);
 }
 
 bool BleNodeTableBridge::update_all(uint32_t now_ms,

@@ -18,7 +18,7 @@
 
 namespace naviga {
 
-class M1Runtime {
+class M1Runtime : public IBleRequestHandler {
  public:
   void init(uint64_t self_id,
             uint16_t short_id,
@@ -80,6 +80,9 @@ class M1Runtime {
 
   /** #450: Current GNSS fix state from last set_self_position. */
   GNSSFixState get_gnss_fix_state() const { return gnss_snapshot_.fix_state; }
+
+  void on_node_table_request(uint16_t snapshot_id, uint16_t page_index) override;
+  void on_targeted_read_request(uint16_t short_id) override;
 
  private:
   void handle_tx(uint32_t now_ms);

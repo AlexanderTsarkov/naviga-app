@@ -20,11 +20,21 @@ constexpr uint8_t kBleContractVersionMinor = 0;
 /** Naviga manufacturer ID for BLE advertising (first-phase; reversible). */
 constexpr uint16_t kBleNavigaManufacturerId = 0x6E4F;
 
+/** S04 #464: Called on GATT write so baseline/targeted response is ready for read. */
+class IBleRequestHandler {
+ public:
+  virtual ~IBleRequestHandler() = default;
+  virtual void on_node_table_request(uint16_t snapshot_id, uint16_t page_index) = 0;
+  virtual void on_targeted_read_request(uint16_t short_id) = 0;
+};
+
 class BleEsp32Transport : public IBleTransport {
  public:
   BleEsp32Transport();
 
   void init();
+  /** S04 #464: Set before any GATT write; used for process-on-write so read gets fresh response. */
+  void set_request_handler(IBleRequestHandler* h) { request_handler_ = h; }
 
   /** S04 Slice 1: Update advertising with display identity and BLE contract version. */
   void set_advertising_content(const char* display_identity, uint8_t version_major, uint8_t version_minor);
@@ -33,11 +43,23 @@ class BleEsp32Transport : public IBleTransport {
   void set_node_table_response(const uint8_t* data, size_t len) override;
   void set_status(const uint8_t* data, size_t len) override;
   bool get_node_table_request(uint16_t* snapshot_id, uint16_t* page_index) const override;
+  void set_targeted_read_response(const uint8_t* data, size_t len) override;
+  void set_targeted_read_request(uint16_t short_id) override;
+  bool get_targeted_read_request(uint16_t* short_id) const override;
+  const uint8_t* targeted_read_response_data() const override;
+  size_t targeted_read_response_len() const override;
   bool connected() const;
   void set_connected(bool connected);
 
+  /** For GATT callbacks (same TU) to read/write core buffer. */
+  BleTransportCore* core_for_callbacks() { return &core_; }
+  /** S04 #464: Invoked from GATT onWrite so response is ready for next read. */
+  void handle_node_table_write(uint16_t snapshot_id, uint16_t page_index);
+  void handle_targeted_read_write(uint16_t short_id);
+
  private:
   BleTransportCore core_;
+  IBleRequestHandler* request_handler_ = nullptr;
 
   BLEServer* server_ = nullptr;
   BLEService* service_ = nullptr;
@@ -49,6 +71,7 @@ class BleEsp32Transport : public IBleTransport {
   BLECharacteristic* node_table_subscribe_char_ = nullptr;
   BLECharacteristic* profiles_list_char_ = nullptr;
   BLECharacteristic* profile_read_char_ = nullptr;
+  BLECharacteristic* targeted_read_char_ = nullptr;
   bool connected_ = false;
 };
 
