@@ -57,9 +57,9 @@ struct PersistedPointers {
  * Resolved via persisted "current" record; fallback to default when missing/invalid.
  */
 struct RoleProfileRecord {
-  uint16_t min_interval_sec = 18;
-  uint8_t max_silence_10s = 9;
-  float min_displacement_m = 25.0f;
+  uint16_t min_interval_sec = 22;   // Person OOTB per #453
+  uint8_t max_silence_10s = 11;
+  float min_displacement_m = 30.0f;
 };
 
 /**

@@ -19,9 +19,10 @@ constexpr char kKeySeq16[] = "seq16";
 constexpr char kKeyNodeTableSnapshotLen[] = "nt_snap_len";
 constexpr char kKeyNodeTableSnapshot[] = "nt_snap";
 
-constexpr uint16_t kDefaultMinIntervalSec = 18;
-constexpr uint8_t kDefaultMaxSilence10s = 9;
-constexpr float kDefaultMinDisplacementM = 25.0f;
+// Person (default role) OOTB values per #453 / role_profiles_policy_v0 §3.1
+constexpr uint16_t kDefaultMinIntervalSec = 22;
+constexpr uint8_t kDefaultMaxSilence10s = 11;
+constexpr float kDefaultMinDisplacementM = 30.0f;
 
 }  // namespace
 
