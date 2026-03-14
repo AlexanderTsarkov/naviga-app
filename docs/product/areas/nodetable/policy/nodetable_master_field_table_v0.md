@@ -15,7 +15,7 @@ This table is the single authoritative classification for NodeTable-related fiel
 | short_id | identity | Yes | Yes | Yes | Yes | Product-facing; CRC16-derived. |
 | is_self | derived | Yes | Yes | No | Derived | From (node_id == local identity). |
 | short_id_collision | derived | Yes | Yes | No | Derived | UI safeguard; recomputed. |
-| node_name | identity/name | Yes | Yes | Yes | Yes | Single canonical name (self + remote). |
+| node_name | identity/name | Yes | Yes | Yes | Yes | Short display label; max 12 chars (product/UI), 24 B UTF-8 (storage/transport); allowlist per identity_naming_persistence_eviction_v0 §2. |
 
 ---
 
@@ -105,7 +105,7 @@ packet_header, payloadVersion — not stored as product NodeTable fields; packin
 - **Aligned:** node_id, short_id, is_self, short_id_collision, pos (lat_e7, lon_e7, pos_age_s, pos_flags, sats), battery_percent, uptime_sec, max_silence_10s, hw_profile_id, fw_version_id, last_rx_rssi, last_seen_ms, last_seq (in NodeTable only; not BLE).
 - **BLE:** last_seq removed from BLE export; snr_last added (sentinel 127 = NA).
 - **Legacy ref:** Kept in NodeEntry for decoder only; not in BLE, not in persistence.
-- **node_name:** Added to NodeEntry; in persistence snapshot; BLE export per format.
+- **node_name:** Added to NodeEntry; in persistence snapshot; BLE export per format. Label constraints: 12 chars / 24 bytes UTF-8, allowlist (Latin, Cyrillic, digits, `- _ # = @ +`); see [identity_naming_persistence_eviction_v0](identity_naming_persistence_eviction_v0.md) §2 and [ble_contract_s04_v0](../../mobile/contract/ble_contract_s04_v0.md) §9.1.
 - **Stubs:** pos_fix_type, pos_accuracy_bucket, charging, battery_est_rem_time, tx_power_step, channel_throttle_step, role_id — added as stubs where minimal.
 
 ---
