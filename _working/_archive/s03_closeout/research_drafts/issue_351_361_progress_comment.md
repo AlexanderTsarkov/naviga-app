@@ -1,0 +1,5 @@
+**#361 progress (coordination):** [#361](https://github.com/AlexanderTsarkov/naviga-app/issues/361) (BLE snapshot outline for S04) has been **reframed** into a **gate/defer deliverable**, aligned with S03 canon+code convergence.
+
+- **Accepted decision:** The current #361 output is an **S04 gate note** (WIP doc) that explicitly **defers** detailed BLE snapshot design until S03 canon and code convergence are complete. The gate doc lists required S03 inputs and an S04 entry checklist; it does **not** define BLE fields, format, or transport.
+- **Gate doc:** `docs/product/wip/areas/mobile/ble_snapshot_s04_gate.md` — defines **when** S04 can start detailed BLE snapshot design (required inputs: accepted NodeTable canon, field map, packet→NodeTable mapping, packet context/TX rules, code parity). Detailed BLE snapshot design remains a **post-S03 / S04** task; it is deferred, not cancelled.
+- **Linkage:** This keeps #361 aligned with the S03 umbrella (NodeTable as product heart; BLE snapshot design once semantics and code are stable). The PR that adds the gate doc **references** #361 but does **not** close it.

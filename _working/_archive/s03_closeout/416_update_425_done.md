@@ -1,0 +1,1 @@
+**#425 completed** (PR #445 merged). Observability: traffic counters for runtime validation in place; instrumentation POS_FULL/STATUS; validation passed. Next planned: **#426** (current_state / docs).

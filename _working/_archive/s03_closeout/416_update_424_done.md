@@ -1,0 +1,1 @@
+**#424 completed (PR #442 merged).** Radio profile baseline aligned with FACTORY/current canon; Phase A uses FACTORY as source, 21 dBm default; Phase B normalizes/persists pointers. Next immediate planning: **User Profile baseline alignment** (separate from #424).
