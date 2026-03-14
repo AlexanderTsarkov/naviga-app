@@ -73,6 +73,9 @@ class NodeTable {
   void update_self_position(int32_t lat_e7, int32_t lon_e7, uint16_t pos_age_s, uint32_t now_ms);
   void touch_self(uint32_t now_ms);
 
+  /** S04 #466: Set authoritative self node_name; marks table dirty for existing persistence. No-op if self entry not present. */
+  bool set_self_node_name(const char* name);
+
   bool upsert_remote(uint64_t node_id,
                      bool pos_valid,
                      int32_t lat_e7,

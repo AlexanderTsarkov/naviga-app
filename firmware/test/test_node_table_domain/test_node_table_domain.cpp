@@ -457,6 +457,36 @@ void test_nodetable_dirty_cleared_after_clear() {
   TEST_ASSERT_FALSE(table.is_dirty());
 }
 
+// S04 #466: set_self_node_name updates self entry and sets dirty.
+void test_set_self_node_name() {
+  NodeTable table;
+  table.set_expected_interval_s(18);
+  const uint64_t self_id = 0x1111111111111111ULL;
+  table.init_self(self_id, 1000);
+  table.clear_dirty();
+
+  TEST_ASSERT_TRUE(table.set_self_node_name("MyNode"));
+  TEST_ASSERT_TRUE(table.is_dirty());
+  NodeEntry e{};
+  TEST_ASSERT_TRUE(table.find_entry_for_test(self_id, &e));
+  TEST_ASSERT_TRUE(e.is_self);
+  TEST_ASSERT_EQUAL_STRING("MyNode", e.node_name);
+
+  table.clear_dirty();
+  TEST_ASSERT_TRUE(table.set_self_node_name(""));
+  TEST_ASSERT_TRUE(table.is_dirty());
+  TEST_ASSERT_TRUE(table.find_entry_for_test(self_id, &e));
+  TEST_ASSERT_EQUAL_STRING("", e.node_name);
+}
+
+// S04 #466: set_self_node_name returns false when self entry not present.
+void test_set_self_node_name_no_self() {
+  NodeTable table;
+  table.set_expected_interval_s(18);
+  TEST_ASSERT_FALSE(table.set_self_node_name("X"));
+  TEST_ASSERT_FALSE(table.set_self_node_name(nullptr));
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_self_init_and_serialization);
@@ -479,5 +509,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_nodetable_snapshot_corrupt_returns_zero);
   RUN_TEST(test_nodetable_snapshot_old_version_rejected);
   RUN_TEST(test_nodetable_dirty_cleared_after_clear);
+  RUN_TEST(test_set_self_node_name);
+  RUN_TEST(test_set_self_node_name_no_self);
   return UNITY_END();
 }

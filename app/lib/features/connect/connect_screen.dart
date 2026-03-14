@@ -63,6 +63,15 @@ class ConnectScreen extends ConsumerWidget {
             ),
           ),
         const SizedBox(height: 8),
+        if (state.connectionStatus == ConnectionStatus.connected &&
+            state.connectedDeviceId != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _ConnectedDeviceNameCard(controller: controller),
+          ),
+        if (state.connectionStatus == ConnectionStatus.connected &&
+            state.connectedDeviceId != null)
+          const SizedBox(height: 8),
         Expanded(
           child: _DeviceList(
             devices: state.deviceList,
@@ -224,6 +233,106 @@ class _ScanStatusIndicator extends StatelessWidget {
       label: Text(label),
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+}
+
+/// S04 #466: Minimal UI to view/edit self node_name when connected.
+class _ConnectedDeviceNameCard extends StatelessWidget {
+  const _ConnectedDeviceNameCard({required this.controller});
+
+  final ConnectController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        title: const Text('Device name'),
+        subtitle: const Text(
+          'Tap Edit to change the name shown in discovery',
+          style: TextStyle(fontSize: 12),
+        ),
+        trailing: TextButton(
+          onPressed: () => _showEditNodeNameDialog(context),
+          child: const Text('Edit'),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showEditNodeNameDialog(BuildContext context) async {
+    final name = await controller.readNodeName();
+    if (!context.mounted) return;
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => _NodeNameEditDialog(initialName: name),
+    );
+    if (result == null || !context.mounted) return;
+    try {
+      await controller.writeNodeName(result);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Device name updated')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update name: $e')),
+      );
+    }
+  }
+}
+
+class _NodeNameEditDialog extends StatefulWidget {
+  const _NodeNameEditDialog({required this.initialName});
+
+  final String initialName;
+
+  @override
+  State<_NodeNameEditDialog> createState() => _NodeNameEditDialogState();
+}
+
+class _NodeNameEditDialogState extends State<_NodeNameEditDialog> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Device name'),
+      content: TextField(
+        controller: _controller,
+        decoration: const InputDecoration(
+          hintText: 'Name (max 32 characters)',
+          border: OutlineInputBorder(),
+        ),
+        maxLength: ConnectController.kNodeNameMaxBytes,
+        autofocus: true,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final name = _controller.text.trim();
+            Navigator.of(context).pop(name);
+          },
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }

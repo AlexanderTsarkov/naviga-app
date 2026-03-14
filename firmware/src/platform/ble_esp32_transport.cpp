@@ -160,14 +160,48 @@ class StubReadCallbacks : public BLECharacteristicCallbacks {
   }
 };
 
-class StubReadWriteCallbacks : public BLECharacteristicCallbacks {
+/** S04 #466: Self node_name. First-phase encoding: 1-byte length (0–32) + UTF-8 payload. Callbacks only read/write core; runtime applies write. */
+class NodeNameCallbacks : public BLECharacteristicCallbacks {
  public:
+  explicit NodeNameCallbacks(BleEsp32Transport* transport) : transport_(transport) {}
+
   void onRead(BLECharacteristic* characteristic) override {
-    if (characteristic) {
+    if (!characteristic || !transport_) {
+      return;
+    }
+    BleTransportCore* core = transport_->core_for_callbacks();
+    const uint8_t* data = core->node_name_value_data();
+    const size_t len = core->node_name_value_len();
+    if (len > 0) {
+      characteristic->setValue(const_cast<uint8_t*>(data), len);
+    } else {
       characteristic->setValue("");
     }
   }
-  void onWrite(BLECharacteristic* /*characteristic*/) override {}
+
+  void onWrite(BLECharacteristic* characteristic) override {
+    if (!characteristic || !transport_) {
+      return;
+    }
+    const std::string value = characteristic->getValue();
+    if (value.empty()) {
+      return;
+    }
+    const auto* bytes = reinterpret_cast<const uint8_t*>(value.data());
+    const size_t received = value.size();
+    uint8_t len_byte = bytes[0];
+    if (len_byte > BleTransportCore::kMaxNodeNameLen) {
+      len_byte = static_cast<uint8_t>(BleTransportCore::kMaxNodeNameLen);
+    }
+    const size_t payload_len = (received >= 1u + len_byte) ? len_byte : (received > 1u ? received - 1u : 0u);
+    const size_t total = 1u + payload_len;
+    if (total > 0) {
+      transport_->core_for_callbacks()->set_node_name_write_request(bytes, total);
+    }
+  }
+
+ private:
+  BleEsp32Transport* transport_ = nullptr;
 };
 
 } // namespace
@@ -202,7 +236,7 @@ void BleEsp32Transport::init() {
   node_name_char_ = service_->createCharacteristic(
       kNodeNameUuid,
       BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
-  node_name_char_->setCallbacks(new StubReadWriteCallbacks());
+  node_name_char_->setCallbacks(new NodeNameCallbacks(this));
 
   node_table_subscribe_char_ = service_->createCharacteristic(
       kNodeTableSubscribeUuid,
@@ -321,6 +355,26 @@ void BleEsp32Transport::send_subscription_update() {
   node_table_subscribe_char_->notify();
 }
 
+void BleEsp32Transport::set_node_name_value(const uint8_t* data, size_t len) {
+  core_.set_node_name_value(data, len);
+}
+
+bool BleEsp32Transport::has_node_name_write_request() const {
+  return core_.has_node_name_write_request();
+}
+
+const uint8_t* BleEsp32Transport::node_name_write_request_data() const {
+  return core_.node_name_write_request_data();
+}
+
+size_t BleEsp32Transport::node_name_write_request_len() const {
+  return core_.node_name_write_request_len();
+}
+
+void BleEsp32Transport::clear_node_name_write_request() {
+  core_.clear_node_name_write_request();
+}
+
 bool BleEsp32Transport::connected() const {
   return connected_;
 }
@@ -388,6 +442,26 @@ void BleEsp32Transport::set_subscription_update_payload(const uint8_t* data, siz
 }
 
 void BleEsp32Transport::send_subscription_update() {}
+
+void BleEsp32Transport::set_node_name_value(const uint8_t* data, size_t len) {
+  core_.set_node_name_value(data, len);
+}
+
+bool BleEsp32Transport::has_node_name_write_request() const {
+  return core_.has_node_name_write_request();
+}
+
+const uint8_t* BleEsp32Transport::node_name_write_request_data() const {
+  return core_.node_name_write_request_data();
+}
+
+size_t BleEsp32Transport::node_name_write_request_len() const {
+  return core_.node_name_write_request_len();
+}
+
+void BleEsp32Transport::clear_node_name_write_request() {
+  core_.clear_node_name_write_request();
+}
 
 bool BleEsp32Transport::connected() const {
   return connected_;

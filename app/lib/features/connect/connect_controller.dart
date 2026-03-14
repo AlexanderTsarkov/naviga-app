@@ -20,6 +20,9 @@ const String kNavigaNodeTableSnapshotUuid =
     '6e4f0003-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaStatusUuid = '6e4f0007-1b9a-4c3a-9a3b-000000000001';
 
+/// S04 #466: Self node_name — read/write; first-phase encoding: 1-byte length + UTF-8 (max 32 bytes).
+const String kNavigaNodeNameUuid = '6e4f0008-1b9a-4c3a-9a3b-000000000001';
+
 /// S04 #464: Targeted read — write 8 bytes node_id (little-endian), read one 72-byte canon record.
 const String kNavigaTargetedReadUuid = '6e4f000c-1b9a-4c3a-9a3b-000000000001';
 
@@ -56,6 +59,7 @@ class ConnectController extends StateNotifier<ConnectState> {
   BluetoothCharacteristic? _deviceInfoCharacteristic;
   BluetoothCharacteristic? _nodeTableSnapshotCharacteristic;
   BluetoothCharacteristic? _statusCharacteristic;
+  BluetoothCharacteristic? _nodeNameCharacteristic;
   BluetoothCharacteristic? _nodeTableSubscribeCharacteristic;
   StreamSubscription<List<int>>? _nodeTableSubscribeSubscription;
   int? _lastNodeTableSnapshotId;
@@ -310,6 +314,10 @@ class ConnectController extends StateNotifier<ConnectState> {
         navigaService,
         Guid(kNavigaNodeTableSubscribeUuid),
       );
+      _nodeNameCharacteristic = _findCharacteristic(
+        navigaService,
+        Guid(kNavigaNodeNameUuid),
+      );
 
       if (_deviceInfoCharacteristic == null) {
         state = state.copyWith(
@@ -504,6 +512,7 @@ class ConnectController extends StateNotifier<ConnectState> {
     await _nodeTableSubscribeSubscription?.cancel();
     _nodeTableSubscribeSubscription = null;
     _nodeTableSubscribeCharacteristic = null;
+    _nodeNameCharacteristic = null;
     _deviceInfoCharacteristic = null;
     _nodeTableSnapshotCharacteristic = null;
     _statusCharacteristic = null;
@@ -524,6 +533,39 @@ class ConnectController extends StateNotifier<ConnectState> {
   }
 
   int? get lastNodeTableSnapshotId => _lastNodeTableSnapshotId;
+
+  /// S04 #466: Max length for self node_name (first-phase encoding).
+  static const int kNodeNameMaxBytes = 32;
+
+  /// S04 #466: Read current self node_name over BLE. Encoding: 1-byte length + UTF-8. Returns empty string if not connected or characteristic missing.
+  Future<String> readNodeName() async {
+    final char = _nodeNameCharacteristic;
+    if (char == null || !char.properties.read) {
+      return '';
+    }
+    try {
+      final payload = await char.read();
+      if (payload.isEmpty) return '';
+      final length = payload[0].clamp(0, kNodeNameMaxBytes);
+      if (length == 0 || payload.length < 1 + length) return '';
+      final bytes = payload.sublist(1, 1 + length);
+      return utf8.decode(bytes);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /// S04 #466: Write self node_name over BLE. Encoding: 1-byte length + UTF-8 (max 32 bytes). Clamps name to kNodeNameMaxBytes.
+  Future<void> writeNodeName(String name) async {
+    final char = _nodeNameCharacteristic;
+    if (char == null || !char.properties.write) {
+      throw StateError('Node name characteristic not available for write');
+    }
+    final bytes = utf8.encode(name);
+    final len = bytes.length.clamp(0, kNodeNameMaxBytes);
+    final payload = <int>[len, ...bytes.sublist(0, len)];
+    await char.write(payload, withoutResponse: false);
+  }
 
   /// S04 #465: Enable notify on NodeTable subscribe characteristic; only call after baseline load.
   Future<void> _startNodeTableSubscription() async {

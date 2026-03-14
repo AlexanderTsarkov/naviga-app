@@ -53,6 +53,13 @@ class BleEsp32Transport : public IBleTransport {
   bool connected() const;
   void set_connected(bool connected);
 
+  /** S04 #466: Self node_name read value (filled by runtime); write request (consumed by runtime). */
+  void set_node_name_value(const uint8_t* data, size_t len);
+  bool has_node_name_write_request() const;
+  const uint8_t* node_name_write_request_data() const;
+  size_t node_name_write_request_len() const;
+  void clear_node_name_write_request();
+
   /** For GATT callbacks (same TU) to read/write core buffer. */
   BleTransportCore* core_for_callbacks() { return &core_; }
   /** Not used from BLE callback; request handling deferred to runtime loop. */

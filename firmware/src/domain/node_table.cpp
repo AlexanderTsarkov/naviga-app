@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
 
 namespace naviga {
 namespace domain {
@@ -160,6 +161,20 @@ void NodeTable::touch_self(uint32_t now_ms) {
   }
   entries_[static_cast<size_t>(self_index_)].last_seen_ms = now_ms;
   set_dirty();
+}
+
+bool NodeTable::set_self_node_name(const char* name) {
+  if (self_index_ < 0 || !name) {
+    return false;
+  }
+  NodeEntry& entry = entries_[static_cast<size_t>(self_index_)];
+  const size_t len = std::min(
+      static_cast<size_t>(strnlen(name, kNodeTableNodeNameMaxLen)),
+      kNodeTableNodeNameMaxLen);
+  std::memcpy(entry.node_name, name, len);
+  entry.node_name[len] = '\0';
+  set_dirty();
+  return true;
 }
 
 // ── RX/apply semantics (#421: canon rx_semantics_v0; #438: v0.2-only, no Tail) ─
