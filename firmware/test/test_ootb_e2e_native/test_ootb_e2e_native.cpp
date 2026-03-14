@@ -36,11 +36,11 @@ uint64_t read_u64_le(const uint8_t* data) {
   return value;
 }
 
-bool buffer_contains_node_id(const uint8_t* buffer, size_t len, uint64_t node_id) {
+bool buffer_contains_node_id(const uint8_t* buffer, size_t len, size_t record_bytes, uint64_t node_id) {
   if (!buffer) {
     return false;
   }
-  for (size_t offset = 0; offset + NodeTable::kRecordBytes <= len; offset += NodeTable::kRecordBytes) {
+  for (size_t offset = 0; offset + record_bytes <= len; offset += record_bytes) {
     if (read_u64_le(buffer + offset) == node_id) {
       return true;
     }
@@ -53,7 +53,8 @@ bool page_contains_node_id(const uint8_t* page, size_t len, uint64_t node_id) {
     return false;
   }
   const size_t records_len = len - kPageHeaderBytes;
-  return buffer_contains_node_id(page + kPageHeaderBytes, records_len, node_id);
+  return buffer_contains_node_id(page + kPageHeaderBytes, records_len,
+                                 BleNodeTableBridge::kRecordBytesBle, node_id);
 }
 
 } // namespace
@@ -91,7 +92,8 @@ void test_e2e_beacon_to_ble_bridge() {
                                                          snapshot_buf,
                                                          sizeof(snapshot_buf));
   TEST_ASSERT_TRUE(snapshot_bytes >= NodeTable::kRecordBytes);
-  TEST_ASSERT_TRUE(buffer_contains_node_id(snapshot_buf, snapshot_bytes, fields.node_id));
+  TEST_ASSERT_TRUE(buffer_contains_node_id(snapshot_buf, snapshot_bytes,
+                                            NodeTable::kRecordBytes, fields.node_id));
 
   BleNodeTableBridge bridge;
   MockBleTransport transport;

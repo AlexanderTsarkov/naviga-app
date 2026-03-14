@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "platform/ble_esp32_transport.h"
+#include "platform/timebase.h"
 
 namespace naviga {
 
@@ -108,6 +109,7 @@ void M1Runtime::init(uint64_t self_id,
   send_policy_.enable_sense(false);
 
   ble_transport_.init();
+  ble_transport_.set_request_handler(this);
 }
 
 void M1Runtime::set_self_position(bool pos_valid,
@@ -409,12 +411,27 @@ void M1Runtime::handle_rx(uint32_t now_ms) {
   }
 }
 
+void M1Runtime::on_node_table_request(uint16_t snapshot_id, uint16_t page_index) {
+  const uint32_t now_ms = uptime_ms();
+  ble_bridge_.update_node_table(now_ms, node_table_, ble_transport_);
+  (void)snapshot_id;
+  (void)page_index;
+}
+
+void M1Runtime::on_targeted_read_request(uint64_t node_id) {
+  const uint32_t now_ms = uptime_ms();
+  ble_bridge_.update_targeted_read(now_ms, node_table_, ble_transport_);
+  (void)node_id;
+}
+
 void M1Runtime::update_ble(uint32_t now_ms) {
   if (last_ble_update_ms_ != 0 && (now_ms - last_ble_update_ms_) < kBleUpdateIntervalMs) {
     return;
   }
   last_ble_update_ms_ = now_ms;
+  // BLE request handling (snapshot + targeted read) runs here, not in GATT callback context.
   ble_bridge_.update_all(now_ms, device_info_, node_table_, ble_transport_);
+  ble_bridge_.update_targeted_read(now_ms, node_table_, ble_transport_);
   ble_status_bridge_.update_status(now_ms, gnss_snapshot_, ble_transport_);
 
   char node_name_buf[domain::kNodeTableNodeNameMaxLen];

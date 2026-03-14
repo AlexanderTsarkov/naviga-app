@@ -39,11 +39,16 @@ struct DeviceInfoModel {
 
 class BleNodeTableBridge {
  public:
-  static constexpr uint8_t kRecordFormatVer = 1;
+  /** S04 #464: canon BLE record format (all product-facing fields, exclusions applied). */
+  static constexpr uint8_t kRecordFormatVer = 2;
   static constexpr uint8_t kPageSize = 10;
+  /** Canon BLE record size (72 bytes). */
+  static constexpr size_t kRecordBytesBle = 72;
 
   bool update_device_info(const DeviceInfoModel& model, IBleTransport& transport) const;
   bool update_node_table(uint32_t now_ms, domain::NodeTable& table, IBleTransport& transport) const;
+  /** Fill targeted-read response for one record by node_id. now_ms used for age/stale. No-op if not found (0-byte response). */
+  void update_targeted_read(uint32_t now_ms, domain::NodeTable& table, IBleTransport& transport) const;
   bool update_all(uint32_t now_ms,
                   const DeviceInfoModel& model,
                   domain::NodeTable& table,

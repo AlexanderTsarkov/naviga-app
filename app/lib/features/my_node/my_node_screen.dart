@@ -267,7 +267,7 @@ class _MyNodeScreenState extends ConsumerState<MyNodeScreen> {
                       ),
                       _RowLabel(
                         label: 'Is grey',
-                        value: '${selfRecord.isGrey}',
+                        value: '${selfRecord.isStale}',
                       ),
                       _RowLabel(
                         label: 'Short ID collision',

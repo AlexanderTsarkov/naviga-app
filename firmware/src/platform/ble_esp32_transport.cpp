@@ -22,6 +22,8 @@ constexpr char kNodeNameUuid[] = "6e4f0008-1b9a-4c3a-9a3b-000000000001";
 constexpr char kNodeTableSubscribeUuid[] = "6e4f0009-1b9a-4c3a-9a3b-000000000001";
 constexpr char kProfilesListUuid[] = "6e4f000a-1b9a-4c3a-9a3b-000000000001";
 constexpr char kProfileReadUuid[] = "6e4f000b-1b9a-4c3a-9a3b-000000000001";
+/** S04 #464: Targeted read — write node_id (8 bytes LE), read one canon record. */
+constexpr char kTargetedReadUuid[] = "6e4f000c-1b9a-4c3a-9a3b-000000000001";
 constexpr size_t kMaxDisplayIdentityLen = 32;
 
 class NavigaServerCallbacks : public BLEServerCallbacks {
@@ -66,19 +68,19 @@ class DeviceInfoCallbacks : public BLECharacteristicCallbacks {
 
 class NodeTableSnapshotCallbacks : public BLECharacteristicCallbacks {
  public:
-  explicit NodeTableSnapshotCallbacks(BleTransportCore* core) : core_(core) {}
+  explicit NodeTableSnapshotCallbacks(BleEsp32Transport* transport) : transport_(transport) {}
 
   void onRead(BLECharacteristic* characteristic) override {
-    if (!characteristic || !core_) {
+    if (!characteristic || !transport_) {
       return;
     }
-    const uint8_t* data = core_->node_table_response_data();
-    const size_t len = core_->node_table_response_len();
+    const uint8_t* data = transport_->core_for_callbacks()->node_table_response_data();
+    const size_t len = transport_->core_for_callbacks()->node_table_response_len();
     characteristic->setValue(const_cast<uint8_t*>(data), len);
   }
 
   void onWrite(BLECharacteristic* characteristic) override {
-    if (!characteristic || !core_) {
+    if (!characteristic || !transport_) {
       return;
     }
     const std::string value = characteristic->getValue();
@@ -90,11 +92,46 @@ class NodeTableSnapshotCallbacks : public BLECharacteristicCallbacks {
         static_cast<uint16_t>(bytes[0] | (static_cast<uint16_t>(bytes[1]) << 8));
     const uint16_t page_index =
         static_cast<uint16_t>(bytes[2] | (static_cast<uint16_t>(bytes[3]) << 8));
-    core_->set_node_table_request(snapshot_id, page_index);
+    transport_->core_for_callbacks()->set_node_table_request(snapshot_id, page_index);
+    // Deferred: runtime loop processes pending request (no NodeTable access from callback).
   }
 
  private:
-  BleTransportCore* core_ = nullptr;
+  BleEsp32Transport* transport_ = nullptr;
+};
+
+class TargetedReadCallbacks : public BLECharacteristicCallbacks {
+ public:
+  explicit TargetedReadCallbacks(BleEsp32Transport* transport) : transport_(transport) {}
+
+  void onRead(BLECharacteristic* characteristic) override {
+    if (!characteristic || !transport_) {
+      return;
+    }
+    const uint8_t* data = transport_->core_for_callbacks()->targeted_read_response_data();
+    const size_t len = transport_->core_for_callbacks()->targeted_read_response_len();
+    characteristic->setValue(const_cast<uint8_t*>(data), len);
+  }
+
+  void onWrite(BLECharacteristic* characteristic) override {
+    if (!characteristic || !transport_) {
+      return;
+    }
+    const std::string value = characteristic->getValue();
+    if (value.size() != 8) {
+      return;
+    }
+    const auto* bytes = reinterpret_cast<const uint8_t*>(value.data());
+    uint64_t node_id = 0;
+    for (int i = 0; i < 8; ++i) {
+      node_id |= static_cast<uint64_t>(bytes[i]) << (8 * i);
+    }
+    transport_->core_for_callbacks()->set_targeted_read_request(node_id);
+    // Deferred: runtime loop processes pending request (no NodeTable access from callback).
+  }
+
+ private:
+  BleEsp32Transport* transport_ = nullptr;
 };
 
 class StatusCallbacks : public BLECharacteristicCallbacks {
@@ -152,7 +189,12 @@ void BleEsp32Transport::init() {
   node_table_char_ = service_->createCharacteristic(
       kNodeTableSnapshotUuid,
       BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
-  node_table_char_->setCallbacks(new NodeTableSnapshotCallbacks(&core_));
+  node_table_char_->setCallbacks(new NodeTableSnapshotCallbacks(this));
+
+  targeted_read_char_ = service_->createCharacteristic(
+      kTargetedReadUuid,
+      BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
+  targeted_read_char_->setCallbacks(new TargetedReadCallbacks(this));
 
   status_char_ = service_->createCharacteristic(kStatusUuid, BLECharacteristic::PROPERTY_READ);
   status_char_->setCallbacks(new StatusCallbacks(&core_));
@@ -233,6 +275,38 @@ bool BleEsp32Transport::get_node_table_request(uint16_t* snapshot_id, uint16_t* 
   return core_.get_node_table_request(snapshot_id, page_index);
 }
 
+void BleEsp32Transport::set_targeted_read_response(const uint8_t* data, size_t len) {
+  core_.set_targeted_read_response(data, len);
+}
+
+void BleEsp32Transport::set_targeted_read_request(uint64_t node_id) {
+  core_.set_targeted_read_request(node_id);
+}
+
+bool BleEsp32Transport::get_targeted_read_request(uint64_t* node_id) const {
+  return core_.get_targeted_read_request(node_id);
+}
+
+const uint8_t* BleEsp32Transport::targeted_read_response_data() const {
+  return core_.targeted_read_response_data();
+}
+
+size_t BleEsp32Transport::targeted_read_response_len() const {
+  return core_.targeted_read_response_len();
+}
+
+void BleEsp32Transport::handle_node_table_write(uint16_t snapshot_id, uint16_t page_index) {
+  if (request_handler_) {
+    request_handler_->on_node_table_request(snapshot_id, page_index);
+  }
+}
+
+void BleEsp32Transport::handle_targeted_read_write(uint64_t node_id) {
+  if (request_handler_) {
+    request_handler_->on_targeted_read_request(node_id);
+  }
+}
+
 bool BleEsp32Transport::connected() const {
   return connected_;
 }
@@ -270,6 +344,30 @@ void BleEsp32Transport::set_status(const uint8_t* data, size_t len) {
 bool BleEsp32Transport::get_node_table_request(uint16_t* snapshot_id, uint16_t* page_index) const {
   return core_.get_node_table_request(snapshot_id, page_index);
 }
+
+void BleEsp32Transport::set_targeted_read_response(const uint8_t* data, size_t len) {
+  core_.set_targeted_read_response(data, len);
+}
+
+void BleEsp32Transport::set_targeted_read_request(uint64_t node_id) {
+  core_.set_targeted_read_request(node_id);
+}
+
+bool BleEsp32Transport::get_targeted_read_request(uint64_t* node_id) const {
+  return core_.get_targeted_read_request(node_id);
+}
+
+const uint8_t* BleEsp32Transport::targeted_read_response_data() const {
+  return core_.targeted_read_response_data();
+}
+
+size_t BleEsp32Transport::targeted_read_response_len() const {
+  return core_.targeted_read_response_len();
+}
+
+void BleEsp32Transport::handle_node_table_write(uint16_t /*snapshot_id*/, uint16_t /*page_index*/) {}
+
+void BleEsp32Transport::handle_targeted_read_write(uint64_t /*node_id*/) {}
 
 bool BleEsp32Transport::connected() const {
   return connected_;

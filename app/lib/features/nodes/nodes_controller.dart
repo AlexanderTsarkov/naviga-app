@@ -36,9 +36,7 @@ class NodesController extends StateNotifier<NodesState> {
   NodesController(this._repository, {NodeTableCacheStore? cacheStore})
     : _cacheStore = cacheStore ?? NodeTableCacheStore(),
       super(NodesState.initial()) {
-    if (kDebugFetchNodeTableOnConnect) {
-      nodeTableDebugRefreshOnConnect = refresh;
-    }
+    nodeTableDebugRefreshOnConnect = refresh;
   }
 
   final NodeTableRepository _repository;

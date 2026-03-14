@@ -131,6 +131,19 @@ class NodeTable {
                            uint8_t* out_buffer,
                            size_t out_capacity) const;
 
+  /** Snapshot time for the current snapshot (for BLE export age/stale). Returns 0 if id mismatch. */
+  uint32_t get_snapshot_time_ms(uint16_t snapshot_id) const;
+  /** Fill out[] with entries for the given snapshot page. Returns count. Used by BLE bridge for canon export. */
+  size_t get_snapshot_page_entries(uint16_t snapshot_id,
+                                  size_t page_index,
+                                  size_t page_size,
+                                  NodeEntry* out,
+                                  size_t max_count) const;
+  /** Copy entry for node_id into *out. Returns true if found. For BLE targeted read. */
+  bool find_entry_by_node_id(uint64_t node_id, NodeEntry* out) const;
+  /** Whether entry is stale at snapshot_time_ms. For BLE export is_stale. */
+  bool is_stale(const NodeEntry& entry, uint32_t snapshot_time_ms) const { return is_grey(entry, snapshot_time_ms); }
+
   // #418: persistence dirty tracking and restore.
   bool is_dirty() const { return dirty_; }
   void clear_dirty() { dirty_ = false; }

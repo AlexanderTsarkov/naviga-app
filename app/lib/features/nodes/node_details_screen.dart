@@ -139,7 +139,7 @@ class NodeDetailsScreen extends ConsumerWidget {
                         label: 'Pos valid',
                         value: '${record.posValid}',
                       ),
-                      _RowLabel(label: 'Is grey', value: '${record.isGrey}'),
+                      _RowLabel(label: 'Is stale', value: '${record.isStale}'),
                       _RowLabel(
                         label: 'Short ID collision',
                         value: '${record.shortIdCollision}',

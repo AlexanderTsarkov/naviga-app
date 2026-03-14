@@ -52,6 +52,35 @@ bool BleTransportCore::get_node_table_request(uint16_t* snapshot_id, uint16_t* p
   return true;
 }
 
+void BleTransportCore::set_targeted_read_response(const uint8_t* data, size_t len) {
+  const size_t copy_len = std::min(len, targeted_read_buf_.size());
+  if (data && copy_len > 0) {
+    std::memcpy(targeted_read_buf_.data(), data, copy_len);
+  }
+  targeted_read_len_ = copy_len;
+}
+
+void BleTransportCore::set_targeted_read_request(uint64_t node_id) {
+  req_targeted_node_id_ = node_id;
+  has_targeted_request_ = true;
+}
+
+bool BleTransportCore::get_targeted_read_request(uint64_t* node_id) const {
+  if (!has_targeted_request_ || !node_id) {
+    return false;
+  }
+  *node_id = req_targeted_node_id_;
+  return true;
+}
+
+const uint8_t* BleTransportCore::targeted_read_response_data() const {
+  return targeted_read_buf_.data();
+}
+
+size_t BleTransportCore::targeted_read_response_len() const {
+  return targeted_read_len_;
+}
+
 const uint8_t* BleTransportCore::node_table_response_data() const {
   return node_table_buf_.data();
 }
