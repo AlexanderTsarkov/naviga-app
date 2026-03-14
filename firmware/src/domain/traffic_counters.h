@@ -18,14 +18,15 @@ struct TrafficCounters {
   uint32_t tx_slot_replaced    = 0;  ///< Enqueue replaced an existing slot (coalesce).
   uint32_t tx_starved          = 0;  ///< Dequeue chose one slot; others got starvation increment.
 
-  // TX outcome (M1Runtime: after send attempt)
+  // TX outcome (M1Runtime: after send attempt). AGGREGATE: this node's totals by type.
   uint32_t tx_sent_pos_full = 0;
   uint32_t tx_sent_alive    = 0;
   uint32_t tx_sent_status   = 0;
   uint32_t tx_drop_channel_busy = 0;
   uint32_t tx_drop_send_fail   = 0;
 
-  // RX (M1Runtime: after on_rx)
+  // RX (M1Runtime: after on_rx, when decode/apply succeeded). AGGREGATE: accepted from any peer.
+  // Not peer-specific: one node's PosRx can exceed a single peer's PosTx (e.g. multiple peers). #452
   uint32_t rx_ok_pos_full = 0;
   uint32_t rx_ok_alive    = 0;
   uint32_t rx_ok_status   = 0;

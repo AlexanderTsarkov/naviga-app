@@ -17,14 +17,14 @@ using naviga::get_ootb_role_profile;
 namespace {
 
 void expect_person(const RoleProfileRecord& r) {
-  TEST_ASSERT_EQUAL_UINT16(18, r.min_interval_sec);
-  TEST_ASSERT_EQUAL_UINT8(9, r.max_silence_10s);
-  TEST_ASSERT_FLOAT_WITHIN(0.1f, 25.0f, r.min_displacement_m);
+  TEST_ASSERT_EQUAL_UINT16(22, r.min_interval_sec);
+  TEST_ASSERT_EQUAL_UINT8(11, r.max_silence_10s);
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 30.0f, r.min_displacement_m);
 }
 
 void expect_dog(const RoleProfileRecord& r) {
-  TEST_ASSERT_EQUAL_UINT16(9, r.min_interval_sec);
-  TEST_ASSERT_EQUAL_UINT8(3, r.max_silence_10s);
+  TEST_ASSERT_EQUAL_UINT16(11, r.min_interval_sec);
+  TEST_ASSERT_EQUAL_UINT8(5, r.max_silence_10s);
   TEST_ASSERT_FLOAT_WITHIN(0.1f, 15.0f, r.min_displacement_m);
 }
 

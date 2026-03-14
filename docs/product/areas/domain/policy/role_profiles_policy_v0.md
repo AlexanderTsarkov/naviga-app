@@ -43,8 +43,8 @@ The following **OOTB default** role profiles are normative. Product/firmware MUS
 
 | Role   | minIntervalSec | minDisplacementM | maxSilence10s |
 |--------|----------------|------------------|---------------|
-| **Person** | 18  | 25  | 9  |
-| **Dog**    | 9   | 15  | 3  |
+| **Person** | 22  | 30  | 11  |
+| **Dog**    | 11  | 15  | 5   |
 | **Infra**  | 360 | 100 | 255 |
 
 **Note (Infra):** The intended maxSilence for Infra may be 3600 s (1 h), but the encoding maximum is 2550 s (255×10 s). For OOTB, the value is **clamped to 255**; receivers interpret maxSilence10s = 255 as 2550 s.
