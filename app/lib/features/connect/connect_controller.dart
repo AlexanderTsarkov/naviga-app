@@ -19,6 +19,7 @@ const String kNavigaDeviceInfoUuid = '6e4f0002-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaNodeTableSnapshotUuid =
     '6e4f0003-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaStatusUuid = '6e4f0007-1b9a-4c3a-9a3b-000000000001';
+
 /// S04 #464: Targeted read — write 8 bytes node_id (little-endian), read one 72-byte canon record.
 const String kNavigaTargetedReadUuid = '6e4f000c-1b9a-4c3a-9a3b-000000000001';
 const String kNavigaNamePrefix = 'Naviga';
@@ -986,8 +987,10 @@ class NodeRecordV1 {
   final int shortId;
   final bool isSelf;
   final bool posValid;
+
   /// Canon product-facing staleness (BLE baseline path). Prefer this over [isGrey].
   final bool isStale;
+
   /// Backward compat: same as [isStale]. Do not use for new BLE-baseline code.
   bool get isGrey => isStale;
   final bool shortIdCollision;
@@ -1027,6 +1030,9 @@ class NodeTableSnapshotPage {
 /// S04 #464: Canon BLE record size (format ver 2).
 const int kNodeRecordBytesBleCanon = 72;
 
+/// Legacy format 1 record size (26 bytes); supported for backward compatibility with older firmware.
+const int kNodeRecordBytesFormat1 = 26;
+
 class BleNodeTableParser {
   static BleParseResult<NodeTableSnapshotPage> parsePage(List<int> data) {
     if (data.length < 10) {
@@ -1055,6 +1061,24 @@ class BleNodeTableParser {
       );
     }
     final recordsBytes = data.length - 10;
+    if (recordFormatVer == 1) {
+      if (recordsBytes % kNodeRecordBytesFormat1 != 0) {
+        return BleParseResult(
+          data: null,
+          warning:
+              'NodeTableSnapshot format 1 payload size invalid (${data.length})',
+        );
+      }
+      return _parsePageFormat1(
+        data: data,
+        offset: 10,
+        snapshotId: snapshotId,
+        totalNodes: totalNodes,
+        pageIndex: pageIndex,
+        pageSize: pageSize,
+        pageCount: pageCount,
+      );
+    }
     if (recordFormatVer == 2) {
       if (recordsBytes % kNodeRecordBytesBleCanon != 0) {
         return BleParseResult(
@@ -1076,6 +1100,68 @@ class BleNodeTableParser {
     return BleParseResult(
       data: null,
       warning: 'Unknown NodeRecord format_ver=$recordFormatVer',
+    );
+  }
+
+  static BleParseResult<NodeTableSnapshotPage> _parsePageFormat1({
+    required List<int> data,
+    required int offset,
+    required int snapshotId,
+    required int totalNodes,
+    required int pageIndex,
+    required int pageSize,
+    required int pageCount,
+  }) {
+    final records = <NodeRecordV1>[];
+    final recordCount = (data.length - offset) ~/ kNodeRecordBytesFormat1;
+    for (var i = 0; i < recordCount; i++) {
+      final base = offset + i * kNodeRecordBytesFormat1;
+      if (base + kNodeRecordBytesFormat1 > data.length) break;
+      final nodeId = _readU64Le(data, base + 0);
+      final shortId = _readU16Le(data, base + 8);
+      final flags = data[base + 10];
+      final lastSeenAgeS = _readU16Le(data, base + 11);
+      final latE7 = _toSigned32(_readU32Le(data, base + 13));
+      final lonE7 = _toSigned32(_readU32Le(data, base + 17));
+      final posAgeS = _readU16Le(data, base + 21);
+      final lastRxRssi = _toSigned8(data[base + 23]);
+      final snrLast = _toSigned8(data[base + 24]);
+
+      final isSelf = (flags & 0x01) != 0;
+      final posValid = (flags & 0x02) != 0;
+      final isStale = (flags & 0x04) != 0;
+      final shortIdCollision = (flags & 0x08) != 0;
+
+      records.add(
+        NodeRecordV1(
+          nodeId: nodeId,
+          shortId: shortId,
+          isSelf: isSelf,
+          posValid: posValid,
+          isStale: isStale,
+          shortIdCollision: shortIdCollision,
+          lastSeenAgeS: lastSeenAgeS,
+          latE7: latE7,
+          lonE7: lonE7,
+          posAgeS: posAgeS,
+          lastRxRssi: lastRxRssi,
+          lastSeq: 0,
+          snrLast: snrLast,
+        ),
+      );
+    }
+    return BleParseResult(
+      data: NodeTableSnapshotPage(
+        header: NodeTableSnapshotHeader(
+          snapshotId: snapshotId,
+          totalNodes: totalNodes,
+          pageIndex: pageIndex,
+          pageSize: pageSize,
+          pageCount: pageCount,
+          recordFormatVer: 1,
+        ),
+        records: records,
+      ),
     );
   }
 

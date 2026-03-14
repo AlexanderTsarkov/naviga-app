@@ -123,10 +123,38 @@ void test_paging_overflow() {
   TEST_ASSERT_EQUAL_UINT32(2, records1);
 }
 
+void test_stale_snapshot_fallback_freshness() {
+  MockBleTransport transport;
+  BleNodeTableBridge bridge;
+  NodeTable table;
+  table.set_expected_interval_s(10);
+  const uint64_t self_id = 0xDDDDDDDDDDDDDDDDULL;
+  table.init_self(self_id, 1000);
+  table.update_self_position(1000, 2000, 0, 1000);
+
+  const uint16_t stale_id = table.create_snapshot(1000);
+  table.create_snapshot(2000);
+
+  transport.set_node_table_request(stale_id, 0);
+  TEST_ASSERT_TRUE(bridge.update_node_table(2000, table, transport));
+
+  const uint8_t* page = transport.node_table_data();
+  TEST_ASSERT_NOT_NULL(page);
+  const uint16_t response_snapshot_id = read_u16_le(page);
+  const uint16_t total_nodes = read_u16_le(page + 2);
+  const size_t len = transport.node_table_len();
+  const size_t record_count = (len - 10) / BleNodeTableBridge::kRecordBytesBle;
+
+  TEST_ASSERT_FALSE(response_snapshot_id == stale_id);
+  TEST_ASSERT_EQUAL_UINT16(1, total_nodes);
+  TEST_ASSERT_EQUAL_UINT32(1, record_count);
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_device_info_payload);
   RUN_TEST(test_snapshot_header_and_record);
   RUN_TEST(test_paging_overflow);
+  RUN_TEST(test_stale_snapshot_fallback_freshness);
   return UNITY_END();
 }

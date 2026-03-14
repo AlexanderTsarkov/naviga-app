@@ -200,7 +200,6 @@ bool BleNodeTableBridge::update_node_table(uint32_t now_ms,
     snapshot_reset = true;
   }
 
-  const uint32_t snapshot_time_ms = table.get_snapshot_time_ms(snapshot_id);
   std::array<domain::NodeEntry, kPageSize> entries{};
   size_t n_entries = 0;
   if (total_nodes > 0 && page_index < page_count) {
@@ -215,6 +214,8 @@ bool BleNodeTableBridge::update_node_table(uint32_t now_ms,
           snapshot_id, 0, kPageSize, entries.data(), entries.size());
     }
   }
+
+  const uint32_t snapshot_time_ms = table.get_snapshot_time_ms(snapshot_id);
 
   std::array<uint8_t, kPageHeaderBytes + kRecordBytesBle * kPageSize> buffer{};
   write_u16_le(buffer.data(), snapshot_id);
