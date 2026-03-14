@@ -1,0 +1,19 @@
+## Goal
+Define meaning of `fwVersionId` (uint16): encoding rules, lifecycle, sentinel/unknown, compatibility expectations, and a lightweight registry/mapping approach.
+
+## Outputs (WIP doc)
+- **Suggested path:** `docs/product/wip/areas/firmware/policy/fw_version_id_semantics_s03.md`
+- **Registry:** `docs/product/areas/firmware/registry/fw_version_id_registry_v0.md`
+
+## Definition of Done
+- [x] Clear definition of `fwVersionId` (what it represents, scope)
+- [x] Encoding rules and examples
+- [x] Sentinel/unknown rules documented
+- [x] Update rules and lifecycle (when it changes, how)
+- [x] Links to provisioning baseline and NodeTable master table
+- [x] Note: "Future: S04 BLE exposure"
+
+## Links
+- Umbrella: [#351](https://github.com/AlexanderTsarkov/naviga-app/issues/351) (S03 Planning WIP)
+- Related: [#360](https://github.com/AlexanderTsarkov/naviga-app/issues/360) (traffic model; Info packet includes FW fields)
+- PR: [#409](https://github.com/AlexanderTsarkov/naviga-app/pull/409) (docs-only; closes on merge)

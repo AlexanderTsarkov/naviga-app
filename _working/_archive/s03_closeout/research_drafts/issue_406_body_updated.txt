@@ -1,0 +1,16 @@
+## Goal
+Define meaning of `hwProfileId` (uint16): what it represents (board + radio + GNSS capabilities), how it is assigned, sentinel/unknown, and a registry approach.
+
+## Outputs (WIP doc)
+- **Suggested path:** `docs/product/wip/areas/firmware/policy/hw_profile_id_semantics_s03.md`
+- **Registry:** `docs/product/areas/firmware/registry/hw_profile_id_registry_v0.md`
+
+## Definition of Done
+- [x] Clear semantics of `hwProfileId` + examples
+- [x] Mapping/registry strategy documented
+- [x] Links to provisioning baseline and packet contract
+
+## Links
+- Umbrella: [#351](https://github.com/AlexanderTsarkov/naviga-app/issues/351) (S03 Planning WIP)
+- Related: [#360](https://github.com/AlexanderTsarkov/naviga-app/issues/360) (traffic model; Info packet includes HW fields)
+- PR: [#410](https://github.com/AlexanderTsarkov/naviga-app/pull/410) (docs-only; closes on merge)

@@ -1,0 +1,7 @@
+**Reframing (docs-only):** The task is reframed from “draft the BLE snapshot outline now” into a **gate/deferral note** for S04.
+
+- **Current deliverable:** A short WIP doc that explicitly **defers** detailed BLE snapshot design until S03 canon and code convergence are complete: [ble_snapshot_s04_gate.md](docs/product/wip/areas/mobile/ble_snapshot_s04_gate.md). It states why we defer, what must stabilize in S03 first, required S03 inputs (accepted NodeTable canon, field map, packet→NodeTable mapping, packet context/TX rules, code parity), and an S04 entry checklist. It does **not** define BLE fields, format, cadence, GATT, or transport.
+- **Detailed BLE snapshot outline** (scope, fields, format, cadence/trigger) remains a **post-S03 task** (S04), to be done when the checklist in the gate doc is satisfied.
+- **Parent:** [#351](https://github.com/AlexanderTsarkov/naviga-app/issues/351). Links in the gate doc to [#358](https://github.com/AlexanderTsarkov/naviga-app/issues/358), [#407](https://github.com/AlexanderTsarkov/naviga-app/issues/407), [#230](https://github.com/AlexanderTsarkov/naviga-app/issues/230), NodeTable hub, and packet context/TX rules.
+
+No code changes; planning/doc only. Definition of Done for this reframing: gate doc exists, rationale for deferral explicit, required S03 inputs listed, S04 start checklist included, non-goals prevent accidental premature BLE design.

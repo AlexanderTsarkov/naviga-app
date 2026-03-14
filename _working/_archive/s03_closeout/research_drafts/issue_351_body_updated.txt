@@ -1,0 +1,329 @@
+# S03 Planning (WIP): NodeTable as Product Heart
+
+This umbrella is **planning + documentation WIP only**. Implementation will be a separate **"S03 Execution"** umbrella after WIP → Canon promotion. No code changes, refactors, or PRs in this planning phase.
+
+---
+
+## Canvas doc (source of truth): S03 — NodeTable как сердце продукта (план документации)
+
+### Контекст и мотивация
+
+- **Цель продукта:** Naviga — embedded-first; FW + радио + домен → BLE bridge → mobile позже.
+- **Проблема-антипример:** Meshtastic решает «сообщения», геопозиция вторична; тяжёлые пакеты/протокол (protobuf), сложные радио-настройки, требующие от пользователя знаний (SF/BW/CR). У нас наоборот: **простота UX**, а сложность — под капотом.
+- **Смысл S03:** довести **NodeTable** до статуса реального «сердца» продукта, чтобы в **S04** можно было безопасно протянуть её в BLE/BT и начать строить mobile UI/логику на фактах из NodeTable.
+
+---
+
+### Итог S03 (Definition of Done)
+
+1) **NodeTable «полная»**: покрывает максимум полей, включая **reserved** (даже если часть ещё не летает по радио).
+2) **Ясная типология данных**: поля разнесены по группам и привязаны к пакетам/источникам.
+3) **Таблица соответствий** для каждого поля:
+   - хранение в RAM (NodeTable)
+   - persistence на flash (если применимо; если ещё не сделано — имплементировать)
+   - on-air wire формат (как именно летит / размер / packing)
+   - (под S04) BLE snapshot формат/поля
+4) **Минимальный footprint в эфире**: где возможно — битовая упаковка, дифференциация по «частоте изменения».
+5) **Оценка трафика**: расчёт/модель для 5–10–20 нод, несколько профилей; подтверждение, что оно реально летает (или зафиксированы корректировки).
+6) **Provisioning / OOTB автономный старт**: новую железку можно прошить, включить — и она **сразу работает без телефона**:
+   - FW делает первичную настройку железа «как это нужно Навиге»
+   - создаётся/обновляется NodeTable, пакеты ходят с учётом общего трафика
+   - необходимые данные корректно персистятся
+7) **Ревизия пользовательских настроек (радио)**: канал/частота, LoRa параметры (скорость), мощность передачи, профили (factory/default → current → previous) — оформлено и приведено к продуктовой логике.
+8) **Ревизия пользовательских настроек ноды**: роли/типы (человек/собака/инфраструктура/репитер/машина) и связанные параметры (min_time, max_silence, min_shift и т.п.) — проверены, уточнены, документированы.
+9) **Док-ориентированная готовность к реализации**: планирование закрыто, решения оформлены, канон обновлён, есть мастер-тикет на изготовление + саб-тикеты на реализацию/тесты.
+
+---
+
+### Список результатов-артефактов (что будет написано в доках)
+
+#### A. NodeTable Field Map (главный документ S03)
+
+Таблица, где каждая строка — поле NodeTable.
+
+**Обязательные колонки (минимум):**
+
+- `Group` (см. группы ниже)
+- `Field` (имя)
+- `Semantics` (что означает)
+- `Source of truth` (само-измерение / из эфира / derived)
+- `Update trigger` (periodic / event(rx) / rare / user)
+- `NodeTable storage` (тип/байты/packing)
+- `Persistence` (persisted / derived / prohibited + правило)
+- `On-air packet` (тип пакета + как кодируется)
+- `Wire footprint` (байты payload + "on-air bytes" с заголовком)
+- `Coalesce/replace rule` (как обновлять при RX/локально)
+- `Notes` (sentinel, диапазоны, компрессия, риски)
+
+#### B. Packet → NodeTable mapping
+
+Карта: какие пакеты (on-air) заполняют какие группы/поля NodeTable.
+
+#### C. Traffic model
+
+Док/таблица/скрипт расчёта:
+
+- сколько пакетов каждого типа в минуту/секунду
+- какой средний on-air размер
+- оценка нагрузки на эфир при 5/10/20 нодах и 2–3 профилях
+- где границы и какие degrade-правила включаются
+
+#### D. "Ready for S04" BLE snapshot outline
+
+Тонкий документ-черновик: какие поля NodeTable нужны mobile UI первыми (map/list/status), какие можно отложить.
+
+---
+
+### Группы NodeTable (каноническая декомпозиция)
+
+#### 1) Node_Core_Pos
+
+- lat/lon (+ минимальные флаги валидности, если нужны)
+
+#### 2) Node_Core_Tail
+
+- остальная полезная GNSS-информация (примерный перечень для уточнения):
+  - fix_type / sats / hdop-ish / speed / course / altitude / time
+  - (важно) `ref_core_seq16` — связь с конкретным Core_Pos
+
+#### 3) Node_Operational
+
+Операционные параметры, которые могут меняться в runtime:
+
+- **TX power (обязательно)**
+- текущий радио-профиль / режим
+- параметры энергосбережения/ролей/таймингов (что реально есть в FW)
+
+#### 4) Node_Informative
+
+Редко меняющиеся / «паспортные»:
+
+- fwVersionId / hwProfileId (нужно формализовать, убрать "заглушки")
+- manufacturer / capabilities (если есть)
+
+#### 5) Node_Self_exposed
+
+Наблюдаемое "на приёме":
+
+- RSSI/SNR/quality принятых пакетов
+- last_rx_at, rx_count (если решим)
+
+#### 6) Node_Derived
+
+Производные поля:
+
+- stale/age, moving/idle, quality score, etc.
+
+---
+
+### Ключевые уточнения, которые надо зафиксировать в S03 (для твоих комментариев)
+
+#### Provisioning (настройка железа под нужды продукта)
+
+- Что именно FW делает «первым делом» на новой железке (E220, GNSS, power, режимы, тайминги).
+- Какие значения считаются **factory defaults** для Naviga (а не «как пришло с завода»).
+- Какие параметры обязаны попасть в NodeTable/telemetry сразу после provisioning.
+
+#### OOTB автономный старт без телефона
+
+- Минимальный набор настроек, который должен существовать, чтобы нода жила автономно:
+  - default radio profile
+  - default node role/type (и параметры)
+  - baseline cadence/traffic policy
+- Что персистится, чтобы после ребута нода продолжала вести себя предсказуемо.
+
+#### Ревизия пользовательских настроек — радио
+
+- Набор радионастроек (канал/частота, LoRa скорость/параметры, txPower step и т.п.).
+- В S03 **нет** создания пользовательских профилей (нет UI/протокола) — задача S03: довести **OOTB/default** профиль до полноты и телеметрии.
+- TX power обязательно отражается в Node_Operational и летит в эфир (Operational packet).
+- Скорость/LoRa параметры (UART E22/E220): дискретные значения (2.4kbps, 4.8kbps, …). В S03 фиксируем как raw enum/step.
+- Под SPI-модули (S05–S06) — отдельный будущий пересмотр модели/единиц.
+
+#### Ревизия пользовательских настроек — нода/роль
+
+- Набор типов/ролей: человек / собака / инфраструктура / репитер / машина.
+- Какие параметры реально участвуют в поведении (min_time, max_silence, min_shift и т.п.) и где они живут.
+- Что можно менять без телефона и что требует mobile (в S04).
+
+#### TX Power — что именно значит "протащить"
+
+**Не просто поле.** Нужно описать:
+
+1) **Где живёт TX power как настройка:**
+   - часть **radio profile**
+   - есть **factory/default profile (OOTB)**
+   - пользовательские профили (UI/протокол) **пока не доступны** и **не входят в S03**
+2) **Состояния/история:**
+   - минимум для S03: `default profile` + `current profile` (как активный)
+   - `previous profile` — полезно, но можно оставить **reserved** до появления UI/протокола
+3) **Телеметрия:**
+   - read-back из радио (что реально выставлено) попадает в Node_Operational
+4) **On-air:**
+   - **TX power нужно передавать в Node_Operational уже в S03** — чтобы другие ноды знали, на какой мощности сейчас вещает нода (в будущем для авто-настройки сети)
+
+**Формат:**
+
+- Для E22/E220 UART модулей: мощность задаётся шагами (например 21/24/27/30/33; 33 — только для T33D).
+- Поэтому в S03 canonical: хранить **raw step** (как authoritative), а `dBm` (если нужен) — только как derived/optional.
+- Пересмотр единиц/диапазонов ожидается при поддержке SPI-модулей (ориентир S05–S06).
+
+#### FW/HW version — убрать "пустые" поля
+
+- определить, что такое `fwVersionId`/`hwProfileId`: opaque uint16 (таблица соответствий вне протокола) или что-то иное.
+- определить sentinel/unknown поведение.
+
+#### GNSS Tail — список и бюджет
+
+- Сначала определить **GNSS HW profile** (режим настройки GNSS как часть provisioning) и получить список реально выдаваемых полей/вариантов.
+- После этого выбрать:
+  - must-have для S04 UI
+  - optional / reserved
+- Зафиксировать бюджет и degrade-политику.
+
+#### Persistence — что реально persistится
+
+- В S03, помимо `seq16`, должна переживать ребут **сама NodeTable** (минимум: ключевые поля + timestamps/age, по политике persisted/derived/prohibited).
+- Определить: что хранить полностью, что — частично, что — запрещено.
+- Зафиксировать стратегию записи (batched/flush vs часто) и риски износа flash.
+
+---
+
+### Текущая проблема из #296 (встроить в S03 план)
+
+#### Persisted seq16 + NVS adapter (минимальная целевая поставка)
+
+- Сделать адаптер для NVS/Preferences (чтобы не размазывать ESP32-специфику по коду).
+- Реализовать восстановление `restored_seq16` при старте.
+- Правило: если `restored_seq16 > 0`, то первый TX использует `restored_seq16 + 1`.
+- Покрыть unit-тестом.
+
+> TODO: уточнить политику записи seq16 (каждый TX или flush-пакетно) и риски износа.
+
+---
+
+### План работы S03 как «карта проработки документации»
+
+#### Шаг 1 — Док-скелет (WIP)
+
+- Создать/обновить WIP-док: **NodeTable Field Map** (черновик с колонками и первой итерацией полей).
+- Внести текущую проблему #296 как отдельный раздел (Persistence/seq16).
+
+#### Шаг 2 — Нормализация семантики
+
+- Для каждого поля: определить значения, sentinel, источник, правила обновления.
+- Разнести по группам (Core_Pos/Tail/Operational/Informative/Self_exposed/Derived).
+
+#### Шаг 3 — Wire footprint и packing
+
+- Для каждого поля: определить on-air representation и размер.
+- Отметить поля-кандидаты на битовую упаковку.
+- Зафиксировать "on-air bytes" (payload + header).
+
+#### Шаг 4 — Трафик-модель
+
+- Собрать таблицу частот/каденсов по пакетам и сценариям.
+- Посчитать эфирную нагрузку для 5/10/20 нод и нескольких профилей.
+- Зафиксировать корректировки (cadence/degrade/переезд полей между пакетами).
+
+#### Шаг 5 — Promote WIP → Canon
+
+- Перенести принятые решения в канонические доки (protocol/policy/spec).
+- Оставить в WIP только черновики/альтернативы.
+
+#### Шаг 6 — Мастер-тикет "изготовления" и саб-тикеты
+
+- Мастер-тикет (Execution): реализация/тесты/интеграции.
+- Саб-тикеты: по одному на каждый компактный PR.
+
+#### Шаг 7 — Закрытие S03
+
+- Итоги + ссылки на PR/Issues.
+- Чистка/синхронизация доков.
+- Обновление `current product state` (release notes) → следующая итерация.
+
+---
+
+### Разбиение на будущие саб-тикеты (черновик)
+
+#### P0 (Must ship)
+
+- [ ] **NodeTable Field Map v0.1** (doc): полная таблица полей + storage/persist/wire/BLE
+- [ ] **Provisioning baseline** (doc): что FW настраивает на новой железке «как для Naviga»
+- [x] **OOTB автономный старт** (doc) [#354](https://github.com/AlexanderTsarkov/naviga-app/issues/354): минимальные дефолты, чтобы работать без телефона
+- [ ] **Persisted seq16 + NVS adapter + test** (implementation): закрыть текущую проблему из #296
+
+#### P1 (Should ship)
+
+- [x] **Radio user settings review** (doc) [#356](https://github.com/AlexanderTsarkov/naviga-app/issues/356): channel/frequency, LoRa speed params, txPower, profile model (default/current/previous)
+- [x] **Node role/type review** (doc) [#357](https://github.com/AlexanderTsarkov/naviga-app/issues/357): роли/типы (Person/Dog/Infra) + параметры (min_interval_s, min_displacement_m, max_silence_10s)
+- [x] **Packet → NodeTable mapping** (doc) [#358](https://github.com/AlexanderTsarkov/naviga-app/issues/358): какие пакеты заполняют какие поля
+- [x] **GNSS Tail completeness + budgets** (doc) [#359](https://github.com/AlexanderTsarkov/naviga-app/issues/359): список полей, кодирование, деградации
+
+#### P2 (Nice to have)
+
+- [x] **Traffic model** (doc) [#360](https://github.com/AlexanderTsarkov/naviga-app/issues/360): 5–10–20 нод, hunt + dogs, U расчёты, levers, control outline.
+- [ ] **BLE snapshot outline for S04** (doc) [#361](https://github.com/AlexanderTsarkov/naviga-app/issues/361): минимальный набор полей для mobile UI
+
+---
+
+### S03 Planning additions (post-#360 findings)
+
+- [#405](https://github.com/AlexanderTsarkov/naviga-app/issues/405) — S03 Planning: Define fwVersionId semantics + versioning scheme (what/why/how)
+- [#406](https://github.com/AlexanderTsarkov/naviga-app/issues/406) — S03 Planning: Define hwProfileId / hardware type semantics (what/why/how)
+- [#407](https://github.com/AlexanderTsarkov/naviga-app/issues/407) — S03 Planning: V0.1 radio packet context, formation & TX rules (and packetization redesign v0.2)
+
+These must be completed **before** [#361](https://github.com/AlexanderTsarkov/naviga-app/issues/361) (BLE snapshot outline), because #361 should reflect the finalized packet context/versioning semantics.
+
+---
+
+### Вопросы для твоих комментариев (чтобы быстро уточнять)
+
+1) TX power: в S03 canonical — raw step; dBm при необходимости как derived. (Ок?)
+2) Profiles: в S03 только OOTB/default + current (как активный); user-defined profiles не делаем.
+3) Node role/type: добавить в NodeTable и (если надо) в on-air informative/operational: человек/собака/машина/репитер.
+4) GNSS Tail: сначала утвердить GNSS provisioning profile и перечень доступных полей → потом выбор must/optional.
+5) Persistence: NodeTable переживает ребут (вместе с seq16); уточнить объём/частоту записи.
+6) Traffic model: базовые сценарии — **человек** и **собака**; нужна модель поведения (движение/стоп) и масштабирование до 20 нод.
+
+---
+
+## Latest completed / Next (S03 planning)
+
+- **Latest completed:** [#360](https://github.com/AlexanderTsarkov/naviga-app/issues/360) Traffic model S03 v0.1 (doc) — \`docs/product/wip/areas/radio/policy/traffic_model_s03_v0_1.md\`. U calculations (hunt, 5/10/20 dogs); split vs merged; risk zones; mitigation levers; control outline. (PR [#402](https://github.com/AlexanderTsarkov/naviga-app/pull/402).) **Also done:** [#359](https://github.com/AlexanderTsarkov/naviga-app/issues/359) GNSS Tail (PR #401), [#358](https://github.com/AlexanderTsarkov/naviga-app/issues/358) (PR #400), [#371](https://github.com/AlexanderTsarkov/naviga-app/issues/371)/[#372](https://github.com/AlexanderTsarkov/naviga-app/issues/372) (PR #398/#399), [#407](https://github.com/AlexanderTsarkov/naviga-app/issues/407) packet context/TX rules (PR [#408](https://github.com/AlexanderTsarkov/naviga-app/pull/408)).
+- **#355 postponed:** [#355](https://github.com/AlexanderTsarkov/naviga-app/issues/355) (Persisted seq16 + NVS adapter + test) is **code-track**; outside current S03 planning-only phase. Revisit when coding phase starts.
+- **Next (planning):** [#361](https://github.com/AlexanderTsarkov/naviga-app/issues/361) — BLE snapshot outline for S04. *Reason:* Packet context/TX rules (#407) are now stabilized in WIP.
+
+---
+
+## Additional planning track (optional extension)
+
+- **Channel utilization budgeting & radio profile strategy:** Epic [#403](https://github.com/AlexanderTsarkov/naviga-app/issues/403) — *S03 Planning: Channel utilization budgeting & radio profile strategy (Long/Standard/Fast)*. WIP strategy doc: \`docs/product/wip/areas/radio/policy/channel_utilization_budgeting_and_profile_strategy_s03_v0_1.md\`. Covers U_target, Long/Standard/Fast profile matrix, merge/split by category, throttling integration, rate_tier strategy, mesh piggyback (attach_window), calibration TBD. Does **not** disrupt the 352–361 closure sequence; resume when continuing this track.
+
+---
+
+## S03 scope summary (from planning constraints)
+
+- **In scope (S03):** NodeTable as product heart; docs/decisions; OOTB/default + telemetry only; TX power on-air in Node_Operational.
+- **Decided (do not reopen):** TX power MUST be sent on-air in Node_Operational in S03; E22/E220 UART format: raw step (21/24/27/30/33); dBm derived/optional; user-defined profiles and role settings changes NOT in S03 (no UI/protocol).
+- **Out of scope (hard):** No user-defined radio profiles UI/BT protocol; no JOIN/Mesh feature expansion; no real CAD/LBT.
+- **P0 planning item:** [#296](https://github.com/AlexanderTsarkov/naviga-app/issues/296) (persisted seq16 + NVS adapter + test) — referenced as implementation issue; history preserved.
+
+---
+
+## Promotion to Canon
+
+- [ ] S03 planning docs reviewed and agreed.
+- [ ] WIP docs promoted to canon per [docs_layout_policy_v0](docs/product/policy/docs_layout_policy_v0.md) / [docs_promotion_policy_v0](docs/product/policy/docs_promotion_policy_v0.md).
+- [ ] Spec map / current_state updated with S03 planning outcomes.
+
+---
+
+## Open S03 Execution umbrella
+
+- [ ] Create **S03 Execution** umbrella issue when planning is complete and promotion criteria above are met.
+- [ ] Link execution work (implementation issues/PRs) to the new umbrella; keep this issue as planning parent.
+
+
+
+

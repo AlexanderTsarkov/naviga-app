@@ -1,0 +1,1 @@
+**#361 reframed as gate doc and closed.** S03 deliverable is the gate note ([ble_snapshot_s04_gate.md](docs/product/wip/areas/mobile/ble_snapshot_s04_gate.md)); full BLE snapshot outline is S04 after WIP→Canon→Code→Test. S04 will start from this gate.

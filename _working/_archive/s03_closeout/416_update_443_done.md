@@ -1,0 +1,1 @@
+**#443 completed** (PR #444 merged). User Profile baseline aligned: Phase B role pointers resolved/normalized/persisted; Status role_id from active profile; validation passed. Next planned: #425 (observability).
