@@ -69,6 +69,10 @@ When ChatGPT writes a prompt for Cursor, it must contain:
 7. **Exit criteria**
    - concrete checklist of "ready to merge".
 
+## Copy-paste output rule
+
+When you produce text explicitly meant to be **copied into another app or tool** (e.g. Cursor prompts, shell or git commands, commit messages, PR/issue text, config snippets), emit that portion as a **copy-paste-ready snippet or block**, not as ordinary prose. This applies only to transfer-targeted content, not to the whole response.
+
 ## Model selection guide (Cursor)
 
 Use **Auto** when:
