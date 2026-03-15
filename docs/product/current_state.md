@@ -1,8 +1,8 @@
 # Current product state
 
-**Last updated:** 2026-03-14  
-**Iteration tag:** S04 planning (BLE canon-promotion and slicing prep)  
-**Scope:** Embedded-first (firmware → radio → domain → BLE bridge → mobile later).
+**Last updated:** 2026-03-15  
+**Iteration tag:** S05 planning (Android mobile foundation on delivered BLE surface)  
+**Scope:** Embedded-first (firmware → radio → domain → BLE bridge); S04 BLE canon delivered; next focus Android mobile app on BLE.
 
 ---
 
@@ -42,7 +42,8 @@
 
 ## Mobile
 
-- **Current status:** Minimal; not in embedded-first critical path. BLE bridge (Phase D) is a pointer only in boot pipeline. Planning/audits: [s02_230_mobile_nodetable_integration_audit](areas/mobile/audit/s02_230_mobile_nodetable_integration_audit.md).
+- **S04 BLE:** Canon contract promoted and closed ([ble_contract_s04_v0](areas/mobile/contract/ble_contract_s04_v0.md); [#460](https://github.com/AlexanderTsarkov/naviga-app/issues/460)). Discovery, NodeTable read/update, node name, profiles; lifecycle baseline→subscribe; version gate.
+- **Next focus:** S05 Android mobile foundation on delivered BLE surface. WIP: [_working/s05_android_mobile_app_wip.md](../../_working/s05_android_mobile_app_wip.md) — minimal screen set, post-connect lifecycle, Map (minimal first version), profiles read-only. Planning/audits: [s02_230_mobile_nodetable_integration_audit](areas/mobile/audit/s02_230_mobile_nodetable_integration_audit.md).
 
 ---
 
@@ -62,12 +63,15 @@
 | **S02** | 2026-02 – 2026-03 | V1-A closure. TX queue fairness / degrade order (Core > Tail-1 > Operational/Informative). Tail split: Operational (0x04) vs Informative (0x05). Boot pipeline Phase A/B/C; role/radio from NVS. E22 adapter + RadioPreset; GNSS scenario emulator. Docs: Stale link fixes, legacy/OOTB banners, _working index, canon archive. | [#277](https://github.com/AlexanderTsarkov/naviga-app/issues/277) (gate), [#224](https://github.com/AlexanderTsarkov/naviga-app/issues/224) (epic); [#322](https://github.com/AlexanderTsarkov/naviga-app/pull/322), [#341](https://github.com/AlexanderTsarkov/naviga-app/pull/341), [#344](https://github.com/AlexanderTsarkov/naviga-app/pull/344), [#345](https://github.com/AlexanderTsarkov/naviga-app/pull/345)–[#349](https://github.com/AlexanderTsarkov/naviga-app/pull/349). |
 | **S03 promotion (c)+(d)** | 2026-03-10 | spec_map updated for 14 S03 promoted docs (canon paths, Promote=Promoted). current_state: source-of-truth / reference-implementation disclaimer added. Canon navigation: Dashboard and §4 traffic_model → canon; no normative WIP refs for promoted S03 material. Step (e) final integrity sweep remains open. | [#412](https://github.com/AlexanderTsarkov/naviga-app/issues/412), [#413](https://github.com/AlexanderTsarkov/naviga-app/pull/413) (step b). |
 | **S03 execution** | 2026-03 | P0: persisted seq16 (#417), NodeTable snapshot+restore (#418), field map (#419), TX formation canon lock (#420), RX semantics (#421), packetization (#422). Boot/OOTB: Phase A/B/C + autonomous start (#423), radio profile baseline (#424), observability (#425), user profile baseline (#443). Protocol: v0.2 packet family + v0.1 RX cutover (#435, #438). current_state reconciled (#426). | [#416](https://github.com/AlexanderTsarkov/naviga-app/issues/416) (umbrella), #417–#425, #435, #438, #443. |
+| **S04 BLE canon** | 2026-03 | BLE contract promoted to canon ([ble_contract_s04_v0](areas/mobile/contract/ble_contract_s04_v0.md)); discovery, NodeTable read/update, node name, profiles; lifecycle baseline→subscribe; version gate. Umbrella [#460](https://github.com/AlexanderTsarkov/naviga-app/issues/460). | [#361](https://github.com/AlexanderTsarkov/naviga-app/issues/361), #460. |
+| **S05 WIP alignment** | 2026-03-15 | Doc-only: S05 Android mobile app WIP aligned with S04 BLE canon; post-connect lifecycle policy explicit; Map in minimum (minimal first version); profile read-only scope clarified; current_state updated for S04→S05 transition. | — |
 
 ---
 
 ## Next focus
 
-- **S04 (planning):** BLE WIP → canon review and promotion decision first; then implementation slicing; implementation work in later issues. Umbrella [#460](https://github.com/AlexanderTsarkov/naviga-app/issues/460); input artifact [ble_contract_s04_v0.md](wip/areas/mobile/ble_contract_s04_v0.md) (WIP, #361).
+- **S05 (planning):** Android mobile app foundation on delivered S04 BLE surface. WIP [_working/s05_android_mobile_app_wip.md](../../_working/s05_android_mobile_app_wip.md): discovery/connect, version gate, baseline→subscribe lifecycle, Nodes/My Node/Profiles/Map (minimal), app/settings minimal. No S05 master issue yet; stabilise WIP → promote to canon → then master issue and slicing.
+- **S04 (closed):** BLE canon promoted ([ble_contract_s04_v0](areas/mobile/contract/ble_contract_s04_v0.md), [#460](https://github.com/AlexanderTsarkov/naviga-app/issues/460)); implementation follows contract.
 - **Post–S03:** Docs cleanup and legacy migration [#278](https://github.com/AlexanderTsarkov/naviga-app/issues/278) (PR-1–PR-3 landed); planning track [#296](https://github.com/AlexanderTsarkov/naviga-app/issues/296) as needed.
 - Channel discovery / selection and AutoPower: post–V1-A ([#175](https://github.com/AlexanderTsarkov/naviga-app/issues/175), [#180](https://github.com/AlexanderTsarkov/naviga-app/issues/180)).
 

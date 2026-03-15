@@ -1,6 +1,6 @@
 # Product Spec Map v0
 
-**Snapshot:** 2026-03-14  
+**Snapshot:** 2026-03-15  
 **Status:** WIP index only (not implementation requirements).  
 **Canonical specs:** `docs/product/areas/` (promoted); remainder in `docs/product/wip/areas/`  
 **Sprint-level release notes:** [current_state.md](../current_state.md).
@@ -183,9 +183,10 @@ Canon docs under `docs/product/areas/**` that still link into `docs/product/wip/
 
 ---
 
-**Last updated:** 2026-03-14
+**Last updated:** 2026-03-15
 
 **Changelog:**
+- 2026-03-15: S05 Android mobile app WIP alignment (doc-only): [_working/s05_android_mobile_app_wip.md](../../_working/s05_android_mobile_app_wip.md) aligned with S04 BLE canon; post-connect lifecycle policy explicit (§5.1); Map in S05 minimum (minimal first version); profile read-only scope clarified (profile/config surfaces only); UI/lifecycle state matrix (§9.1). [current_state.md](../current_state.md) updated for S04→S05 transition (S04 BLE canon closed, next focus S05).
 - 2026-03-14: S04 BLE contract promotion [#460](https://github.com/AlexanderTsarkov/naviga-app/issues/460): promoted [ble_contract_s04_v0.md](../areas/mobile/contract/ble_contract_s04_v0.md) from WIP to canon. New canon path: docs/product/areas/mobile/contract/ble_contract_s04_v0.md. WIP path replaced with redirect stub. Spec_map: added Mobile BLE contract Inventory row (Promote=Promoted). No semantic changes; editorial polish only (baseline definition, alias wording). [#361](https://github.com/AlexanderTsarkov/naviga-app/issues/361).
 - 2026-03-10: Step (e) final integrity sweep [#412](https://github.com/AlexanderTsarkov/naviga-app/issues/412): canon→WIP leaks fixed — [field_cadence_v0](../areas/nodetable/policy/field_cadence_v0.md), [activity_state_v0](../areas/nodetable/policy/activity_state_v0.md), [nodetable_fields_inventory_v0](../areas/nodetable/policy/nodetable_fields_inventory_v0.md) now link to canon [traffic_model_v0](../areas/radio/policy/traffic_model_v0.md); [fw_version_id_registry_v0](../areas/firmware/registry/fw_version_id_registry_v0.md) and [hw_profile_id_registry_v0](../areas/firmware/registry/hw_profile_id_registry_v0.md) now link to canon semantics docs. No remaining normative canon→WIP refs for the 14 promoted S03 docs.
 - 2026-03-10: S03 WIP→canon promotion steps (c)+(d) [#412](https://github.com/AlexanderTsarkov/naviga-app/issues/412): spec_map Inventory updated for 14 promoted S03 docs (NodeTable: nodetable_field_map_v0, packet_to_nodetable_mapping_v0, packet_sets_v0, presence_and_age_semantics_v0, identity_naming_persistence_eviction_v0, seq_ref_version_link_metrics_v0, tx_priority_and_arbitration_v0, s03_nodetable_slice_v0; Radio: traffic_model_v0, packet_context_tx_rules_v0; Firmware: provisioning_baseline_v0, ootb_autonomous_start_v0, fw_version_id_semantics_v0, hw_profile_id_semantics_v0). All point to canon paths; Promote=Promoted. Dashboard and §4 traffic_model references updated to canon. current_state.md: reference-implementation disclaimer added (§ Source of truth).

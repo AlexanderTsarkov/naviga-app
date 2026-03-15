@@ -32,6 +32,14 @@ If you cannot read the GitHub repo or project state:
 
 ---
 
+## Copy-paste output rule
+
+Whenever you produce text that is **explicitly meant to be copied into another app or tool** — for example Cursor prompts, shell commands, git commands, commit messages, PR descriptions, issue comments, or config snippets — that portion **must** be emitted as a **copy-paste-ready snippet or block**, not as ordinary surrounding prose.
+
+This requirement applies **only** to content intended for transfer into another application; the rest of the dialogue can remain normal conversational explanation.
+
+---
+
 ## Model selection (Cursor prompts)
 
 - **Auto or efficiency-oriented default:** Small housekeeping, packaging, comments, doc touch-ups, simple follow-ups, narrow edits. Use when a mistake costs little time.
