@@ -21,8 +21,25 @@ class MockBleTransport : public IBleTransport {
   void set_subscription_update_payload(const uint8_t* data, size_t len) override;
   void send_subscription_update() override;
 
+  void set_profiles_list(const uint8_t* data, size_t len) override;
+  const uint8_t* profiles_list_data() const override;
+  size_t profiles_list_len() const override;
+  bool get_profile_read_request(uint8_t* type, uint32_t* id) const override;
+  bool has_profile_read_request() const override;
+  void set_profile_read_response(const uint8_t* data, size_t len) override;
+  const uint8_t* profile_read_response_data() const override;
+  size_t profile_read_response_len() const override;
+  void clear_profile_read_request() override;
+
   const uint8_t* subscription_update_data() const { return subscription_update_buf_; }
   size_t subscription_update_len() const { return subscription_update_len_; }
+
+  /** Test helper: simulate app writing profile read request. */
+  void set_profile_read_request(uint8_t type, uint32_t id) {
+    profile_read_request_type_ = type;
+    profile_read_request_id_ = id;
+    has_profile_read_request_ = true;
+  }
 
   size_t device_info_len() const;
   const uint8_t* device_info() const;
@@ -50,6 +67,16 @@ class MockBleTransport : public IBleTransport {
   static constexpr size_t kMaxSubscriptionBatchLen = 1 + 5 * 72;  // 1 + 5*72
   uint8_t subscription_update_buf_[kMaxSubscriptionBatchLen] = {0};
   size_t subscription_update_len_ = 0;
+
+  static constexpr size_t kMaxProfilesListLen = 64;
+  uint8_t profiles_list_buf_[kMaxProfilesListLen] = {0};
+  size_t profiles_list_len_ = 0;
+  uint8_t profile_read_request_type_ = 0;
+  uint32_t profile_read_request_id_ = 0;
+  bool has_profile_read_request_ = false;
+  static constexpr size_t kMaxProfileReadResponseLen = 64;
+  uint8_t profile_read_response_buf_[kMaxProfileReadResponseLen] = {0};
+  size_t profile_read_response_len_ = 0;
 };
 
 } // namespace naviga

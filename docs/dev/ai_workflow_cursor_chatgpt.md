@@ -10,6 +10,30 @@ Goal: keep PRs small, CI green, and context transferable between chats.
 - Issues/PRs are the planning + audit trail.
 - "Inventory / progress" lives in the repo and is updated after merges (do NOT duplicate it in ChatGPT Project Files).
 
+## First-pass execution rule: reconnaissance before implementation
+
+For non-trivial tasks, the first pass must begin with reconnaissance of the current repo state before implementation starts.
+
+**Minimum first-pass checks:**
+
+- Inspect relevant current code.
+- Inspect nearby legacy code if present and relevant.
+- Inspect relevant docs/contracts/policies when they may constrain behavior.
+
+**Decision rule after reconnaissance:**
+
+- If the task is straightforward and no meaningful contradictions, branching paths, or architectural ambiguities are found, implementation may continue immediately in the same task.
+- If reconnaissance reveals contradictions, unclear ownership, multiple plausible approaches, policy mismatches, legacy-vs-canon tension, or any decision that would materially affect implementation shape, stop and produce a concise report instead of choosing a path autonomously.
+
+**Mandatory behavior:**
+
+- Do not silently choose one of several plausible approaches when repo/docs/context support more than one.
+- Escalate such cases with a report for explicit user decision.
+- Not every task requires a separate reconnaissance prompt, but every non-trivial task requires a reconnaissance phase.
+- Small obvious fixes may proceed directly only when the path is genuinely unambiguous.
+
+---
+
 ## Default development loop
 
 1. Pick an Issue from the Project board (or create one).
